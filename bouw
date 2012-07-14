@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (C) 2012 Niek Linnenbank
 #
@@ -20,6 +20,11 @@ import os
 import sys
 import inspect
 
+# Check for at least python version 3.0
+if sys.version_info.major < 3:
+    print(sys.argv[0] + ': python >= 3.x is required')
+    sys.exit(1)
+
 # Retrieve the path to the currently executed file
 cur_file = os.path.abspath(inspect.getfile(inspect.currentframe()))
 
@@ -32,8 +37,6 @@ else:
 # Convert to directory name
 cur_dir = os.path.dirname(cur_path)
 
-print cur_dir
-
 # Append source directory to the path, if exists.
 if os.path.exists(cur_dir + "/source/bouw/__init__.py"):
     sys.path.insert(1, cur_dir + "/source")
@@ -42,11 +45,7 @@ import bouw
 
 if __name__ == '__main__':
 
-    target = 'build'
-
     if len(sys.argv) >= 2:
-	target = sys.argv[1]
-
-    print sys.argv[0] + ': executing `' + target + '\''
-
-    bouw.execute_target(target)
+        bouw.execute(sys.argv[1])
+    else:
+        bouw.execute()

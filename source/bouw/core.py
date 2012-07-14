@@ -17,41 +17,45 @@
 
 import os
 import sys
-import config
+import bouw.config
+import bouw.default
 
 #
 # Register all targets with the given name by recursing in all directories.
 #
-def register_targets(target):
+def _register_targets(target):
 
     # Look for build.py in all subdirectories
     for dirname, dirnames, filenames in os.walk('.'):
-	for filename in filenames:
-	    if filename == config.script_name:
+        for filename in filenames:
+            if filename == bouw.default.script_filename:
 
-		path = os.path.join(dirname, filename)
-		print sys.argv[0] + ': parsing `' + path + '\''
+                path = os.path.join(dirname, filename)
+                print(sys.argv[0] + ': parsing `' + path + '\'')
 
-	        globs = {}
-	        locs  = {}
+                globs = {}
+                locs  = {}
 
-	        # Parse the build.py file
-	        execfile(path, globs, locs)
+                # Parse the build.py file
+                with open(path, "r") as f:
+                    exec(f.read(), globs, locs)
 
-	        # execute the build target
-		if target in locs:
-		    locs[target](1)
-
+                # execute the build target
+                if target in locs:
+                    locs[target](1)
 
 #
 # Execute the given target in all directories
 #
-def execute_target(target):
+def execute(target = bouw.default.target):
 
     # TODO: import configuration to generate the environments
+    conf = bouw.config.parse(bouw.default.config_filename)
+
+    print(sys.argv[0] + ": executing `" + target + "'")
 
     # Traverse directory tree to find all instances of the given target
-    register_targets(target)
+    _register_targets(target)
 
     # TODO: actually build a dependency tree
 

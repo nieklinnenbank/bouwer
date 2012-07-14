@@ -15,13 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import sys
-import configparser
-
-##
-# Parse configuration in the given file
-# @param filename Path to the configuration file
-# @return Reference to the generated configuration
-##
-def parse(filename):
-    print(sys.argv[0] + ': reading `' + filename + '\'')
+script_filename = 'Bouwfile'
+target          = 'build'
+config_filename = 'build.conf'
