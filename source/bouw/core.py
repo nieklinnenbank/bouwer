@@ -17,6 +17,7 @@
 
 import os
 import sys
+import config
 
 #
 # Register all targets with the given name by recursing in all directories.
@@ -26,7 +27,7 @@ def register_targets(target):
     # Look for build.py in all subdirectories
     for dirname, dirnames, filenames in os.walk('.'):
 	for filename in filenames:
-	    if filename == 'build.py':
+	    if filename == config.script_name:
 
 		path = os.path.join(dirname, filename)
 		print sys.argv[0] + ': parsing `' + path + '\''

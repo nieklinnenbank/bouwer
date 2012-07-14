@@ -18,8 +18,25 @@
 
 import os
 import sys
+import inspect
 
-sys.path.insert(1, 'source')
+# Retrieve the path to the currently executed file
+cur_file = os.path.abspath(inspect.getfile(inspect.currentframe()))
+
+# Is it a symbolic link?
+if os.path.islink(cur_file):
+    cur_path = os.readlink(cur_file)
+else:
+    cur_path = cur_file
+
+# Convert to directory name
+cur_dir = os.path.dirname(cur_path)
+
+print cur_dir
+
+# Append source directory to the path, if exists.
+if os.path.exists(cur_dir + "/source/bouw/__init__.py"):
+    sys.path.insert(1, cur_dir + "/source")
 
 import bouw
 
