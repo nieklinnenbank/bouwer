@@ -19,6 +19,7 @@ import os
 import sys
 import bouw.config
 import bouw.default
+import bouw.environment
 
 #
 # Register all targets with the given name by recursing in all directories.
@@ -54,10 +55,10 @@ def execute(target = bouw.default.target):
 
     print(sys.argv[0] + ": executing `" + target + "'")
 
-    # Traverse directory tree to find all instances of the given target
-    for env_name in conf.sections():
-        conf.set(env_name, 'id', env_name)
-        _register_targets(target, conf[env_name])
+    # Traverse directory tree for each configured environment
+    for section_name in conf.sections():
+        env = bouw.environment.Environment(section_name, conf)
+        _register_targets(target, env)
 
     # TODO: actually build a dependency tree
 
