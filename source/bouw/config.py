@@ -25,3 +25,8 @@ import configparser
 ##
 def parse(filename):
     print(sys.argv[0] + ': reading `' + filename + '\'')
+
+    # Parse the given file
+    conf = configparser.ConfigParser(interpolation = configparser.ExtendedInterpolation())
+    conf.read(filename)
+    return conf

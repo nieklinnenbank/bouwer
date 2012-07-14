@@ -23,7 +23,7 @@ import bouw.default
 #
 # Register all targets with the given name by recursing in all directories.
 #
-def _register_targets(target):
+def _register_targets(target, env):
 
     # Look for build.py in all subdirectories
     for dirname, dirnames, filenames in os.walk('.'):
@@ -42,7 +42,7 @@ def _register_targets(target):
 
                 # execute the build target
                 if target in locs:
-                    locs[target](1)
+                    locs[target](env)
 
 #
 # Execute the given target in all directories
@@ -55,7 +55,9 @@ def execute(target = bouw.default.target):
     print(sys.argv[0] + ": executing `" + target + "'")
 
     # Traverse directory tree to find all instances of the given target
-    _register_targets(target)
+    for env_name in conf.sections():
+        conf.set(env_name, 'id', env_name)
+        _register_targets(target, conf[env_name])
 
     # TODO: actually build a dependency tree
 
@@ -64,4 +66,3 @@ def execute(target = bouw.default.target):
     # First execute all CC and AS tasks, since they are independent
     # Then execute all LD tasks, since they depend on the CC and AS tasks
     # Finally, do all other things, like building an ISO and filesystem images
-    pass
