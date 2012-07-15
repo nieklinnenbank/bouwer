@@ -15,6 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import os
+import os.path
+import inspect
+
 class Environment(dict):
 
     ##
@@ -29,6 +33,47 @@ class Environment(dict):
 
         self.name   = name
         self.config = global_config[name]
+        self._load_builders(self._get_load_dir() + '/builder')
+
+    ##
+    # Find the directory of the currently executing file.
+    #
+    # @return Path to the current directory of this file.
+    #
+    def _get_load_dir(self):
+        cur_file = os.path.abspath(inspect.getfile(inspect.currentframe()))
+        return os.path.dirname(cur_file)
+
+    ##
+    # Load all python modules in a directory as builders.
+    #
+    # @param path Destination directory containing builder modules.
+    #
+    def _load_builders(self, path):
+
+        for dirname, dirnames, filenames in os.walk(path):
+            for filename in filenames:
+                if filename.endswith(".py"):
+                    self._load_builder(path + '/' + filename)
+
+    ##
+    # Load the given builder.
+    #
+    # @param path Destination path of the builder
+    #
+    def _load_builder(self, path):
+
+        globs = {}
+        locs  = {}
+
+        # Evaluate the module
+        with open(path, "r") as f:
+            exec(f.read(), globs, locs)
+            f.close()
+
+        # For each function, add it to ourselves
+        for loc in locs:
+            setattr(self.__class__, loc, locs[loc])
 
     ##
     # Implements the env[key] mechanism
@@ -38,16 +83,3 @@ class Environment(dict):
     #
     def __getitem__(self, key):
         return self.config[key]
-
-    def Library(self, target, sources):
-        print("Building Library `" + target + "' from `" + str(sources) + "'")
-
-        n = len(sources) + 1
-        i = 1
-
-        for src in sources:
-            #print(self['cc'] + ' ' + self['ccflags'] + ' -c -o ' + src + '.o ' +  src)
-            print('[' + str(i) + '/' + str(n) + ']  CC  ' + src)
-            i = i + 1
-
-        print('[' + str(n) + '/' + str(n) + ']  AR  ' + target)

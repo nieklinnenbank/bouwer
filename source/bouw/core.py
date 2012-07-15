@@ -38,6 +38,7 @@ def _register_targets(target, env):
                 locs  = {}
 
                 # Parse the build.py file
+                # TODO: if there is an error, it only shows 'string' as the source...
                 with open(path, "r") as f:
                     exec(f.read(), globs, locs)
 
