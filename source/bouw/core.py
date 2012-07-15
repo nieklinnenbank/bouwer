@@ -21,6 +21,7 @@ import sys
 import bouw.config
 import bouw.default
 import bouw.environment
+import bouw.action
 
 #
 # Execute the given target in all directories
@@ -34,15 +35,18 @@ def execute(target = bouw.default.target):
     # Parse configuration
     conf = bouw.config.parse(bouw.default.config_filename)
 
+    # Initialize action tree
+    action_tree = bouw.action.ActionTree()
+
     # Traverse directory tree for each configured environment
     if len(conf.sections()) >= 1:
         for section_name in conf.sections():
-            env = bouw.environment.Environment(section_name, conf)
+            env = bouw.environment.Environment(section_name, conf, action_tree)
             env.register_targets(target)
 
     # Use the default if not any environments configured
     else:
-        env = bouw.environment.Environment('DEFAULT', conf)
+        env = bouw.environment.Environment('DEFAULT', conf, action_tree)
         env.register_targets(target)
 
     # TODO: actually build a dependency tree

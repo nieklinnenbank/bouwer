@@ -32,25 +32,45 @@ class Library:
     def __init__(self, env):
         self.env = env
 
-    def _private_func(self):
-        print("Private function")
-
+    ##
+    # Build a static library
+    #
+    # @param target Name of the library to build
+    # @param sources List of source files of the library
+    #
     def execute(self, target, sources):
-        print("Building Library `" + target + "' from `" + str(sources) + "'")
-        print("I'm executed from `" + self.env.bouwfile + "'")
-        self._private_func()
 
-    # TODO: add '#include' implicit dependencies
-    # TODO: decide here with timestamps if we need to redo this action
+        # TODO: add '#include' implicit dependencies
+        # TODO: decide here with timestamps if we need to redo this action
 
+        objects = []
+
+        # Traverse all source files given
         for src in sources:
             splitfile = os.path.splitext(src)
-            print(str(splitfile))
-#        outfile = os.path.splitext(src)[0] + '.o'
-#        self.register_action(outfile, self['cc'] + ' ' + self['ccflags'] + ' ' + outfile + ' ' + srcfile)
 
-#        self.register_action(target, self['ar'] + ' ' + self['arflags'] + ' ' + target + ' ' + str(sources),
-#                             sources)
+            # Compile a C source file into an object file
+            if splitfile[1] == '.c':
+
+                # Output file is the name with the .o suffix
+                outfile = splitfile[0] + '.o'
+                objects.append(outfile)
+
+                # Register compile action
+                self.env.register_action(outfile,
+                                         self.env['cc'] + ' ' + self.env['ccflags'],
+                                         [src])
+
+            # Unknown filetype
+            else:
+                raise Exception('unknown filetype: ' + src)
+
+        # Create the archive after all objects are done
+        self.env.register_action(target + '.a',
+                                 self.env['ar'] + ' ' + self.env['arflags'],
+                                 objects)
+
+        # TODO: almost.. here please specify the path to the _buildroot_ objects
 
 #        n = len(sources) + 1
 #        i = 1

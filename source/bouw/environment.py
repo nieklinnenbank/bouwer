@@ -29,14 +29,16 @@ class Environment(dict):
     #
     # @param name Name of the environment to initialize
     # @param global_config Reference to the configuration file
+    # @param action_tree Reference to the actions tree
     #
-    def __init__(self, name, global_config):
+    def __init__(self, name, global_config, action_tree):
 
         global_config.set(name, 'id', name)
 
         self.name     = name
         self.config   = global_config[name]
         self.bouwfile = None
+        self.action   = action_tree
         self._load_builders(self._get_load_dir() + '/builder')
 
     ##
@@ -126,6 +128,5 @@ class Environment(dict):
                     if target in locs:
                         locs[target](self)
 
-    def register_action(self, target, action, deplist):
-        print("registering `" + target + ' <=== ' + str(deplist) + ' using cmd: ' + action)
-        pass
+    def register_action(self, target, action, sources):
+        self.action.add(target, action, sources, self)
