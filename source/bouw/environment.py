@@ -19,6 +19,7 @@ import os
 import os.path
 import sys
 import inspect
+import importlib
 import bouw.default
 
 class Environment(dict):
@@ -56,7 +57,7 @@ class Environment(dict):
 
         for dirname, dirnames, filenames in os.walk(path):
             for filename in filenames:
-                if filename.endswith(".py"):
+                if filename.endswith(".py") and filename != '__init__.py':
                     self._load_builder(path + '/' + filename)
 
     ##
@@ -66,15 +67,15 @@ class Environment(dict):
     #
     def _load_builder(self, path):
 
-        globs = {}
-        locs  = {}
+        name = os.path.basename(os.path.splitext(path)[0])
 
-        # Execute it
-        self._run_module(path, globs, locs)
+        # Import the builder as a module
+        module = importlib.import_module('bouw.builder.' + name)
+        class_ = getattr(module, name)
+        instance = class_(self)
 
-        # For each function, add it to ourselves
-        for loc in locs:
-            setattr(self.__class__, loc, locs[loc])
+        # Add the execute function to ourselves
+        setattr(self.__class__, name, instance.execute)
 
     ##
     # Evaluate the given python module.
@@ -118,9 +119,13 @@ class Environment(dict):
                     globs = {}
                     locs  = {}
 
-                    # Parse the build.py file
+                    # Parse the Bouwfile
                     self._run_module(self.bouwfile, globs, locs)
 
                     # execute the build target
                     if target in locs:
                         locs[target](self)
+
+    def register_action(self, target, action, deplist):
+        print("registering `" + target + ' <=== ' + str(deplist) + ' using cmd: ' + action)
+        pass

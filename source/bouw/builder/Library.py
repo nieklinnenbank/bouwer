@@ -15,16 +15,49 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-def Library(self, target, sources):
-    print("Building Library `" + target + "' from `" + str(sources) + "'")
-    print("I'm executed from `" + self.bouwfile + "'")
+import os
+import os.path
 
-    n = len(sources) + 1
-    i = 1
+##
+# Build a static library
+#
+# @param target Destination library file to build
+# @param sources List of source code files to include
+#
+class Library:
 
-    for src in sources:
-        #print(self['cc'] + ' ' + self['ccflags'] + ' -c -o ' + src + '.o ' +  src)
-        print('[' + str(i) + '/' + str(n) + ']  CC  ' + src)
-        i = i + 1
+    ##
+    # Constructor
+    #
+    def __init__(self, env):
+        self.env = env
 
-    print('[' + str(n) + '/' + str(n) + ']  AR  ' + target)
+    def _private_func(self):
+        print("Private function")
+
+    def execute(self, target, sources):
+        print("Building Library `" + target + "' from `" + str(sources) + "'")
+        print("I'm executed from `" + self.env.bouwfile + "'")
+        self._private_func()
+
+    # TODO: add '#include' implicit dependencies
+    # TODO: decide here with timestamps if we need to redo this action
+
+        for src in sources:
+            splitfile = os.path.splitext(src)
+            print(str(splitfile))
+#        outfile = os.path.splitext(src)[0] + '.o'
+#        self.register_action(outfile, self['cc'] + ' ' + self['ccflags'] + ' ' + outfile + ' ' + srcfile)
+
+#        self.register_action(target, self['ar'] + ' ' + self['arflags'] + ' ' + target + ' ' + str(sources),
+#                             sources)
+
+#        n = len(sources) + 1
+#        i = 1
+#
+#        for src in sources:
+#            #print(self['cc'] + ' ' + self['ccflags'] + ' -c -o ' + src + '.o ' +  src)
+#            print('[' + str(i) + '/' + str(n) + ']  CC  ' + src)
+#            i = i + 1
+#
+#        print('[' + str(n) + '/' + str(n) + ']  AR  ' + target)
