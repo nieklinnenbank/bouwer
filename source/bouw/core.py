@@ -16,50 +16,34 @@
 #
 
 import os
+import os.path
 import sys
 import bouw.config
 import bouw.default
 import bouw.environment
 
 #
-# Register all targets with the given name by recursing in all directories.
-#
-def _register_targets(target, env):
-
-    # Look for build.py in all subdirectories
-    for dirname, dirnames, filenames in os.walk('.'):
-        for filename in filenames:
-            if filename == bouw.default.script_filename:
-
-                path = os.path.join(dirname, filename)
-                print(sys.argv[0] + ': parsing `' + path + '\'')
-
-                globs = {}
-                locs  = {}
-
-                # Parse the build.py file
-                # TODO: if there is an error, it only shows 'string' as the source...
-                with open(path, "r") as f:
-                    exec(f.read(), globs, locs)
-
-                # execute the build target
-                if target in locs:
-                    locs[target](env)
-
-#
 # Execute the given target in all directories
 #
 def execute(target = bouw.default.target):
 
-    # TODO: import configuration to generate the environments
+    # Traverse current directory to the top-level Bouwfile
+    while os.path.exists('../' + bouw.default.script_filename):
+        os.chdir(os.getcwd() + '/../')
+
+    # Parse configuration
     conf = bouw.config.parse(bouw.default.config_filename)
 
-    print(sys.argv[0] + ": executing `" + target + "'")
-
     # Traverse directory tree for each configured environment
-    for section_name in conf.sections():
-        env = bouw.environment.Environment(section_name, conf)
-        _register_targets(target, env)
+    if len(conf.sections()) >= 1:
+        for section_name in conf.sections():
+            env = bouw.environment.Environment(section_name, conf)
+            env.register_targets(target)
+
+    # Use the default if not any environments configured
+    else:
+        env = bouw.environment.Environment('DEFAULT', conf)
+        env.register_targets(target)
 
     # TODO: actually build a dependency tree
 

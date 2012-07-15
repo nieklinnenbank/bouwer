@@ -17,7 +17,9 @@
 
 import os
 import os.path
+import sys
 import inspect
+import bouw.default
 
 class Environment(dict):
 
@@ -31,8 +33,9 @@ class Environment(dict):
 
         global_config.set(name, 'id', name)
 
-        self.name   = name
-        self.config = global_config[name]
+        self.name     = name
+        self.config   = global_config[name]
+        self.bouwfile = None
         self._load_builders(self._get_load_dir() + '/builder')
 
     ##
@@ -66,14 +69,27 @@ class Environment(dict):
         globs = {}
         locs  = {}
 
-        # Evaluate the module
-        with open(path, "r") as f:
-            exec(f.read(), globs, locs)
-            f.close()
+        # Execute it
+        self._run_module(path, globs, locs)
 
         # For each function, add it to ourselves
         for loc in locs:
             setattr(self.__class__, loc, locs[loc])
+
+    ##
+    # Evaluate the given python module.
+    #
+    # @param path Path to the python module to execute
+    # @param globs Dictionary with globals
+    # @param locs Dictionary with locals
+    #
+    def _run_module(self, path, globs, locs):
+
+        # Evaluate the module
+        # TODO: if this goes wrong, it only shows <string> as source
+        with open(path, "r") as f:
+            exec(f.read(), globs, locs)
+            f.close()
 
     ##
     # Implements the env[key] mechanism
@@ -83,3 +99,28 @@ class Environment(dict):
     #
     def __getitem__(self, key):
         return self.config[key]
+
+    #
+    # Register all targets with the given name by recursing in all directories.
+    #
+    def register_targets(self, target):
+
+        print(sys.argv[0] + ": executing `" + target + "'")
+
+        # Look for build.py in all subdirectories
+        for dirname, dirnames, filenames in os.walk('.'):
+            for filename in filenames:
+                if filename == bouw.default.script_filename:
+
+                    self.bouwfile = os.path.join(dirname, filename)
+                    print(sys.argv[0] + ': parsing `' + self.bouwfile + '\'')
+
+                    globs = {}
+                    locs  = {}
+
+                    # Parse the build.py file
+                    self._run_module(self.bouwfile, globs, locs)
+
+                    # execute the build target
+                    if target in locs:
+                        locs[target](self)

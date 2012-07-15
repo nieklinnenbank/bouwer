@@ -17,6 +17,7 @@
 
 def Library(self, target, sources):
     print("Building Library `" + target + "' from `" + str(sources) + "'")
+    print("I'm executed from `" + self.bouwfile + "'")
 
     n = len(sources) + 1
     i = 1
