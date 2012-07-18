@@ -22,6 +22,7 @@ import bouw.config
 import bouw.default
 import bouw.environment
 import bouw.action
+import bouw.work
 
 #
 # Execute the given target in all directories
@@ -49,7 +50,9 @@ def execute(target = bouw.default.target):
         env = bouw.environment.Environment('DEFAULT', conf, action_tree)
         env.register_targets(target)
 
-    # TODO: actually build a dependency tree
+    # Execute the generated actions
+    master = bouw.work.Master(action_tree)
+    master.execute()
 
     # Now execute the registered targets in parallel
 

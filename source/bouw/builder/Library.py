@@ -21,9 +21,6 @@ import os.path
 ##
 # Build a static library
 #
-# @param target Destination library file to build
-# @param sources List of source code files to include
-#
 class Library:
 
     ##
@@ -31,6 +28,9 @@ class Library:
     #
     def __init__(self, env):
         self.env = env
+
+    def _ar_str(self, target, sources):
+        return "  AR  " + target
 
     ##
     # Build a static library
@@ -45,6 +45,7 @@ class Library:
 
         objects = []
 
+        # TODO: put this in an Object() builder
         # Traverse all source files given
         for src in sources:
             splitfile = os.path.splitext(src)

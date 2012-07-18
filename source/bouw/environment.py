@@ -18,6 +18,7 @@
 import os
 import os.path
 import sys
+import copy
 import inspect
 import importlib
 import bouw.default
@@ -31,12 +32,12 @@ class Environment(dict):
     # @param global_config Reference to the configuration file
     # @param action_tree Reference to the actions tree
     #
-    def __init__(self, name, global_config, action_tree):
+    def __init__(self, name, config, action_tree):
 
-        global_config.set(name, 'id', name)
 
         self.name     = name
-        self.config   = global_config[name]
+        self.config   = config
+        self.config.set(name, 'id', name)
         self.bouwfile = None
         self.action   = action_tree
         self._load_builders(self._get_load_dir() + '/builder')
@@ -101,7 +102,7 @@ class Environment(dict):
     # @return Configuration item with the given key name
     #
     def __getitem__(self, key):
-        return self.config[key]
+        return self.config[self.name][key]
 
     #
     # Register all targets with the given name by recursing in all directories.
@@ -124,9 +125,18 @@ class Environment(dict):
                     # Parse the Bouwfile
                     self._run_module(self.bouwfile, globs, locs)
 
+                    # Save current configuration
+                    # TODO: this cannot be done with configparser object
+                    # TODO: solution: make our own Config class instead
+                    #saved_config = copy.deepcopy(self.config)
+                    saved_config = copy.copy(self.config)
+
                     # execute the build target
                     if target in locs:
                         locs[target](self)
+
+                    # Restore configuration
+                    self.config = saved_config
 
     def register_action(self, target, action, sources):
         self.action.add(target, action, sources, self)
