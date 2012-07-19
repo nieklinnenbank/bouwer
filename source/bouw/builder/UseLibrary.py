@@ -37,12 +37,11 @@ class UseLibrary:
     def execute(self, libraries):
 
         for lib in libraries:
-            print("using lib: " + lib)
 
             # Find the correct include parameter for ccflags
             inc_param = self.env['incflags'].replace('%INCLUDE%', 'library' + os.sep + lib)
 
-            print("inc_param=" + inc_param)
+            # TODO: this is ugly, find some clearer way to extend the Config object
 
             # Append library include paths to the C compiler flags
             self.env.config.set(self.env['id'], 'ccflags',

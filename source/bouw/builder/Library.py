@@ -29,9 +29,6 @@ class Library:
     def __init__(self, env):
         self.env = env
 
-    def _ar_str(self, target, sources):
-        return "  AR  " + target
-
     ##
     # Build a static library
     #
@@ -60,7 +57,8 @@ class Library:
                 # Register compile action
                 self.env.register_action(outfile,
                                          self.env['cc'] + ' ' + self.env['ccflags'],
-                                         [src])
+                                         [src],
+                                         "CC")
 
             # Unknown filetype
             else:
@@ -69,7 +67,7 @@ class Library:
         # Create the archive after all objects are done
         self.env.register_action(target + '.a',
                                  self.env['ar'] + ' ' + self.env['arflags'],
-                                 objects)
+                                 objects, "AR")
 
         # TODO: almost.. here please specify the path to the _buildroot_ objects
 

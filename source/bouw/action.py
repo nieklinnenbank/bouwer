@@ -19,13 +19,14 @@ import os
 
 class Action:
 
-    def __init__(self, target, command, sources, action_map):
+    def __init__(self, target, command, sources, action_map, pretty):
         self.target  = target
         self.command = command
         self.sources = sources
         self.taken   = False
         self.done    = False
         self.action_map = action_map
+        self.pretty  = pretty
 
     def sources_done(self):
         for src in self.sources:
@@ -74,9 +75,7 @@ class ActionTree:
     def is_done(self):
         return self.num_done == len(self.actions)
 
-    def add(self, target, cmd, sources, env):
-
-        print("add(" + target + "," + str(sources) + ")")
+    def add(self, target, cmd, sources, env, pretty):
 
         # Honour the buildroot setting
         buildroot = env['buildroot'] + os.sep + env['id']
@@ -116,7 +115,7 @@ class ActionTree:
             os.makedirs(os.path.dirname(real_target))
 
         # Add the action
-        action = Action(real_target, command, real_sources, self.actions)
+        action = Action(real_target, command, real_sources, self.actions, pretty)
 
         self.actions[real_target] = action
 

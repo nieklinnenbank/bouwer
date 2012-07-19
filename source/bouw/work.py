@@ -18,19 +18,33 @@
 import multiprocessing
 import queue
 import os
+import os.path
 
+##
+# Function executed by the worker processes
+#
+# @param num ID number of the worker
+# @param actions Reference to the actions tree
+# @param work_queue Reference to the worker queue
+# @param done_queue Reference to the done queue
+#
 def worker(num, actions, work_queue, done_queue):
-    print("Worker " + str(num) + " getting work")
 
     while True:
         name = work_queue.get()
-        print("Worker " + str(num) + " executing: " + actions[name].command)
+
+        if actions[name].pretty is not None:
+            print("[" + str(num) + "]  " + actions[name].pretty + "  " + actions[name].target)
+        else:
+            print("[" + str(num) + "] ==> " + actions[name].command)
         os.system(actions[name].command)
         done_queue.put(name)
 
-    print("Worker " + str(num) + " done")
-
 class Master:
+
+    ##
+    # Constructor
+    #
     def __init__(self, action_tree):
         self.action_tree = action_tree
         self.num_workers = multiprocessing.cpu_count()
@@ -40,9 +54,6 @@ class Master:
         pass
 
     def execute(self):
-
-        # OK, but problem: the queue does NOT wait until the dependencies are compiled 100%
-        # Solution: workers must report back when done
 
         # Fill the queue initially with work not having dependencies
         initial_work = self.action_tree.get_available()
@@ -55,26 +66,16 @@ class Master:
             self.workers.append(p)
             p.start()
 
-#        for dep in self.action_tree.reverse_actions:
-#            print("Dependency " + dep + " triggeres: ")
-#            for action in self.action_tree.reverse_actions[dep]:
-#                print("  " + action.target)
-
         # Now keep processing until all dependencies are done
         while True:
-
             work_done = self.done_queue.get()
-            print("Done: " + work_done)
 
             available = self.action_tree.get_available(work_done)
             for action in available:
-                print("Available: " + action.target)
                 self.work_queue.put(action.target)
 
             if self.action_tree.is_done():
-                print("Nothing available")
                 break
 
-        print("We're done!")
         for proc in self.workers:
             proc.terminate()

@@ -138,5 +138,5 @@ class Environment(dict):
                     # Restore configuration
                     self.config = saved_config
 
-    def register_action(self, target, action, sources):
-        self.action.add(target, action, sources, self)
+    def register_action(self, target, action, sources, pretty = None):
+        self.action.add(target, action, sources, self, pretty)
