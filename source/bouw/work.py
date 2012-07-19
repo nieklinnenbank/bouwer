@@ -67,15 +67,12 @@ class Master:
             p.start()
 
         # Now keep processing until all dependencies are done
-        while True:
+        while not self.action_tree.is_done():
             work_done = self.done_queue.get()
 
             available = self.action_tree.get_available(work_done)
             for action in available:
                 self.work_queue.put(action.target)
-
-            if self.action_tree.is_done():
-                break
 
         for proc in self.workers:
             proc.terminate()
