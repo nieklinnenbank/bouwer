@@ -18,40 +18,40 @@
 import os
 import os.path
 import sys
-import bouw.config
-import bouw.default
-import bouw.environment
-import bouw.action
-import bouw.work
+import bouwer.config
+import bouwer.default
+import bouwer.environment
+import bouwer.action
+import bouwer.work
 
 #
 # Execute the given target in all directories
 #
-def execute(target = bouw.default.target):
+def execute(target = bouwer.default.target):
 
     # Traverse current directory to the top-level Bouwfile
-    while os.path.exists('../' + bouw.default.script_filename):
+    while os.path.exists('../' + bouwer.default.script_filename):
         os.chdir(os.getcwd() + '/../')
 
     # Parse configuration
-    conf = bouw.config.parse(bouw.default.config_filename)
+    conf = bouwer.config.parse(bouwer.default.config_filename)
 
     # Initialize action tree
-    action_tree = bouw.action.ActionTree()
+    action_tree = bouwer.action.ActionTree()
 
     # Traverse directory tree for each configured environment
     if len(conf.sections()) >= 1:
         for section_name in conf.sections():
-            env = bouw.environment.Environment(section_name, conf, action_tree)
+            env = bouwer.environment.Environment(section_name, conf, action_tree)
             env.register_targets(target)
 
     # Use the default if not any environments configured
     else:
-        env = bouw.environment.Environment('DEFAULT', conf, action_tree)
+        env = bouwer.environment.Environment('DEFAULT', conf, action_tree)
         env.register_targets(target)
 
     # Execute the generated actions
-    master = bouw.work.Master(action_tree)
+    master = bouwer.work.Master(action_tree)
     master.execute()
 
     # Now execute the registered targets in parallel

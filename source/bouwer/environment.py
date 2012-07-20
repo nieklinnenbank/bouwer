@@ -21,7 +21,7 @@ import sys
 import copy
 import inspect
 import importlib
-import bouw.default
+import bouwer.default
 
 class Environment(dict):
 
@@ -73,7 +73,7 @@ class Environment(dict):
         name = os.path.basename(os.path.splitext(path)[0])
 
         # Import the builder as a module
-        module = importlib.import_module('bouw.builder.' + name)
+        module = importlib.import_module('bouwer.builder.' + name)
         class_ = getattr(module, name)
         instance = class_(self)
 
@@ -114,7 +114,7 @@ class Environment(dict):
         # Look for build.py in all subdirectories
         for dirname, dirnames, filenames in os.walk('.'):
             for filename in filenames:
-                if filename == bouw.default.script_filename:
+                if filename == bouwer.default.script_filename:
 
                     self.bouwfile = os.path.join(dirname, filename)
                     print(sys.argv[0] + ': parsing `' + self.bouwfile + '\'')

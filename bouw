@@ -38,14 +38,14 @@ else:
 cur_dir = os.path.dirname(cur_path)
 
 # Append source directory to the path, if exists.
-if os.path.exists(cur_dir + "/source/bouw/__init__.py"):
+if os.path.exists(cur_dir + "/source/bouwer/__init__.py"):
     sys.path.insert(1, cur_dir + "/source")
 
-import bouw
+import bouwer
 
 if __name__ == '__main__':
 
     if len(sys.argv) >= 2:
-        bouw.execute(sys.argv[1])
+        bouwer.execute(sys.argv[1])
     else:
-        bouw.execute()
+        bouwer.execute()
