@@ -37,46 +37,14 @@ class Library:
     #
     def execute(self, target, sources):
 
-        # TODO: add '#include' implicit dependencies
-        # TODO: decide here with timestamps if we need to redo this action
-
+        # Make a list of objects on which we depend
         objects = []
 
-        # TODO: put this in an Object() builder
         # Traverse all source files given
         for src in sources:
-            splitfile = os.path.splitext(src)
-
-            # Compile a C source file into an object file
-            if splitfile[1] == '.c':
-
-                # Output file is the name with the .o suffix
-                outfile = splitfile[0] + '.o'
-                objects.append(outfile)
-
-                # Register compile action
-                self.env.register_action(outfile,
-                                         self.env['cc'] + ' ' + self.env['ccflags'],
-                                         [src],
-                                         "CC")
-
-            # Unknown filetype
-            else:
-                raise Exception('unknown filetype: ' + src)
+            objects.append(self.env.Object(src))
 
         # Create the archive after all objects are done
         self.env.register_action(target + '.a',
                                  self.env['ar'] + ' ' + self.env['arflags'],
                                  objects, "AR")
-
-        # TODO: almost.. here please specify the path to the _buildroot_ objects
-
-#        n = len(sources) + 1
-#        i = 1
-#
-#        for src in sources:
-#            #print(self['cc'] + ' ' + self['ccflags'] + ' -c -o ' + src + '.o ' +  src)
-#            print('[' + str(i) + '/' + str(n) + ']  CC  ' + src)
-#            i = i + 1
-#
-#        print('[' + str(n) + '/' + str(n) + ']  AR  ' + target)
