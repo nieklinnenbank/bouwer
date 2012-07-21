@@ -31,6 +31,30 @@ class Action:
         self.action_map = action_map
         self.pretty  = pretty
 
+        # Look if this target needs execution, based on the sources timestamps.
+        try:
+            my_st = os.stat(target)
+            num_done = 0
+
+            for src in self.sources:
+
+                # If the source is not marked done, we must always build
+                if src in self.action_map and not self.action_map[src].done:
+                    break
+
+                # See if the timestamp is larger than ours
+                st = os.stat(src)
+                if st.st_mtime <= my_st.st_mtime:
+                    num_done = num_done + 1
+
+            if num_done >= len(self.sources):
+                print(self.target + " is already up-to-date")
+                self.done = True
+                self.taken = True
+
+        except OSError:
+            pass
+
     def sources_done(self):
         for src in self.sources:
             if src in self.action_map and not self.action_map[src].done:
@@ -48,6 +72,9 @@ class Action:
 #
 class ActionTree:
 
+    ##
+    # Constructor
+    #
     def __init__(self):
         self.buildroot_map = {} # translates the full project path to the
                                 # build root path, e.g:
@@ -55,6 +82,7 @@ class ActionTree:
         self.actions = {}
         self.reverse_actions = {}
         self.num_done = 0
+        self.num_needed = 0
 
     def get_available(self, command_ready = None):
 
@@ -84,9 +112,15 @@ class ActionTree:
 
         return ret
 
+    ##
+    # Check whether all Actions are executed.
+    #
     def is_done(self):
-        return self.num_done == len(self.actions)
+        return self.num_done == self.num_needed
 
+    ##
+    # Put a new Action on the ActionTree.
+    #
     def add(self, target, cmd, sources, env, pretty):
 
         # Prepare command string
@@ -102,6 +136,10 @@ class ActionTree:
 
         # Add the action
         action = Action(target, command, sources, self.actions, pretty)
+
+        # Increment num_needed
+        if not action.done:
+            self.num_needed = self.num_needed + 1
 
         # Add to the target -> action map
         self.actions[target] = action

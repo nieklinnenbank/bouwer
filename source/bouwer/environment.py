@@ -169,4 +169,6 @@ class Environment(dict):
             else:
                 real_sources.append(real_src)
 
+        print(str(real_target) + " <= " + str(real_sources))
+
         self.action.add(real_target, action, real_sources, self, pretty)
