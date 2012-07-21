@@ -40,6 +40,9 @@ class Environment(dict):
         self.config.set(name, 'id', name)
         self.bouwfile = None
         self.action   = action_tree
+        self.buildroot_map = {} # translates the full project path to the
+                                # build root path, e.g:
+                                #   src/module/foo.o -> build/src/module/foo.o
         self._load_builders(self._get_load_dir() + '/builder')
 
     ##
@@ -139,4 +142,31 @@ class Environment(dict):
                     self.config = saved_config
 
     def register_action(self, target, action, sources, pretty = None):
-        self.action.add(target, action, sources, self, pretty)
+
+        # Honour the buildroot setting
+        buildroot = self['buildroot'] + os.sep + self['id']
+
+        # Full path to the target from the top-level Bouwfile
+        full_target = os.path.dirname(self.bouwfile) + os.sep + target
+
+        # Real path to the target, using a buildroot
+        real_dir    = buildroot + os.sep + os.path.dirname(self.bouwfile[2:])
+        real_target = real_dir + os.sep + target
+
+        # Fill the buildmap
+        self.buildroot_map[full_target] = real_target
+
+        # Make sure the sources have absolute paths
+        real_sources = []
+
+        # Find absolute paths of the sources
+        for src in sources:
+            real_src = os.path.dirname(self.bouwfile) + os.sep + src
+
+            # This source may have a real target in the buildroot
+            if real_src in self.buildroot_map:
+                real_sources.append(self.buildroot_map[real_src])
+            else:
+                real_sources.append(real_src)
+
+        self.action.add(real_target, action, real_sources, self, pretty)

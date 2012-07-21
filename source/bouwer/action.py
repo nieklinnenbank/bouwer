@@ -89,48 +89,24 @@ class ActionTree:
 
     def add(self, target, cmd, sources, env, pretty):
 
-        # Honour the buildroot setting
-        buildroot = env['buildroot'] + os.sep + env['id']
-
-        # Full path to the target from the top-level Bouwfile
-        full_target = os.path.dirname(env.bouwfile) + os.sep + target
-
-        # Real path to the target, using a buildroot
-        real_dir    = buildroot + os.sep + os.path.dirname(env.bouwfile[2:])
-        real_target = real_dir + os.sep + target
-
-        # Fill the buildmap
-        self.buildroot_map[full_target] = real_target
-
-        # Make sure the sources have absolute paths
-        real_sources = []
-
-        # Find absolute paths of the sources
-        for src in sources:
-            real_src = os.path.dirname(env.bouwfile) + os.sep + src
-
-            # This source may have a real target in the buildroot
-            if real_src in self.buildroot_map:
-                real_sources.append(self.buildroot_map[real_src])
-            else:
-                real_sources.append(real_src)
-
         # Prepare command string
         command = cmd
-        command = command.replace("%TARGET%", real_target)
-        command = command.replace("%SOURCES%", " ".join(real_sources))
+        command = command.replace("%TARGET%", target)
+        command = command.replace("%SOURCES%", " ".join(sources))
         command = command.replace("\n", " ")
         command = command.replace("\r", " ")
 
         # Make target directory, if not existing
-        if not os.path.exists(os.path.dirname(real_target)):
-            os.makedirs(os.path.dirname(real_target))
+        if not os.path.exists(os.path.dirname(target)):
+            os.makedirs(os.path.dirname(target))
 
         # Add the action
-        action = Action(real_target, command, real_sources, self.actions, pretty)
+        action = Action(target, command, sources, self.actions, pretty)
 
-        self.actions[real_target] = action
+        # Add to the target -> action map
+        self.actions[target] = action
 
+        # Add to the dependency -> action map
         for dep in action.sources:
             if not dep in self.reverse_actions:
                 self.reverse_actions[dep] = []
