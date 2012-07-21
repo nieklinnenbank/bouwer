@@ -31,9 +31,12 @@ class Action:
         self.action_map = action_map
         self.pretty  = pretty
 
-        # Look if this target needs execution, based on the sources timestamps.
+    ##
+    # Decide if this Action needs execution, based on the sources timestamps.
+    #
+    def decide_execution(self):
         try:
-            my_st = os.stat(target)
+            my_st = os.stat(self.target)
             num_done = 0
 
             for src in self.sources:
@@ -48,7 +51,6 @@ class Action:
                     num_done = num_done + 1
 
             if num_done >= len(self.sources):
-                print(self.target + " is already up-to-date")
                 self.done = True
                 self.taken = True
 
@@ -136,6 +138,10 @@ class ActionTree:
 
         # Add the action
         action = Action(target, command, sources, self.actions, pretty)
+
+        # If not forced, decide on avoiding this Action
+        if not env.args.force:
+            action.decide_execution()
 
         # Increment num_needed
         if not action.done:

@@ -44,8 +44,4 @@ if os.path.exists(cur_dir + "/source/bouwer/__init__.py"):
 import bouwer
 
 if __name__ == '__main__':
-
-    if len(sys.argv) >= 2:
-        bouwer.execute(sys.argv[1])
-    else:
-        bouwer.execute()
+    bouwer.execute()

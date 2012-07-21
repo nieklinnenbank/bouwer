@@ -18,6 +18,7 @@
 import os
 import os.path
 import sys
+import argparse
 import bouwer.config
 import bouwer.default
 import bouwer.environment
@@ -25,37 +26,56 @@ import bouwer.action
 import bouwer.work
 
 #
+# Parse command line arguments
+#
+def _parse_arguments():
+
+    # Build parser
+    parser = argparse.ArgumentParser(description='Bouwer build automation tool.',
+                                     epilog='Copyright (c) 2012 Niek Linnenbank.',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--version', action='version', version='0.0.1')
+    parser.add_argument('-v', '--verbose', help='Output verbose build information', action='store_true')
+    parser.add_argument('-f', '--force', help='Force a rebuild of all targets', action='store_true')
+    parser.add_argument('-c', '--config', help='Location of the configuration file', type=str, default='build.conf')
+    parser.add_argument('targets', metavar='TARGET', type=str, nargs='*', default=['build'], help='Build targets to execute')
+
+    # Execute parser
+    return parser.parse_args()
+
+#
 # Execute the given target in all directories
 #
-def execute(target = bouwer.default.target):
+def execute():
 
     # Traverse current directory to the top-level Bouwfile
     while os.path.exists('../' + bouwer.default.script_filename):
         os.chdir(os.getcwd() + '/../')
 
+    # Parse command line arguments
+    args = _parse_arguments()
+
     # Parse configuration
-    conf = bouwer.config.parse(bouwer.default.config_filename)
+    # TODO: please merge the build.conf and argparse stuff!?
+    conf = bouwer.config.parse(args)
 
-    # Initialize action tree
-    action_tree = bouwer.action.ActionTree()
+    # Execute each target in turn.
+    for target in args.targets:
 
-    # Traverse directory tree for each configured environment
-    if len(conf.sections()) >= 1:
-        for section_name in conf.sections():
-            env = bouwer.environment.Environment(section_name, conf, action_tree)
+        # Initialize action tree
+        action_tree = bouwer.action.ActionTree()
+
+        # Traverse directory tree for each configured environment
+        if len(conf.sections()) >= 1:
+            for section_name in conf.sections():
+                env = bouwer.environment.Environment(section_name, conf, args, action_tree)
+                env.register_targets(target)
+
+        # Use the default if not any environments configured
+        else:
+            env = bouwer.environment.Environment('DEFAULT', conf, args, action_tree)
             env.register_targets(target)
 
-    # Use the default if not any environments configured
-    else:
-        env = bouwer.environment.Environment('DEFAULT', conf, action_tree)
-        env.register_targets(target)
-
-    # Execute the generated actions
-    master = bouwer.work.Master(action_tree)
-    master.execute()
-
-    # Now execute the registered targets in parallel
-
-    # First execute all CC and AS tasks, since they are independent
-    # Then execute all LD tasks, since they depend on the CC and AS tasks
-    # Finally, do all other things, like building an ISO and filesystem images
+        # Execute the generated actions
+        master = bouwer.work.Master(action_tree, conf, args)
+        master.execute()

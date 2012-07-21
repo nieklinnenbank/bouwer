@@ -45,8 +45,10 @@ class Master:
     ##
     # Constructor
     #
-    def __init__(self, action_tree):
+    def __init__(self, action_tree, config, args):
         self.action_tree = action_tree
+        self.config = config
+        self.args   = args
         self.num_workers = multiprocessing.cpu_count()
         self.work_queue  = multiprocessing.Queue()
         self.done_queue = multiprocessing.Queue()

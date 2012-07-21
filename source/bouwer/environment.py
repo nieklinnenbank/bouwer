@@ -32,12 +32,13 @@ class Environment(dict):
     # @param global_config Reference to the configuration file
     # @param action_tree Reference to the actions tree
     #
-    def __init__(self, name, config, action_tree):
+    def __init__(self, name, config, args, action_tree):
 
 
         self.name     = name
         self.config   = config
         self.config.set(name, 'id', name)
+        self.args     = args
         self.bouwfile = None
         self.action   = action_tree
         self.buildroot_map = {} # translates the full project path to the
@@ -112,7 +113,8 @@ class Environment(dict):
     #
     def register_targets(self, target):
 
-        print(sys.argv[0] + ": executing `" + target + "'")
+        if self.args.verbose:
+            print(sys.argv[0] + ": executing `" + target + "'")
 
         # Look for build.py in all subdirectories
         for dirname, dirnames, filenames in os.walk('.'):
@@ -120,7 +122,9 @@ class Environment(dict):
                 if filename == bouwer.default.script_filename:
 
                     self.bouwfile = os.path.join(dirname, filename)
-                    print(sys.argv[0] + ': parsing `' + self.bouwfile + '\'')
+
+                    if self.args.verbose:
+                        print(sys.argv[0] + ': parsing `' + self.bouwfile + '\'')
 
                     globs = {}
                     locs  = {}
@@ -169,6 +173,9 @@ class Environment(dict):
             else:
                 real_sources.append(real_src)
 
-        print(str(real_target) + " <= " + str(real_sources))
+        # For verbose execution, remove pretty output
+        if self.args.verbose:
+            pretty = None
 
+        # Add new Action to the ActionTree
         self.action.add(real_target, action, real_sources, self, pretty)

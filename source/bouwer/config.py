@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import os
 import sys
 import configparser
 
@@ -23,10 +24,20 @@ import configparser
 # @param filename Path to the configuration file
 # @return Reference to the generated configuration
 ##
-def parse(filename):
-    print(sys.argv[0] + ': reading `' + filename + '\'')
+def parse(args):
+
+    # Output message
+    if args.verbose:
+        print(sys.argv[0] + ': reading `' + args.config + '\'')
+
+    # Config file must be readable
+    try:
+        os.stat(args.config)
+    except OSError as e:
+        print(sys.argv[0] + ": could not read config file '" + args.config + "': " + str(e))
+        sys.exit(1)
 
     # Parse the given file
     conf = configparser.ConfigParser(interpolation = configparser.ExtendedInterpolation())
-    conf.read(filename)
+    conf.read(args.config)
     return conf
