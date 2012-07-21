@@ -19,6 +19,9 @@ import os
 
 class Action:
 
+    ##
+    # Constructor
+    #
     def __init__(self, target, command, sources, action_map, pretty):
         self.target  = target
         self.command = command
@@ -34,6 +37,15 @@ class Action:
                 return False
         return True
 
+    ##
+    # Execute only when not already (being) executed and dependencies done.
+    #
+    def can_execute(self):
+        return not self.taken and not self.done and self.sources_done()
+
+##
+# Represents all Actions registered for execution.
+#
 class ActionTree:
 
     def __init__(self):
@@ -56,7 +68,7 @@ class ActionTree:
 
             if command_ready in self.reverse_actions:
                 for action in self.reverse_actions[command_ready]:
-                    if not action.taken and not action.done and action.sources_done():
+                    if action.can_execute():
                         action.taken = True
                         ret.append(action)
 
@@ -66,7 +78,7 @@ class ActionTree:
                 action = self.actions[act]
 
                 # Only add if all dependencies ready and we're not already processed
-                if not action.taken and not action.done and action.sources_done():
+                if action.can_execute():
                     action.taken = True
                     ret.append(action)
 
