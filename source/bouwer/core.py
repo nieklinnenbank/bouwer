@@ -20,7 +20,6 @@ import os.path
 import sys
 import argparse
 import bouwer.config
-import bouwer.default
 import bouwer.environment
 import bouwer.action
 import bouwer.work
@@ -38,6 +37,7 @@ def _parse_arguments():
     parser.add_argument('-v', '--verbose', help='Output verbose build information', action='store_true')
     parser.add_argument('-f', '--force', help='Force a rebuild of all targets', action='store_true')
     parser.add_argument('-c', '--config', help='Location of the configuration file', type=str, default='build.conf')
+    parser.add_argument('-s', '--script', help='Filename of scripts containing Actions', type=str, default='Bouwfile')
     parser.add_argument('targets', metavar='TARGET', type=str, nargs='*', default=['build'], help='Build targets to execute')
 
     # Execute parser
@@ -48,12 +48,12 @@ def _parse_arguments():
 #
 def execute():
 
-    # Traverse current directory to the top-level Bouwfile
-    while os.path.exists('../' + bouwer.default.script_filename):
-        os.chdir(os.getcwd() + '/../')
-
     # Parse command line arguments
     args = _parse_arguments()
+
+    # Traverse current directory to the top-level Bouwfile
+    while os.path.exists('../' + args.script):
+        os.chdir(os.getcwd() + '/../')
 
     # Parse configuration
     # TODO: please merge the build.conf and argparse stuff!?

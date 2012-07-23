@@ -40,6 +40,9 @@ def worker(num, actions, work_queue, done_queue):
         os.system(actions[name].command)
         done_queue.put(name)
 
+##
+# The Master distributes all Actions to the workers.
+#
 class Master:
 
     ##
@@ -55,6 +58,9 @@ class Master:
         self.workers = []
         pass
 
+    ##
+    # Execute all work in the current ActionTree.
+    #
     def execute(self):
 
         # Fill the queue initially with work not having dependencies
@@ -64,7 +70,9 @@ class Master:
 
         # Start workers
         for i in range(self.num_workers):
-            p = multiprocessing.Process(target = worker, args = (i, self.action_tree.actions, self.work_queue, self.done_queue, ))
+            p = multiprocessing.Process(target = worker,
+                                        args = (i, self.action_tree.actions,
+                                                self.work_queue, self.done_queue,))
             self.workers.append(p)
             p.start()
 
@@ -76,5 +84,6 @@ class Master:
             for action in available:
                 self.work_queue.put(action.target)
 
+        # Stop all workers
         for proc in self.workers:
             proc.terminate()

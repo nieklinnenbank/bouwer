@@ -21,8 +21,10 @@ import sys
 import copy
 import inspect
 import importlib
-import bouwer.default
 
+##
+# Represents a build configuration for executing Actions.
+#
 class Environment(dict):
 
     ##
@@ -33,8 +35,6 @@ class Environment(dict):
     # @param action_tree Reference to the actions tree
     #
     def __init__(self, name, config, args, action_tree):
-
-
         self.name     = name
         self.config   = config
         self.config.set(name, 'id', name)
@@ -108,7 +108,7 @@ class Environment(dict):
     def __getitem__(self, key):
         return self.config[self.name][key]
 
-    #
+    ##
     # Register all targets with the given name by recursing in all directories.
     #
     def register_targets(self, target):
@@ -116,10 +116,10 @@ class Environment(dict):
         if self.args.verbose:
             print(sys.argv[0] + ": executing `" + target + "'")
 
-        # Look for build.py in all subdirectories
+        # Look for Action scripts in all subdirectories
         for dirname, dirnames, filenames in os.walk('.'):
             for filename in filenames:
-                if filename == bouwer.default.script_filename:
+                if filename == self.args.script:
 
                     self.bouwfile = os.path.join(dirname, filename)
 
@@ -145,6 +145,9 @@ class Environment(dict):
                     # Restore configuration
                     self.config = saved_config
 
+    ##
+    # Register an Action for execution.
+    #
     def register_action(self, target, action, sources, pretty = None):
 
         # Honour the buildroot setting
