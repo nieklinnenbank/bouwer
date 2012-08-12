@@ -1,0 +1,16 @@
+- loadable plugins/modules
+- status output modules:
+    - verbose full command output:    gcc -o foo.o foo.c -Wall
+    - fancified short command output: CC  foo.c
+    - progress bar output:            [#######----------------] 33%
+    - quiet output:
+    - logfile output: build.log
+- configuration frontends:
+    - stdio fgets
+    - curses menuconfig
+    - qt4 graphical gui
+    - html web based frontend
+- builders
+- pre/post builder hook
+    - e.g. static code checks for C programs
+- configuration items

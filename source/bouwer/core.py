@@ -19,6 +19,7 @@ import os
 import os.path
 import sys
 import argparse
+import inspect
 import bouwer.config
 import bouwer.environment
 import bouwer.action
@@ -36,12 +37,20 @@ def _parse_arguments():
     parser.add_argument('--version', action='version', version='0.0.1')
     parser.add_argument('-v', '--verbose', help='Output verbose build information', action='store_true')
     parser.add_argument('-f', '--force', help='Force a rebuild of all targets', action='store_true')
-    parser.add_argument('-c', '--config', help='Location of the configuration file', type=str, default='build.conf')
+    parser.add_argument('-c', '--config', help='Location of the configuration file', type=str, default='Bouwconfig')
     parser.add_argument('-s', '--script', help='Filename of scripts containing Actions', type=str, default='Bouwfile')
+
+# TODO: this must be an "output" module, same as e.g. the "pretty" output module with " CC  foo.c",
+# and the verbose output module with all full commands printed
+    parser.add_argument('-p', '--progress', help='Print progress bar only at build', action='store_true')
+
     parser.add_argument('targets', metavar='TARGET', type=str, nargs='*', default=['build'], help='Build targets to execute')
 
     # Execute parser
     return parser.parse_args()
+
+def load_modules():
+    pass
 
 #
 # Execute the given target in all directories
@@ -55,10 +64,36 @@ def execute():
     while os.path.exists('../' + args.script):
         os.chdir(os.getcwd() + '/../')
 
+    # Load all modules
+    load_modules()
+
+    # Get the path to this source file
+    core_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+    base_path = os.path.dirname(os.path.abspath(core_path + '../../'))
+    conf_path = base_path + '/config'
+
     # Parse configuration
     # TODO: please merge the build.conf and argparse stuff!?
-    conf = bouwer.config.parse(args)
+    conf = bouwer.config.Configuration(args)
 
+    # Parse all pre-defined configurations
+    for conf_file in os.listdir(conf_path):
+        conf.parse(conf_path + os.sep + conf_file)
+
+    #
+    # TODO: the core runs all targets inside a Bouwfile to let them *REGISTER*
+    # the possible Actions. Then, only the *ENABLED* targets are run in order.
+    # That way, it is possible to derive inter-target dependencies, e.g.:
+    #
+    # def iso:
+    #     Iso('myimage.iso', 'obj_dir')  <- if only iso is given as the target, the build dependencies are also run
+    #
+    # def build:
+    #     Program('foo', 'bar.c')  <- written to obj_dir
+    #     Library('zzz', 'asdf.c') <- written to obj_dir
+    #
+
+"""
     # Execute each target in turn.
     for target in args.targets:
 
@@ -79,3 +114,4 @@ def execute():
         # Execute the generated actions
         master = bouwer.work.Master(action_tree, conf, args)
         master.execute()
+"""

@@ -41,8 +41,16 @@ class UseLibrary:
             # Find the correct include parameter for ccflags
             inc_param = self.env['incflags'].replace('%INCLUDE%', 'library' + os.sep + lib)
 
+            #print('fixing library ' + lib[3:])
+            #lib_param = self.env['libflags'].replace('%LIBRARY%', lib)
+            #lib_param = lib_param.replace('%LIBNAME%', lib[3:])
+
             # TODO: this is ugly, find some clearer way to extend the Config object
 
             # Append library include paths to the C compiler flags
             self.env.config.set(self.env['id'], 'ccflags',
                 self.env['ccflags'] + ' ' + inc_param)
+
+            # Append library linker flags
+            #self.env.config.set(self.env['id'], 'ldflags',
+            #    self.env['ldflags'] + ' ' + lib_param)

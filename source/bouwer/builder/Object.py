@@ -30,6 +30,13 @@ class Object:
         self.env = env
 
     ##
+    # Detect a valid compiler configuration
+    #
+    def detect(self, conf):
+        # Todo: attempt to compile a C program with this config
+        pass
+
+    ##
     # Build an executable Object
     #
     # @param source Source file

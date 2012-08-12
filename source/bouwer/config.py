@@ -19,25 +19,89 @@ import os
 import sys
 import configparser
 
+# Reference to the active Configuration object
+config = None
+
+class Config:
+
+    def __init__(self, name, **keywords):
+        global config
+
+        self.name     = name
+        self.keywords = keywords
+
+        # First inherit keywords of an existing item, if it exists
+        # TODO
+
+        # Then add the item to the active tree
+        config.add_item(name, self)
+
+class ConfigTree(Config):
+
+    def __init__(self, name, **keywords):
+        global config
+        self.name = name
+        self.keywords = keywords
+        config.add_tree(name, self)
+
 ##
-# Parse configuration in the given file
-# @param filename Path to the configuration file
-# @return Reference to the generated configuration
-##
-def parse(args):
+# Represents the current configuration
+#
+class Configuration:
 
-    # Output message
-    if args.verbose:
-        print(sys.argv[0] + ': reading `' + args.config + '\'')
+    # Constructor
+    def __init__(self, args):
+        self.args = args
+        pass
 
-    # Config file must be readable
-    try:
-        os.stat(args.config)
-    except OSError as e:
-        print(sys.argv[0] + ": could not read config file '" + args.config + "': " + str(e))
-        sys.exit(1)
+    # output config to a C header config.h file:
+    #
+    # enabled:
+    #
+    #    #define CONFIG_$NAME $VALUE
+    # or:
+    #
+    #    /* CONFIG_$NAME */
+    #
+    def write_header(self, path):
+        pass
 
-    # Parse the given file
-    conf = configparser.ConfigParser(interpolation = configparser.ExtendedInterpolation())
-    conf.read(args.config)
-    return conf
+    # Add a configuration tree
+    def add_tree(self, name, obj):
+        pass
+
+    # Add a configuration item
+    def add_item(self, name, obj):
+        pass
+
+    # Find an configuration item, e.g. 'VERSION'
+    def get_item(self, name):
+        pass
+
+    # Find the first config item with the given key, e.g. 'cc'
+    def get_item_by_key(self, key):
+        pass
+
+    ##
+    # Parse configuration in the given file
+    # @param filename Path to the configuration file
+    # @return Reference to the generated configuration
+    ##
+    def parse(self, filename):
+
+        global config
+
+        # Output message
+        if self.args.verbose:
+            print(sys.argv[0] + ': reading `' + filename + '\'')
+
+        # Config file must be readable
+        try:
+            os.stat(self.args.config)
+        except OSError as e:
+            print(sys.argv[0] + ": could not read config file '" + filename + "': " + str(e))
+            sys.exit(1)
+
+        # Parse the given file
+        config = self
+        exec(compile(open(filename).read(), filename, 'exec'))
