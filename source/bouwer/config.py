@@ -22,26 +22,56 @@ import configparser
 # Reference to the active Configuration object
 config = None
 
+##
+# Represents a single configuration item
+#
 class Config:
 
-    def __init__(self, name, **keywords):
-        global config
+    # Reference to the Configuration object
+    global config
 
+    ##
+    # Constructor
+    #
+    def __init__(self, name, **keywords):
         self.name     = name
         self.keywords = keywords
 
-        # First inherit keywords of an existing item, if it exists
-        # TODO
+        # See if the 'tree' keyword exists.
+        if 'tree' in keywords:
 
-        # Then add the item to the active tree
-        config.add_item(name, self)
+            # Try to inherit from the existing item, if any
+            try:
+                item = config.get_item(name)
 
-class ConfigTree(Config):
+                for key in item.keywords:
+                    if key not in keywords:
+                        keywords[key] = item.keywords[key]
+            except Exception as e:
+                print(e)
+                pass
 
+            # Add item to the specific config tree
+            config.add_item(name, self, keywords['tree'])
+
+        # Add item to Configuration
+        else:
+            config.add_item(name, self)
+##
+# Represents a configuration tree
+#
+class ConfigTree:
+
+    # Reference to the Configuration object
+    global config
+
+    ##
+    # Constructor
+    #
     def __init__(self, name, **keywords):
-        global config
-        self.name = name
+        self.name     = name
         self.keywords = keywords
+        self.items    = {}
         config.add_tree(name, self)
 
 ##
@@ -51,8 +81,9 @@ class Configuration:
 
     # Constructor
     def __init__(self, args):
-        self.args = args
-        pass
+        self.args  = args
+        self.items = {}
+        self.trees = {}
 
     # output config to a C header config.h file:
     #
@@ -68,19 +99,18 @@ class Configuration:
 
     # Add a configuration tree
     def add_tree(self, name, obj):
-        pass
+        self.trees[name] = obj
 
     # Add a configuration item
-    def add_item(self, name, obj):
-        pass
+    def add_item(self, name, obj, tree = None):
+        if tree is None:
+            self.items[name] = obj
+        else:
+            self.trees[tree].items[name] = obj
 
     # Find an configuration item, e.g. 'VERSION'
     def get_item(self, name):
-        pass
-
-    # Find the first config item with the given key, e.g. 'cc'
-    def get_item_by_key(self, key):
-        pass
+        return self.items[name]
 
     ##
     # Parse configuration in the given file
@@ -88,7 +118,6 @@ class Configuration:
     # @return Reference to the generated configuration
     ##
     def parse(self, filename):
-
         global config
 
         # Output message
@@ -97,7 +126,7 @@ class Configuration:
 
         # Config file must be readable
         try:
-            os.stat(self.args.config)
+            os.stat(filename)
         except OSError as e:
             print(sys.argv[0] + ": could not read config file '" + filename + "': " + str(e))
             sys.exit(1)
@@ -105,3 +134,26 @@ class Configuration:
         # Parse the given file
         config = self
         exec(compile(open(filename).read(), filename, 'exec'))
+
+    ##
+    # Dump the current configuration to standard output
+    #
+    def dump(self):
+
+        # Dump all configuration trees
+        for tree_name in self.trees:
+
+            tree = self.trees[tree_name]
+            print(str(tree.name))
+
+            for key in tree.keywords:
+                print('\t' + str(key) + ' = ' + str(tree.keywords[key]))
+
+            for item_name in tree.items:
+                item = tree.items[item_name]
+
+                print('')
+                print('\t' + str(item.name))
+
+                for key in item.keywords:
+                    print('\t\t' + str(key) + ' = ' + str(item.keywords[key]))

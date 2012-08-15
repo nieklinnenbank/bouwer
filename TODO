@@ -1,3 +1,8 @@
+
+- Checking for valid CC configuration must happen in a PREBUILD work queue, in parallel
+- There can also be a POSTBUILD work queue for post processing
+- i.e. the work queues must have different levels or so
+
 - loadable plugins/modules
 - status output modules:
     - verbose full command output:    gcc -o foo.o foo.c -Wall
@@ -12,5 +17,6 @@
     - html web based frontend
 - builders
 - pre/post builder hook
-    - e.g. static code checks for C programs
+    - e.g. static code checks for C programs, which must happen on every invocation of e.g. the Object() builder
+    - check must also happen on header files plz!
 - configuration items

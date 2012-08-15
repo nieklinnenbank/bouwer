@@ -80,6 +80,17 @@ def execute():
     for conf_file in os.listdir(conf_path):
         conf.parse(conf_path + os.sep + conf_file)
 
+    # Parse all user configurations
+    for dirname, dirnames, filenames in os.walk('.'):
+        for filename in filenames:
+            if filename == args.config:
+                conf_file = os.path.join(dirname, filename)
+                conf.parse(conf_file)
+
+    # Dump the current configuration for debugging
+    if args.verbose:
+        conf.dump()
+
     #
     # TODO: the core runs all targets inside a Bouwfile to let them *REGISTER*
     # the possible Actions. Then, only the *ENABLED* targets are run in order.
