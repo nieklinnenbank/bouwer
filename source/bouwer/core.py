@@ -24,11 +24,12 @@ import bouwer.config
 import bouwer.environment
 import bouwer.action
 import bouwer.work
+import bouwer.plugin
 
+##
+# Retrieve the default command line parser
 #
-# Parse command line arguments
-#
-def _parse_arguments():
+def _get_parser():
 
     # Build parser
     parser = argparse.ArgumentParser(description='Bouwer build automation tool.',
@@ -37,50 +38,51 @@ def _parse_arguments():
     parser.add_argument('--version', action='version', version='0.0.1')
     parser.add_argument('-v', '--verbose', help='Output verbose build information', action='store_true')
     parser.add_argument('-f', '--force', help='Force a rebuild of all targets', action='store_true')
-    parser.add_argument('-c', '--config', help='Location of the configuration file', type=str, default='Bouwconfig')
-    parser.add_argument('-s', '--script', help='Filename of scripts containing Actions', type=str, default='Bouwfile')
+    parser.add_argument('-c', '--config', help='Filename of configuration files', type=str, default='Bouwconfig')
+    parser.add_argument('-s', '--script', help='Filename of builder scripts', type=str, default='Bouwfile')
+    parser.add_argument('-P', '--plugin-dir', help='Directory containing plugins', type=str, default='bouwer-plugins')
 
 # TODO: this must be an "output" module, same as e.g. the "pretty" output module with " CC  foo.c",
 # and the verbose output module with all full commands printed
     parser.add_argument('-p', '--progress', help='Print progress bar only at build', action='store_true')
 
     parser.add_argument('targets', metavar='TARGET', type=str, nargs='*', default=['build'], help='Build targets to execute')
+    return parser
 
-    # Execute parser
-    return parser.parse_args()
-
-def load_modules():
-    pass
-
-#
+##
 # Execute the given target in all directories
 #
 def execute():
 
     # Parse command line arguments
-    args = _parse_arguments()
+    parser = _get_parser()
+
+    # Execute command line parser to retrieve known arguments
+    args, unknowns = parser.parse_known_args()
 
     # Traverse current directory to the top-level Bouwfile
-    while os.path.exists('../' + args.script):
-        os.chdir(os.getcwd() + '/../')
-
-    # Load all modules
-    load_modules()
+    while os.path.exists('..' + os.sep + args.script):
+        os.chdir(os.getcwd() + os.sep + '..' + os.sep)
 
     # Get the path to this source file
+    # TODO: ugly long code!!!
     core_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    base_path = os.path.dirname(os.path.abspath(core_path + '../../'))
-    conf_path = base_path + '/config'
+    base_path = os.path.dirname(os.path.abspath(core_path + '..' + os.sep + '..' + os.sep))
+    conf_path = base_path + os.sep + 'config'
+    plug_path = base_path + os.sep + 'source' + os.sep + 'bouwer-plugins'
 
-    # Parse configuration
-    # TODO: please merge the build.conf and argparse stuff!?
+    # Load all plugins from distribution and user defined
+    bouwer.plugin.load_path(plug_path, args, parser)
+    bouwer.plugin.load_path(args.plugin_dir, args, parser)
+
+    # Create configuration object
     conf = bouwer.config.Configuration(args)
 
-    # Parse all pre-defined configurations
+    # Parse all pre-defined configurations from Bouwer
     for conf_file in os.listdir(conf_path):
         conf.parse(conf_path + os.sep + conf_file)
 
-    # Parse all user configurations
+    # Parse all user defined configurations
     for dirname, dirnames, filenames in os.walk('.'):
         for filename in filenames:
             if filename == args.config:

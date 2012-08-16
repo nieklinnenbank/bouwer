@@ -41,7 +41,7 @@ cur_dir = os.path.dirname(cur_path)
 if os.path.exists(cur_dir + "/source/bouwer/__init__.py"):
     sys.path.insert(1, cur_dir + "/source")
 
-import bouwer
+import bouwer.core
 
 if __name__ == '__main__':
-    bouwer.execute()
+    bouwer.core.execute()

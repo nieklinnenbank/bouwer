@@ -15,4 +15,36 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-# This file must exist for python to mark this directory as a module
+import os
+
+##
+# Configure using standard I/O
+#
+class LineConfig(Plugin):
+
+    ##
+    # Constructor
+    #
+    def __init__(self, core):
+        core.register_configurator(self)
+
+    ##
+    # See if we have all dependencies for this plugin
+    #
+    def exists():
+        return True
+
+    ##
+    # See if we have the mkisofs/genisoimage command
+    # If we don't have any valid configuration, we are disabled.
+    #
+    def detect(conf):
+        pass
+
+    ##
+    # Generate an ISO image
+    #
+    # @param filename Name of the image
+    #
+    def execute(self, filename):
+        pass
