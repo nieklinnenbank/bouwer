@@ -37,8 +37,6 @@ class CommandLine:
         self.parser.add_argument('--version', action='version', version='0.0.1')
         self.parser.add_argument('-v', '--verbose', help='Output verbose build information', action='store_true', default=False)
         self.parser.add_argument('-f', '--force', help='Force a rebuild of all targets', action='store_true', default=False)
-        self.parser.add_argument('-c', '--config', help='Filename of configuration files', type=str, default='Bouwconfig')
-        self.parser.add_argument('-s', '--script', help='Filename of builder scripts', type=str, default='Bouwfile')
         self.parser.add_argument('-n', '--number', help='Test number argument', type=int, default=123)
         self.parser.add_argument('-d', '--float', help='Test float argument', type=float, default=4.56)
         self.parser.add_argument('-P', '--plugin-dir', help='Directory containing plugins', type=str, default='bouwer-plugins')

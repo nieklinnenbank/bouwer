@@ -16,18 +16,19 @@
 #
 
 import os
+from bouwer.plugin import *
 
 ##
 # Make an ISO image
 #
-class Iso:
+class Iso(Plugin):
 
     ##
-    # Constructor
+    # Initialize plugin
     #
-    def __init__(self, env):
-        self.env = env
-        env.register_builder(self)
+    def initialize(self, conf):
+        # TODO: register builder
+        pass
 
     ##
     # Builders always exist.

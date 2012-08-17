@@ -32,45 +32,21 @@ import bouwer.cli
 #
 def execute():
 
+    # Traverse current directory to the top-level Bouwfile
+    while os.path.exists('..' + os.sep + 'Bouwfile'):
+        os.chdir(os.getcwd() + os.sep + '..' + os.sep)
+
     # Create command line interface object
     cli = bouwer.cli.CommandLine()
 
-    # Traverse current directory to the top-level Bouwfile
-    while os.path.exists('..' + os.sep + cli.args.script):
-        os.chdir(os.getcwd() + os.sep + '..' + os.sep)
+    # (Re)load configuration
+    conf = bouwer.config.Configuration(cli.args)
 
-    # Get the path to this source file
-    # TODO: ugly long code!!!
-    core_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    base_path = os.path.dirname(os.path.abspath(core_path + '..' + os.sep + '..' + os.sep))
-    conf_path = base_path + os.sep + 'config'
-    plug_path = base_path + os.sep + 'source' + os.sep + 'bouwer-plugins'
-
-    # Load all plugins from distribution and user defined
-    # These plugins may register new command line argument types
-    bouwer.plugin.load_path(plug_path, cli)
-    bouwer.plugin.load_path(cli.args.plugin_dir, cli)
+    # Load all plugins
+    plugins = bouwer.plugin.PluginLoader(conf)
 
     # Generate final list of command line arguments
-    args = cli.parse()
-
-    # Create configuration object
-    conf = bouwer.config.Configuration(args)
-
-    # Parse all pre-defined configurations from Bouwer
-    for conf_file in os.listdir(conf_path):
-        conf.parse(conf_path + os.sep + conf_file)
-
-    # Parse all user defined configurations
-    for dirname, dirnames, filenames in os.walk('.'):
-        for filename in filenames:
-            if filename == cli.args.config:
-                conf_file = os.path.join(dirname, filename)
-                conf.parse(conf_file)
-
-    # Dump the current configuration for debugging
-    if cli.args.verbose:
-        conf.dump()
+    conf.args = cli.parse()
 
     #
     # TODO: the core runs all targets inside a Bouwfile to let them *REGISTER*

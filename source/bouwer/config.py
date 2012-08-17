@@ -18,6 +18,7 @@
 import os
 import sys
 import configparser
+import inspect
 
 # Reference to the active Configuration object
 config = None
@@ -79,11 +80,33 @@ class ConfigTree:
 #
 class Configuration:
 
+    ##
     # Constructor
+    #
     def __init__(self, args):
         self.args  = args
         self.items = {}
         self.trees = {}
+
+        # Find the path to the Bouwer distribution configuration files
+        core_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+        base_path = os.path.dirname(os.path.abspath(core_path + '..' + os.sep + '..' + os.sep))
+        conf_path = base_path + os.sep + 'config'
+
+        # Parse all pre-defined configurations from Bouwer
+        for conf_file in os.listdir(conf_path):
+            self.parse(conf_path + os.sep + conf_file)
+
+        # Parse all user defined configurations
+        for dirname, dirnames, filenames in os.walk('.'):
+            for filename in filenames:
+                if filename == 'Bouwconfig':
+                    conf_file = os.path.join(dirname, filename)
+                    self.parse(conf_file)
+
+        # Dump the current configuration for debugging
+        if args.verbose:
+            self.dump()
 
     # output config to a C header config.h file:
     #

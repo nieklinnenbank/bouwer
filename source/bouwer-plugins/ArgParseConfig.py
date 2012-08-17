@@ -19,9 +19,11 @@ import os
 from bouwer.plugin import *
 
 ##
-# Configure using standard I/O
+# Configure using the argparse cli, similar to autotools like:
 #
-class LineConfig(Plugin):
+#    ./configure --enable-option --with-foo
+#
+class ArgParseConfig(Plugin):
 
     ##
     # Initialize plugin

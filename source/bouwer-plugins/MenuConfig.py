@@ -16,17 +16,18 @@
 #
 
 import os
+from bouwer.plugin import *
 
 ##
 # Configure using ncurses
 #
-class MenuConfig:
+class MenuConfig(Plugin):
 
     ##
-    # Constructor
+    # Initialize the plugin. Only called once if exists is True.
     #
-    def __init__(self, core):
-        core.register_configurator(self)
+    def initialize(self, cli):
+        cli.parser.add_argument('--menuconfig', dest='action', action='store_const', const=self.configure)
 
     ##
     # See if we have ncurses installed
@@ -36,16 +37,8 @@ class MenuConfig:
         return True
 
     ##
-    # See if we have the mkisofs/genisoimage command
-    # If we don't have any valid configuration, we are disabled.
+    # Runs the menu configuration
     #
-    def detect(conf):
-        pass
-
-    ##
-    # Generate an ISO image
-    #
-    # @param filename Name of the image
-    #
-    def execute(self, filename):
+    def configure(self):
+        print(str('Running menuconfig!'))
         pass
