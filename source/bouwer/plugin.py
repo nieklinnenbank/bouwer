@@ -38,7 +38,7 @@ class Plugin:
 ##
 # Load all plugins in the given directory
 #
-def load_path(path, args, parser):
+def load_path(path, cli):
 
     # The path must exist, otherwise don't attempt
     if not os.path.exists(path):
@@ -47,5 +47,5 @@ def load_path(path, args, parser):
     for dirname, dirnames, filenames in os.walk(path):
         for filename in filenames:
             # TODO: only in verbose mode, but the parser isn't executed yet?
-            if args.verbose:
+            if cli.args.verbose:
                 print('Loading ' + str(filename))

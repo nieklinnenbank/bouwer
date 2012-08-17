@@ -25,43 +25,18 @@ import bouwer.environment
 import bouwer.action
 import bouwer.work
 import bouwer.plugin
-
-##
-# Retrieve the default command line parser
-#
-def _get_parser():
-
-    # Build parser
-    parser = argparse.ArgumentParser(description='Bouwer build automation tool.',
-                                     epilog='Copyright (c) 2012 Niek Linnenbank.',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--version', action='version', version='0.0.1')
-    parser.add_argument('-v', '--verbose', help='Output verbose build information', action='store_true')
-    parser.add_argument('-f', '--force', help='Force a rebuild of all targets', action='store_true')
-    parser.add_argument('-c', '--config', help='Filename of configuration files', type=str, default='Bouwconfig')
-    parser.add_argument('-s', '--script', help='Filename of builder scripts', type=str, default='Bouwfile')
-    parser.add_argument('-P', '--plugin-dir', help='Directory containing plugins', type=str, default='bouwer-plugins')
-
-# TODO: this must be an "output" module, same as e.g. the "pretty" output module with " CC  foo.c",
-# and the verbose output module with all full commands printed
-    parser.add_argument('-p', '--progress', help='Print progress bar only at build', action='store_true')
-
-    parser.add_argument('targets', metavar='TARGET', type=str, nargs='*', default=['build'], help='Build targets to execute')
-    return parser
+import bouwer.cli
 
 ##
 # Execute the given target in all directories
 #
 def execute():
 
-    # Parse command line arguments
-    parser = _get_parser()
-
-    # Execute command line parser to retrieve known arguments
-    args, unknowns = parser.parse_known_args()
+    # Create command line interface object
+    cli = bouwer.cli.CommandLine()
 
     # Traverse current directory to the top-level Bouwfile
-    while os.path.exists('..' + os.sep + args.script):
+    while os.path.exists('..' + os.sep + cli.args.script):
         os.chdir(os.getcwd() + os.sep + '..' + os.sep)
 
     # Get the path to this source file
@@ -72,8 +47,12 @@ def execute():
     plug_path = base_path + os.sep + 'source' + os.sep + 'bouwer-plugins'
 
     # Load all plugins from distribution and user defined
-    bouwer.plugin.load_path(plug_path, args, parser)
-    bouwer.plugin.load_path(args.plugin_dir, args, parser)
+    # These plugins may register new command line argument types
+    bouwer.plugin.load_path(plug_path, cli)
+    bouwer.plugin.load_path(cli.args.plugin_dir, cli)
+
+    # Generate final list of command line arguments
+    args = cli.parse()
 
     # Create configuration object
     conf = bouwer.config.Configuration(args)
@@ -85,12 +64,12 @@ def execute():
     # Parse all user defined configurations
     for dirname, dirnames, filenames in os.walk('.'):
         for filename in filenames:
-            if filename == args.config:
+            if filename == cli.args.config:
                 conf_file = os.path.join(dirname, filename)
                 conf.parse(conf_file)
 
     # Dump the current configuration for debugging
-    if args.verbose:
+    if cli.args.verbose:
         conf.dump()
 
     #
