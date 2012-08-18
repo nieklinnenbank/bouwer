@@ -19,26 +19,18 @@ import os
 from bouwer.plugin import *
 
 ##
-# Configure using ncurses
+# Output prettyfied commands
 #
-class MenuConfig(Plugin):
+class PrettyOutput(Plugin):
 
     ##
-    # Initialize the plugin. Only called once if exists is True.
+    # Initialize plugin
     #
     def initialize(self, cli):
-        cli.parser.add_argument('--menuconfig', dest='action', action='store_const', const=self.configure)
+        pass
 
     ##
-    # See if we have ncurses installed
+    # See if we have all dependencies for this plugin
     #
     def exists():
-        # Look for the ncurses module
         return True
-
-    ##
-    # Runs the menu configuration
-    #
-    def configure(self):
-        print(str('Running menuconfig!'))
-        pass

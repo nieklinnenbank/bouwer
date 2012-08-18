@@ -40,13 +40,19 @@ def execute():
     cli = bouwer.cli.CommandLine()
 
     # (Re)load configuration
-    conf = bouwer.config.Configuration(cli.args)
+    conf = bouwer.config.Configuration(cli)
 
     # Load all plugins
     plugins = bouwer.plugin.PluginLoader(conf)
 
     # Generate final list of command line arguments
     conf.args = cli.parse()
+
+    # If we have a configuration plugin enabled by cli, invoke it
+    try:
+        return conf.args.config_plugin.configure()
+    except AttributeError:
+        pass
 
     #
     # TODO: the core runs all targets inside a Bouwfile to let them *REGISTER*

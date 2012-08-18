@@ -33,13 +33,13 @@ class CommandLine:
         # Build parser
         self.parser = argparse.ArgumentParser(description='Bouwer build automation tool.',
                                      epilog='Copyright (c) 2012 Niek Linnenbank.',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help = False)
         self.parser.add_argument('--version', action='version', version='0.0.1')
         self.parser.add_argument('-v', '--verbose', help='Output verbose build information', action='store_true', default=False)
         self.parser.add_argument('-f', '--force', help='Force a rebuild of all targets', action='store_true', default=False)
         self.parser.add_argument('-n', '--number', help='Test number argument', type=int, default=123)
         self.parser.add_argument('-d', '--float', help='Test float argument', type=float, default=4.56)
-        self.parser.add_argument('-P', '--plugin-dir', help='Directory containing plugins', type=str, default='bouwer-plugins')
+        self.parser.add_argument('-P', '--plugin-dir', help='Directory containing plugins', type=str, default='bouw_plugins')
 
         # TODO: this must be an "output" module, same as e.g. the "pretty" output module with " CC  foo.c",
         # and the verbose output module with all full commands printed
@@ -59,7 +59,12 @@ class CommandLine:
     def parse(self):
 
         # Parse the arguments
+        self.parser = argparse.ArgumentParser(parents = [self.parser],
+        description='Bouwer build automation tool.',
+                                     epilog='Copyright (c) 2012 Niek Linnenbank.',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         self.args = self.parser.parse_args()
+#        self.parser.format_help()
         return self.args
 
     ##

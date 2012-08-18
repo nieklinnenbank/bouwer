@@ -83,8 +83,9 @@ class Configuration:
     ##
     # Constructor
     #
-    def __init__(self, args):
-        self.args  = args
+    def __init__(self, cli):
+        self.cli   = cli
+        self.args  = cli.args
         self.items = {}
         self.trees = {}
 
@@ -105,7 +106,7 @@ class Configuration:
                     self.parse(conf_file)
 
         # Dump the current configuration for debugging
-        if args.verbose:
+        if self.args.verbose:
             self.dump()
 
     # output config to a C header config.h file:

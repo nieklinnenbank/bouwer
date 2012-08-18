@@ -15,9 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import sys
 import os
 import os.path
 import inspect
+import importlib
 
 ##
 # Represents a loadable Bouwer plugin
@@ -27,7 +29,13 @@ class Plugin:
     ##
     # Constructor
     #
-    def __init__(self):
+    def __init__(self, conf):
+        pass
+
+    ##
+    # Startup the plugin
+    #
+    def initialize(self, conf):
         pass
 
     ##
@@ -43,22 +51,30 @@ class PluginLoader:
 
     def __init__(self, conf):
 
-        self.conf = conf
+        self.conf    = conf
+        self.plugins = {}
 
-        # TODO: ugly long code!!!
+        # TODO: ugly long code!
         core_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-        base_path = os.path.dirname(os.path.abspath(core_path + '..' + os.sep + '..' + os.sep))
-        plug_path = base_path + os.sep + 'source' + os.sep + 'bouwer-plugins'
+        plug_path = core_path + os.sep + 'plugins'
 
         self._load_path(plug_path)
         self._load_path(conf.args.plugin_dir)
 
+    ##
+    # Load all plugins in the given directory
+    #
     def _load_path(self, path):
 
         # The path must exist, otherwise don't attempt
         if not os.path.exists(path):
             return
 
+        # Append source directory to the python path, if exists.
+        if os.path.exists(path + os.sep + "__init__.py"):
+            sys.path.insert(1, os.path.dirname(path))
+
+        # Attempt to load all plugins in the given path
         for dirname, dirnames, filenames in os.walk(path):
             for filename in filenames:
 
@@ -66,17 +82,35 @@ class PluginLoader:
                 if not filename.endswith(".py") or not filename[0].isupper():
                     continue
 
-                # Debug out
+                # Begin loading the plugin
                 if self.conf.args.verbose:
-                    print('Loading ' + path + os.sep + str(filename))
+                    print('Loading ' + path + os.sep + filename)
+
+                # Setup variables
+                name, ext = os.path.splitext(filename)
+                globs  = {}
+                locs   = {}
+                class_ = None
 
                 # Load the module
-                exec(compile(open(path + os.sep + filename).read(), filename, 'exec'))
+                #exec(compile(open(path).read(), path, 'exec'), globs, locs)
+
+                loadstr = os.path.basename(path) + '.' + name
 
                 # Import the builder as a module
-                #module = importlib.import_module('bouwer.builder.' + name)
-                #class_ = getattr(module, name)
-                #instance = class_(self)
+                module = importlib.import_module(loadstr)
+#                class_ = getattr(module, name)
+#                instance = class_(self)
 
-                # Add the execute function to ourselves
-                #setattr(self.__class__, name, instance.execute)
+                # Find the plugin class, if any
+                try:
+                    class_ = getattr(module, name)
+                    #class_ = locs[plugin_name]
+                except AttributeError:
+                    pass
+
+                # Initialize the plugin, if available
+                if class_ is not None and Plugin in class_.__bases__:
+                    instance = class_(self.conf)
+                    instance.initialize(self.conf)
+                    self.plugins[name] = instance

@@ -26,7 +26,8 @@ class LineConfig(Plugin):
     ##
     # Initialize plugin
     #
-    def initialize(self, cli):
+    def initialize(self, conf):
+        print("Initializing LineConfig")
         pass
 
     ##
