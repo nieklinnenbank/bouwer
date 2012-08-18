@@ -42,5 +42,9 @@ class MenuConfig(Plugin):
     ##
     # Runs the menu configuration
     #
-    def configure(self):
+    def configure(self, conf):
         print('Running menuconfig!')
+        conf.trees['HOST'].items['GCC'].keywords['asm'] = 'assemblytool.exe'
+        conf.save()
+        print('Configuration saved!')
+

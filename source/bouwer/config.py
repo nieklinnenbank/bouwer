@@ -19,6 +19,7 @@ import os
 import sys
 import configparser
 import inspect
+import pickle
 
 # Reference to the active Configuration object
 config = None
@@ -84,26 +85,34 @@ class Configuration:
     # Constructor
     #
     def __init__(self, cli):
+
+        # Save arguments
         self.cli   = cli
         self.args  = cli.args
-        self.items = {}
-        self.trees = {}
 
-        # Find the path to the Bouwer distribution configuration files
-        core_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-        base_path = os.path.dirname(os.path.abspath(core_path + '..' + os.sep + '..' + os.sep))
-        conf_path = base_path + os.sep + 'config'
+        #
+        # TODO: configuration might have been changed in the meanwhile.
+        # perhaps there should be a mechanism to _invalidate_ or remove/update the current configuration?
+        #
+        if not self.load(cli):
+            self.items = {}
+            self.trees = {}
 
-        # Parse all pre-defined configurations from Bouwer
-        for conf_file in os.listdir(conf_path):
-            self.parse(conf_path + os.sep + conf_file)
+            # Find the path to the Bouwer distribution configuration files
+            core_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+            base_path = os.path.dirname(os.path.abspath(core_path + '..' + os.sep + '..' + os.sep))
+            conf_path = base_path + os.sep + 'config'
 
-        # Parse all user defined configurations
-        for dirname, dirnames, filenames in os.walk('.'):
-            for filename in filenames:
-                if filename == 'Bouwconfig':
-                    conf_file = os.path.join(dirname, filename)
-                    self.parse(conf_file)
+            # Parse all pre-defined configurations from Bouwer
+            for conf_file in os.listdir(conf_path):
+                self.parse(conf_path + os.sep + conf_file)
+
+            # Parse all user defined configurations
+            for dirname, dirnames, filenames in os.walk('.'):
+                for filename in filenames:
+                    if filename == 'Bouwconfig':
+                        conf_file = os.path.join(dirname, filename)
+                        self.parse(conf_file)
 
         # Dump the current configuration for debugging
         if self.args.verbose:
@@ -158,6 +167,50 @@ class Configuration:
         # Parse the given file
         config = self
         exec(compile(open(filename).read(), filename, 'exec'))
+
+    ##
+    # Save current configuration to the given file
+    #
+    def save(self, filename = '.bouwconf'):
+        fp = open(filename, 'wb')
+        pickle.dump(self, fp)
+
+    ##
+    # Load configuration from the given file
+    #
+    def load(self, cli, filename = '.bouwconf'):
+
+        # Ignore non existing files
+        if not os.path.exists(filename):
+            return
+
+        # Attempt to read configuration
+        fp  = open(filename, 'rb')
+        obj = pickle.load(fp)
+        self.items = obj.items
+        self.trees = obj.trees
+
+        # Re-assign command line
+        self.cli   = cli
+        self.args  = cli.args
+
+        # Success
+        return True
+
+    ##
+    # Serialize this object
+    #
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['cli']
+        del state['args']
+        return state
+
+    ##
+    # Deserialize an instance of this class
+    #
+    def __setstate__(self, dict_obj):
+        self.__dict__ = dict_obj
 
     ##
     # Dump the current configuration to standard output

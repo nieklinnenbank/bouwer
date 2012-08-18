@@ -92,20 +92,15 @@ class PluginLoader:
                 locs   = {}
                 class_ = None
 
-                # Load the module
-                #exec(compile(open(path).read(), path, 'exec'), globs, locs)
-
+                # Construct load string
                 loadstr = os.path.basename(path) + '.' + name
 
                 # Import the builder as a module
                 module = importlib.import_module(loadstr)
-#                class_ = getattr(module, name)
-#                instance = class_(self)
 
                 # Find the plugin class, if any
                 try:
                     class_ = getattr(module, name)
-                    #class_ = locs[plugin_name]
                 except AttributeError:
                     pass
 

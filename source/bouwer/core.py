@@ -50,7 +50,7 @@ def execute():
 
     # If we have a configuration plugin enabled by cli, invoke it
     try:
-        return conf.args.config_plugin.configure()
+        return conf.args.config_plugin.configure(conf)
     except AttributeError:
         pass
 
