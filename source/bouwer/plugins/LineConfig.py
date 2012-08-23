@@ -16,6 +16,7 @@
 #
 
 import os
+import argparse
 from bouwer.plugin import *
 
 ##
@@ -27,11 +28,45 @@ class LineConfig(Plugin):
     # Initialize plugin
     #
     def initialize(self, conf):
-        print("Initializing LineConfig")
-        pass
+        conf.cli.parser.add_argument('--lineconfig', dest='config_plugin',
+            action='store_const', const=self, default=argparse.SUPPRESS,
+            help='Change configuration using standard I/O interface')
 
     ##
-    # See if we have all dependencies for this plugin
+    # Main configuration routine
     #
-    def exists():
-        return True
+    def configure(self, conf):
+
+        self.item_count  = 0
+        self.item_total  = len(conf.items)
+        self.item_total += len(conf.trees)
+
+        for item in conf.items:
+            self._prompt_change(conf.items[item])
+
+#        for tree in conf.trees:
+#            for item in tree.items:
+#                self._prompt_change(item)
+
+        conf.save()
+        print('Configuration saved!')
+
+    def _prompt_change(self, item):
+
+        prompt = '{' + str(self.item_count) + '/' + str(self.item_total) + '} '
+
+        self.item_count += 1
+
+        if 'title' in item.keywords:
+            prompt += item.keywords['title']
+        else:
+            prompt += item.name
+
+        # Please change this intelligently for various types of config items plz.
+        # e.g. for boolean items, this is true, but for strings, it's not.
+        prompt += ' (Y/y/N/n/?) '
+
+        if 'default' in item.keywords:
+            prompt += ' [' + str(item.keywords['default']) + ']'
+
+        print(prompt)

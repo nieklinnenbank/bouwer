@@ -39,6 +39,25 @@ class Config:
         self.name     = name
         self.keywords = keywords
 
+        # Set missing keywords
+        if not 'default' in keywords: self.keywords['default'] = False
+        if not 'depends' in keywords: self.keywords['depends'] = []
+
+        # Apply the default value
+        # TODO: make an exception for List here?
+        self.value = self.keywords['default']
+        self.type  = type(keywords['default'])
+
+        # See if the 'childs' keyword exists, for reverse dependency adding
+        if 'childs' in keywords:
+            for child in keywords['childs']:
+                child.keywords['depends'].append(name)
+
+        if self.type is list:
+            self.value = self.keywords['default'][0]
+            for item in self.keywords['default']:
+                item.keywords['depends'].append(name)
+
         # See if the 'tree' keyword exists.
         if 'tree' in keywords:
 
@@ -59,6 +78,7 @@ class Config:
         # Add item to Configuration
         else:
             config.add_item(name, self)
+
 ##
 # Represents a configuration tree
 #
@@ -217,6 +237,16 @@ class Configuration:
     #
     def dump(self):
 
+        # Dump all configuration items in the default tree
+        for item_name in self.items:
+            item = self.items[item_name]
+
+            print('')
+            print(str(item.name) + ':' + str(item.type) + ' => ' + str(item.value))
+
+            for key in item.keywords:
+                print('\t' + str(key) + ' = ' + str(item.keywords[key]))
+
         # Dump all configuration trees
         for tree_name in self.trees:
 
@@ -230,7 +260,7 @@ class Configuration:
                 item = tree.items[item_name]
 
                 print('')
-                print('\t' + str(item.name))
+                print('\t' + str(item.name) + ':' + str(item.type) + ' => ' + str(item.value))
 
                 for key in item.keywords:
                     print('\t\t' + str(key) + ' = ' + str(item.keywords[key]))

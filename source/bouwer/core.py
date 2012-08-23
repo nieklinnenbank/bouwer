@@ -49,10 +49,14 @@ def execute():
     conf.args = cli.parse()
 
     # If we have a configuration plugin enabled by cli, invoke it
+    conf_plugin = None
     try:
-        return conf.args.config_plugin.configure(conf)
+        conf_plugin = conf.args.config_plugin
     except AttributeError:
         pass
+
+    if conf_plugin is not None:
+        conf_plugin.configure(conf)
 
     #
     # TODO: the core runs all targets inside a Bouwfile to let them *REGISTER*
