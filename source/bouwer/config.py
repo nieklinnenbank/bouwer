@@ -47,12 +47,15 @@ class Config:
         # TODO: make an exception for List here?
         self.value = self.keywords['default']
         self.type  = type(keywords['default'])
+        self.bouwfile = os.path.abspath(inspect.getfile(inspect.currentframe().f_back))
 
         # See if the 'childs' keyword exists, for reverse dependency adding
         if 'childs' in keywords:
             for child in keywords['childs']:
                 child.keywords['depends'].append(name)
 
+        # In case of a list, make the options also a rev dependency
+        # TODO: make sure only one option is True initially
         if self.type is list:
             self.value = self.keywords['default'][0]
             for item in self.keywords['default']:
@@ -79,9 +82,17 @@ class Config:
         else:
             config.add_item(name, self)
 
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
+
 ##
 # Represents a configuration tree
 #
+
+# TODO: ConfigTree should inherit from Config plz
 class ConfigTree:
 
     # Reference to the Configuration object
@@ -94,6 +105,15 @@ class ConfigTree:
         self.name     = name
         self.keywords = keywords
         self.items    = {}
+        self.type     = bool
+        self.bouwfile = os.path.abspath(inspect.getfile(inspect.currentframe().f_back))
+
+        # Set missing keywords
+        if not 'default' in keywords: self.keywords['default'] = False
+        if not 'depends' in keywords: self.keywords['depends'] = []
+
+        self.value = self.keywords['default']
+
         config.add_tree(name, self)
 
 ##
@@ -117,6 +137,7 @@ class Configuration:
         if not self.load(cli):
             self.items = {}
             self.trees = {}
+            self.path_map = {}
 
             # Find the path to the Bouwer distribution configuration files
             core_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
@@ -138,6 +159,7 @@ class Configuration:
         if self.args.verbose:
             self.dump()
 
+    ##
     # output config to a C header config.h file:
     #
     # enabled:
@@ -150,18 +172,35 @@ class Configuration:
     def write_header(self, path):
         pass
 
+    ##
     # Add a configuration tree
+    #
     def add_tree(self, name, obj):
         self.trees[name] = obj
 
+        if not obj.bouwfile in self.path_map:
+            self.path_map[obj.bouwfile] = [ obj ]
+        else:
+            self.path_map[obj.bouwfile].append(obj)
+
+
+    ##
     # Add a configuration item
+    #
     def add_item(self, name, obj, tree = None):
         if tree is None:
             self.items[name] = obj
         else:
             self.trees[tree].items[name] = obj
 
-    # Find an configuration item, e.g. 'VERSION'
+        if not obj.bouwfile in self.path_map:
+            self.path_map[obj.bouwfile] = [ obj ]
+        else:
+            self.path_map[obj.bouwfile].append(obj)
+
+    ##
+    # Find an configuration item by name, e.g. 'VERSION'
+    #
     def get_item(self, name):
         return self.items[name]
 
@@ -209,6 +248,7 @@ class Configuration:
         obj = pickle.load(fp)
         self.items = obj.items
         self.trees = obj.trees
+        self.path_map = obj.path_map
 
         # Re-assign command line
         self.cli   = cli
@@ -240,12 +280,7 @@ class Configuration:
         # Dump all configuration items in the default tree
         for item_name in self.items:
             item = self.items[item_name]
-
-            print('')
-            print(str(item.name) + ':' + str(item.type) + ' => ' + str(item.value))
-
-            for key in item.keywords:
-                print('\t' + str(key) + ' = ' + str(item.keywords[key]))
+            self._dump_item(item)
 
         # Dump all configuration trees
         for tree_name in self.trees:
@@ -258,9 +293,12 @@ class Configuration:
 
             for item_name in tree.items:
                 item = tree.items[item_name]
+                self._dump_item(item)
 
-                print('')
-                print('\t' + str(item.name) + ':' + str(item.type) + ' => ' + str(item.value))
+    def _dump_item(self, item):
 
-                for key in item.keywords:
-                    print('\t\t' + str(key) + ' = ' + str(item.keywords[key]))
+        print('')
+        print(str(item.name) + ':' + str(item.type) + ' => ' + str(item.value))
+
+        for key in item.keywords:
+            print('\t' + str(key) + ' = ' + str(item.keywords[key]))

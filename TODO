@@ -20,3 +20,5 @@
     - e.g. static code checks for C programs, which must happen on every invocation of e.g. the Object() builder
     - check must also happen on header files plz!
 - configuration items
+    - MAYBE USE PPRINT INSTEAD OF PICKLE FOR PERSISTENCY?
+
