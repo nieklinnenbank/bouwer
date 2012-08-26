@@ -16,6 +16,7 @@
 #
 
 import os
+import sys
 import argparse
 from bouwer.plugin import *
 
@@ -70,12 +71,15 @@ class LineConfig(Plugin):
     #
     def _change_item(self, item):
 
-
         # Print the prompt for this item
         self._print_prompt(item)
 
         # Read the user input
-        line = sys.stdin.readline().strip()
+        try:
+            line = sys.stdin.readline().strip()
+        except KeyboardInterrupt:
+            print()
+            sys.exit(1)
 
         # No input means keep the current value
         if len(line) == 0: return True
