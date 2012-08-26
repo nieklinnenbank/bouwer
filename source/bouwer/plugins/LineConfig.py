@@ -62,9 +62,18 @@ class LineConfig(Plugin):
 
                 while self._change_item(obj) is not True: pass
 
-        # TODO: prompt first here!
-        conf.save()
-        print('Configuration saved!')
+        # Ask to save the modified configuration.
+        print()
+        print('Save Configuration? (y/n) [n] ', end = '')
+        sys.stdout.flush()
+
+        try:
+            if sys.stdin.readline().strip().lower() == 'y':
+                conf.save()
+                print('Configuration saved!')
+        except KeyboardInterrupt:
+            print()
+            sys.exit(1)
 
     ##
     # Change a configuration item
