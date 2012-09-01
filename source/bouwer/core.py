@@ -56,7 +56,7 @@ def execute():
         pass
 
     if conf_plugin is not None:
-        conf_plugin.configure(conf)
+        sys.exit(conf_plugin.configure(conf))
 
     #
     # TODO: the core runs all targets inside a Bouwfile to let them *REGISTER*
@@ -93,3 +93,4 @@ def execute():
         master = bouwer.work.Master(action_tree, conf, args)
         master.execute()
 """
+

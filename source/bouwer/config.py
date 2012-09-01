@@ -21,16 +21,10 @@ import configparser
 import inspect
 import pickle
 
-# Reference to the active Configuration object
-config = None
-
 ##
 # Represents a single configuration item
 #
 class Config:
-
-    # Reference to the Configuration object
-    global config
 
     ##
     # Constructor
@@ -38,50 +32,38 @@ class Config:
     def __init__(self, name, **keywords):
         self.name     = name
         self.keywords = keywords
+        self.subitems = {}
+        self.value    = keywords.get('default', True)
+        self.type     = type(self.value)
+        self.depends  = keywords.get('depends', [])
 
-        # Set missing keywords
-        if not 'default' in keywords: self.keywords['default'] = False
-        if not 'depends' in keywords: self.keywords['depends'] = []
-
-        # Apply the default value
-        # TODO: make an exception for List here?
-        self.value = self.keywords['default']
-        self.type  = type(keywords['default'])
-        self.bouwfile = os.path.abspath(inspect.getfile(inspect.currentframe().f_back))
-
-        # See if the 'childs' keyword exists, for reverse dependency adding
-        if 'childs' in keywords:
-            for child in keywords['childs']:
-                child.keywords['depends'].append(name)
+        # Let all of our childs depend on us    
+        for child in keywords.get('childs', []):
+            child.depends.append(self)
 
         # In case of a list, make the options also a rev dependency
-        # TODO: make sure only one option is True initially
         if self.type is list:
+
+            # Default selected option is the first.
             self.value = self.keywords['default'][0]
+
+            # It's also possible to configure the default selected item.
             for item in self.keywords['default']:
-                item.keywords['depends'].append(name)
+                if 'selected' in item.keywords:
+                    self.value = item
+                    break
 
-        # See if the 'tree' keyword exists.
-        if 'tree' in keywords:
+            # Set dependency to us for all options            
+            for item in self.keywords['default']:
+                item.depends.append(self)
 
-            # Try to inherit from the existing item, if any
-            try:
-                item = config.get_item(name)
+                # Make sure only the default boolean option is True
+                if item.type == bool:
+                   item.value = (item == self.value)
 
-                for key in item.keywords:
-                    if key not in keywords:
-                        keywords[key] = item.keywords[key]
-            except Exception as e:
-                print(e)
-                pass
-
-            # Add item to the specific config tree
-            config.add_item(name, self, keywords['tree'])
-
-        # Add item to Configuration
-        else:
-            config.add_item(name, self)
-
+        # Store the location of the Bouwfile where we are declared
+        self.bouwfile = os.path.abspath(inspect.getfile(inspect.currentframe().f_back))
+                                
     def __str__(self):
         return self.name
 
@@ -89,32 +71,28 @@ class Config:
         return self.name
 
 ##
-# Represents a configuration tree
+# Wrapper for accessing Configuration
 #
-
-# TODO: ConfigTree should inherit from Config plz
-class ConfigTree:
-
-    # Reference to the Configuration object
-    global config
+class ConfigWrapper:
 
     ##
     # Constructor
     #
-    def __init__(self, name, **keywords):
-        self.name     = name
-        self.keywords = keywords
-        self.items    = {}
-        self.type     = bool
-        self.bouwfile = os.path.abspath(inspect.getfile(inspect.currentframe().f_back))
+    def __init__(self, conf):
+        self.conf = conf
 
-        # Set missing keywords
-        if not 'default' in keywords: self.keywords['default'] = False
-        if not 'depends' in keywords: self.keywords['depends'] = []
+    ##
+    # Add an item to the Configuration
+    #
+    def put_item(self, name, **keywords):
+        return self.conf.insert_item(Config(name, **keywords))
 
-        self.value = self.keywords['default']
-
-        config.add_tree(name, self)
+    ##
+    # Add a new configuration tree
+    #
+    def put_tree(self, name, **keywords):
+        return self.conf.insert_tree(Config(name, **keywords))
+        
 
 ##
 # Represents the current configuration
@@ -123,94 +101,113 @@ class Configuration:
 
     ##
     # Constructor
+    # @param cli CommandLine object for reading arguments
     #
     def __init__(self, cli):
-
-        # Save arguments
         self.cli   = cli
         self.args  = cli.args
+        self.trees = { 'DEFAULT': Config('DEFAULT') }
 
-        #
-        # TODO: configuration might have been changed in the meanwhile.
-        # perhaps there should be a mechanism to _invalidate_ or remove/update the current configuration?
-        #
-        if not self.load(cli):
-            self.items = {}
-            self.trees = {}
-            self.path_map = {}
+        # Attempt to load saved config, otherwise reset to predefined.
+        if not self.load():
+            self.reset()
 
-            # Find the path to the Bouwer distribution configuration files
-            core_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-            base_path = os.path.dirname(os.path.abspath(core_path + '..' + os.sep + '..' + os.sep))
-            conf_path = base_path + os.sep + 'config'
-
-            # Parse all pre-defined configurations from Bouwer
-            for conf_file in os.listdir(conf_path):
-                self.parse(conf_path + os.sep + conf_file)
-
-            # Parse all user defined configurations
-            for dirname, dirnames, filenames in os.walk('.'):
-                for filename in filenames:
-                    if filename == 'Bouwconfig':
-                        conf_file = os.path.join(dirname, filename)
-                        self.parse(conf_file)
-
-        # Dump the current configuration for debugging
+        # Dump configuration for debugging
         if self.args.verbose:
             self.dump()
 
     ##
-    # output config to a C header config.h file:
+    # Introduce a new configuration item
+    # @param obj Config object to insert
+    # @param tree Name of the tree to insert object or NONE for default tree.
     #
-    # enabled:
+    def insert_item(self, obj, tree = None):
+        self.trees[obj.keywords.get('tree', 'DEFAULT')].subitems[obj.name] = obj
+        return obj
+
+    ##
+    # Introduce a new configuration tree
+    # @param obj Config object for the tree
     #
-    #    #define CONFIG_$NAME $VALUE
-    # or:
+    def insert_tree(self, obj):
+        self.trees[obj.name] = obj
+        return obj
+
+    ##
+    # Load a saved configuration from the given file
+    # @param filename Path to the saved configuration file
     #
-    #    /* CONFIG_$NAME */
+    def load(self, filename = '.bouwconf'):
+        return False
+
+    ##
+    # Save current configuration to the given file
+    # @param filename Path to the configuration output file
     #
-    def write_header(self, path):
+    def save(self, filename = '.bouwconf'):
         pass
 
     ##
-    # Add a configuration tree
+    # Reset configuration to the initial predefined state
     #
-    def add_tree(self, name, obj):
-        self.trees[name] = obj
+    def reset(self):
 
-        if not obj.bouwfile in self.path_map:
-            self.path_map[obj.bouwfile] = [ obj ]
-        else:
-            self.path_map[obj.bouwfile].append(obj)
+        # Find the path to the Bouwer predefined configuration files
+        curr_file = inspect.getfile(inspect.currentframe())
+        curr_dir  = os.path.dirname(os.path.abspath(curr_file))
+        base_path = os.path.dirname(os.path.abspath(curr_dir + '..' + os.sep + '..' + os.sep))
+        conf_path = base_path + os.sep + 'config'
 
+        # Parse all pre-defined configurations from Bouwer
+        self._scan_dir(conf_path)
+
+        # Parse all user defined configurations
+        self._scan_dir(os.getcwd())
+
+        # TODO: synchronize configuration trees!!!
 
     ##
-    # Add a configuration item
+    # Dump the current configuration to standard output
     #
-    def add_item(self, name, obj, tree = None):
-        if tree is None:
-            self.items[name] = obj
-        else:
-            self.trees[tree].items[name] = obj
-
-        if not obj.bouwfile in self.path_map:
-            self.path_map[obj.bouwfile] = [ obj ]
-        else:
-            self.path_map[obj.bouwfile].append(obj)
+    def dump(self):
+        for tree_name, tree in self.trees.items():
+            self._dump_item(tree)
 
     ##
-    # Find an configuration item by name, e.g. 'VERSION'
+    # Dump a single configuration item to stdout
+    # @param item Config object to dump
+    # @param parent Text describing the parent item
     #
-    def get_item(self, name):
-        return self.items[name]
+    def _dump_item(self, item, parent = ''):
+        print(parent + str(item) + ' ' + str(item.keywords))
+        for child_item_name, child_item in item.subitems.items():
+            self._dump_item(child_item, parent + item.name + '.')
 
     ##
-    # Parse configuration in the given file
+    # Scan a directory for configuration definition files.
+    # @param dirname Path to directory to scan
+    #
+    def _scan_dir(self, dirname):
+
+        found = False
+
+        # Look for all Bouwconfig's.
+        for filename in os.listdir(dirname):
+            if filename.endswith('Bouwconfig'):
+                self._parse(dirname + os.sep + filename)
+                found = True
+
+        # Only scan subdirectories if at least one Bouwconfig found.
+        if found:        
+            for filename in os.listdir(dirname):
+                if os.path.isdir(dirname + os.sep + filename):
+                    self._scan_dir(dirname + os.sep + filename)
+        
+    ##
+    # Parse configuration definition file
     # @param filename Path to the configuration file
-    # @return Reference to the generated configuration
     ##
-    def parse(self, filename):
-        global config
+    def _parse(self, filename):
 
         # Output message
         if self.args.verbose:
@@ -223,82 +220,10 @@ class Configuration:
             print(sys.argv[0] + ": could not read config file '" + filename + "': " + str(e))
             sys.exit(1)
 
+        # Initialize wrapper for adding item to ourselves
+        wrapper = ConfigWrapper(self)
+        globs = { 'Config':     wrapper.put_item,
+                  'ConfigTree': wrapper.put_tree }
+
         # Parse the given file
-        config = self
-        exec(compile(open(filename).read(), filename, 'exec'))
-
-    ##
-    # Save current configuration to the given file
-    #
-    def save(self, filename = '.bouwconf'):
-        fp = open(filename, 'wb')
-        pickle.dump(self, fp)
-
-    ##
-    # Load configuration from the given file
-    #
-    def load(self, cli, filename = '.bouwconf'):
-
-        # Ignore non existing files
-        if not os.path.exists(filename):
-            return
-
-        # Attempt to read configuration
-        fp  = open(filename, 'rb')
-        obj = pickle.load(fp)
-        self.items = obj.items
-        self.trees = obj.trees
-        self.path_map = obj.path_map
-
-        # Re-assign command line
-        self.cli   = cli
-        self.args  = cli.args
-
-        # Success
-        return True
-
-    ##
-    # Serialize this object
-    #
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        del state['cli']
-        del state['args']
-        return state
-
-    ##
-    # Deserialize an instance of this class
-    #
-    def __setstate__(self, dict_obj):
-        self.__dict__ = dict_obj
-
-    ##
-    # Dump the current configuration to standard output
-    #
-    def dump(self):
-
-        # Dump all configuration items in the default tree
-        for item_name in self.items:
-            item = self.items[item_name]
-            self._dump_item(item)
-
-        # Dump all configuration trees
-        for tree_name in self.trees:
-
-            tree = self.trees[tree_name]
-            print(str(tree.name))
-
-            for key in tree.keywords:
-                print('\t' + str(key) + ' = ' + str(tree.keywords[key]))
-
-            for item_name in tree.items:
-                item = tree.items[item_name]
-                self._dump_item(item)
-
-    def _dump_item(self, item):
-
-        print('')
-        print(str(item.name) + ':' + str(item.type) + ' => ' + str(item.value))
-
-        for key in item.keywords:
-            print('\t' + str(key) + ' = ' + str(item.keywords[key]))
+        exec(compile(open(filename).read(), filename, 'exec'), globs)

@@ -1,3 +1,4 @@
+- only rescan Bouwconfig files if there is no .bouwconf available pls.
 
 - Checking for valid CC configuration must happen in a PREBUILD work queue, in parallel
 - There can also be a POSTBUILD work queue for post processing

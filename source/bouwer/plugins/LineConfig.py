@@ -45,22 +45,26 @@ class LineConfig(Plugin):
         self.item_count  = 0
 
         # TODO: put this in the global config module
-        self.item_total  = len(conf.items)
+        #self.item_total  = len(conf.items)
+        self.item_total = 0
         self.item_total += len(conf.trees)
 
-        for tree in conf.trees:
-            self.item_total += len(conf.trees[tree].items)
+        for tree_name, tree in conf.trees.items():
+            self.item_total += len(tree.subitems)
 
-        for path in conf.path_map:
-            print()
-            print(str(os.path.relpath(path)))
+#        for path in conf.path_map:
+#            print()
+#            print(str(os.path.relpath(path)))
 
-            for obj in conf.path_map[path]:
+#            for obj in conf.path_map[path]:
+
+        for tree_name, tree in conf.trees.items():
+            for item_name, item in tree.subitems.items():
 
                 # Increase item count
                 self.item_count += 1
 
-                while self._change_item(obj) is not True: pass
+                while self._change_item(item) is not True: pass
 
         # Ask to save the modified configuration.
         print()
@@ -73,7 +77,8 @@ class LineConfig(Plugin):
                 print('Configuration saved!')
         except KeyboardInterrupt:
             print()
-            sys.exit(1)
+            return 1
+        return 0
 
     ##
     # Change a configuration item
