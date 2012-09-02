@@ -31,8 +31,8 @@ class LineConfig(Plugin):
     def initialize(self, conf):
 
         conf.cli.parser.add_argument('--lineconfig',
-            dest    ='config_plugin',
-            action  ='store_const',
+            dest    = 'config_plugin',
+            action  = 'store_const',
             const   = self,
             default = argparse.SUPPRESS,
             help    = 'Change configuration using standard I/O interface')
@@ -42,29 +42,29 @@ class LineConfig(Plugin):
     #
     def configure(self, conf):
 
-        self.item_count  = 0
-
-        # TODO: put this in the global config module
-        #self.item_total  = len(conf.items)
-        self.item_total = 0
-        self.item_total += len(conf.trees)
+        self.item_count = 0
+        self.item_total = len(conf.trees)
 
         for tree_name, tree in conf.trees.items():
             self.item_total += len(tree.subitems)
 
-#        for path in conf.path_map:
-#            print()
-#            print(str(os.path.relpath(path)))
-
-#            for obj in conf.path_map[path]:
-
         for tree_name, tree in conf.trees.items():
-            for item_name, item in tree.subitems.items():
+            print()
+            print(tree.name)
+            
+            for path in tree.bouwfiles:
+                print()
+                print(str(os.path.relpath(path)))
 
-                # Increase item count
-                self.item_count += 1
+                for item in tree.bouwfiles[path]:
+                    if item.parent is not None:
+                        continue
 
-                while self._change_item(item) is not True: pass
+                    self._change_item(item)
+
+                    if 'childs' in item.keywords and item.value:
+                        for child in item.keywords.get('childs'):
+                            self._change_item(child)
 
         # Ask to save the modified configuration.
         print()
@@ -80,10 +80,18 @@ class LineConfig(Plugin):
             return 1
         return 0
 
+    def _change_item(self, item):
+
+        # Increase item count
+        self.item_count += 1
+
+        while self._try_change_item(item) is not True:
+            pass
+
     ##
     # Change a configuration item
     #
-    def _change_item(self, item):
+    def _try_change_item(self, item):
 
         # Print the prompt for this item
         self._print_prompt(item)
@@ -105,7 +113,7 @@ class LineConfig(Plugin):
 
         # Change a boolean
         if item.type == bool:
-            if line == 'Y' or line == 'y': item.value = True
+            if line == 'Y' or line == 'y': item.value = True # TODO: also set rev. dependencies to True, if any.
             if line == 'N' or line == 'n': item.value = False
             if line == 'k': pass
             if line == '?': pass

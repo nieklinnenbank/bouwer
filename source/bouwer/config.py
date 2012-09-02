@@ -30,16 +30,19 @@ class Config:
     # Constructor
     #
     def __init__(self, name, **keywords):
-        self.name     = name
-        self.keywords = keywords
-        self.subitems = {}
-        self.value    = keywords.get('default', True)
-        self.type     = type(self.value)
-        self.depends  = keywords.get('depends', [])
-
+        self.name      = name
+        self.keywords  = keywords
+        self.subitems  = {}
+        self.value     = keywords.get('default', True)
+        self.type      = type(self.value)
+        self.depends   = keywords.get('depends', [])
+        self.parent    = None
+        self.bouwfiles = {}
+        
         # Let all of our childs depend on us    
         for child in keywords.get('childs', []):
             child.depends.append(self)
+            child.parent = self
 
         # In case of a list, make the options also a rev dependency
         if self.type is list:
@@ -47,22 +50,31 @@ class Config:
             # Default selected option is the first.
             self.value = self.keywords['default'][0]
 
-            # It's also possible to configure the default selected item.
-            for item in self.keywords['default']:
-                if 'selected' in item.keywords:
-                    self.value = item
-                    break
-
-            # Set dependency to us for all options            
+            # Add dependency to us for all list options
             for item in self.keywords['default']:
                 item.depends.append(self)
+                item.parent = self
 
-                # Make sure only the default boolean option is True
+                # It's also possible to configure the default selected item.
+                if 'selected' in item.keywords:
+                    self.value = item
+
+    def __getattr__(self, name):
+        return self.__dict__[name]
+        
+    def __setattr__(self, name, value):    
+        if self.__dict__.get('type', bool) == list and name == 'value':
+
+            # Value must contain item from the default list
+            if value not in self.keywords.get('default'):
+                raise Exception("item " + str(value) + " not in list " + self.name)
+
+            # Make sure only one boolean option is True for lists
+            for item in self.keywords.get('default'):
                 if item.type == bool:
-                   item.value = (item == self.value)
-
-        # Store the location of the Bouwfile where we are declared
-        self.bouwfile = os.path.abspath(inspect.getfile(inspect.currentframe().f_back))
+                    item.value = (item == value)
+        
+        return object.__setattr__(self, name, value)
                                 
     def __str__(self):
         return self.name
@@ -122,7 +134,14 @@ class Configuration:
     # @param tree Name of the tree to insert object or NONE for default tree.
     #
     def insert_item(self, obj, tree = None):
-        self.trees[obj.keywords.get('tree', 'DEFAULT')].subitems[obj.name] = obj
+        dest_tree = self.trees[obj.keywords.get('tree', 'DEFAULT')]
+        dest_tree.subitems[obj.name] = obj
+        
+        path = os.path.abspath(inspect.getfile(inspect.currentframe().f_back.f_back))
+        if not path in dest_tree.bouwfiles:
+            dest_tree.bouwfiles[path] = []
+
+        dest_tree.bouwfiles[path].append(obj)
         return obj
 
     ##
@@ -174,12 +193,32 @@ class Configuration:
             self._dump_item(tree)
 
     ##
+    # Retrieve a sorted dictionary of items per Bouwfile for the given tree.
+    # @param tree_name Name of the tree to sort
+    # @return Tuple containing sorted dictionary and item count
+    #
+    def sort(self, tree_name):
+        tree   = self.trees.get(name)
+        sorted = {}
+        count  = 0
+        
+        for item_name, item in tree.subitems.items():
+            if not item.bouwfile in sorted:
+                sorted[item.bouwfile] = []
+            if not item.readonly:
+                sorted[item.bouwfile].append(item)
+                count += 1
+
+        return (sorted, count)
+
+    ##
     # Dump a single configuration item to stdout
     # @param item Config object to dump
     # @param parent Text describing the parent item
     #
     def _dump_item(self, item, parent = ''):
         print(parent + str(item) + ' ' + str(item.keywords))
+
         for child_item_name, child_item in item.subitems.items():
             self._dump_item(child_item, parent + item.name + '.')
 
