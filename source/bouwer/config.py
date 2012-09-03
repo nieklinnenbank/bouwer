@@ -33,18 +33,21 @@ class Config:
         self.name      = name
         self.keywords  = keywords
         self.subitems  = {}
+        self.depends   = [] # TODO: problem, this contains strings...
         self.value     = keywords.get('default', True)
         self.type      = type(self.value)
-        self.depends   = keywords.get('depends', [])
-        self.parent    = None
         self.bouwfiles = {}
+
+        # TODO: add circular dependency check somewhere.
         
         # Let all of our childs depend on us    
         for child in keywords.get('childs', []):
-            child.depends.append(self)
-            child.parent = self
+            child.depends.append(self)              # TODO: this NOT!
 
-        # In case of a list, make the options also a rev dependency
+#        for item in keywords.get('depends', []): # TODO: fix this in synchronize, real object pls!
+ #           self.depends.append(item)
+
+        # In case of a list, make the options depend on us
         if self.type is list:
 
             # Default selected option is the first.
@@ -52,18 +55,27 @@ class Config:
 
             # Add dependency to us for all list options
             for item in self.keywords['default']:
-                item.depends.append(self)
-                item.parent = self
+                item.depends.append(self)       # TODO: don't do this, let synchronize() fix this?
 
                 # It's also possible to configure the default selected item.
                 if 'selected' in item.keywords:
                     self.value = item
 
+    ##
+    # See if all our dependencies are met.
+    # @return True if dependencies met, False otherwise.
+    #
+    def satisfied(self):
+        for dep in self.depends:
+            if not dep.value:
+                return False
+        return True
+
     def __getattr__(self, name):
         return self.__dict__[name]
         
     def __setattr__(self, name, value):    
-        if self.__dict__.get('type', bool) == list and name == 'value':
+        if self.__dict__.get('type', None) == list and name == 'value':
 
             # Value must contain item from the default list
             if value not in self.keywords.get('default'):
@@ -73,7 +85,7 @@ class Config:
             for item in self.keywords.get('default'):
                 if item.type == bool:
                     item.value = (item == value)
-        
+
         return object.__setattr__(self, name, value)
                                 
     def __str__(self):
@@ -183,7 +195,8 @@ class Configuration:
         # Parse all user defined configurations
         self._scan_dir(os.getcwd())
 
-        # TODO: synchronize configuration trees!!!
+        # Synchronize configuration trees
+        self._synchronize()
 
     ##
     # Dump the current configuration to standard output
@@ -193,23 +206,10 @@ class Configuration:
             self._dump_item(tree)
 
     ##
-    # Retrieve a sorted dictionary of items per Bouwfile for the given tree.
-    # @param tree_name Name of the tree to sort
-    # @return Tuple containing sorted dictionary and item count
+    # Make sure all configuration trees contain at least the default items
     #
-    def sort(self, tree_name):
-        tree   = self.trees.get(name)
-        sorted = {}
-        count  = 0
-        
-        for item_name, item in tree.subitems.items():
-            if not item.bouwfile in sorted:
-                sorted[item.bouwfile] = []
-            if not item.readonly:
-                sorted[item.bouwfile].append(item)
-                count += 1
-
-        return (sorted, count)
+    def _synchronize(self):    
+        pass
 
     ##
     # Dump a single configuration item to stdout

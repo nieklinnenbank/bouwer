@@ -52,19 +52,22 @@ class LineConfig(Plugin):
             print()
             print(tree.name)
             
-            for path in tree.bouwfiles:
+            # Reset done list
+            self.done = []
+            
+            for path in sorted(tree.bouwfiles):
                 print()
                 print(str(os.path.relpath(path)))
 
                 for item in tree.bouwfiles[path]:
-                    if item.parent is not None:
+                    for dep in item.depends:
+                        if dep not in self.done: # and dep in tree.bouwfiles[path]:
+                            self._change_item(dep)
+
+                    if item in self.done or not item.satisfied():
                         continue
-
-                    self._change_item(item)
-
-                    if 'childs' in item.keywords and item.value:
-                        for child in item.keywords.get('childs'):
-                            self._change_item(child)
+                    else:
+                        self._change_item(item)
 
         # Ask to save the modified configuration.
         print()
@@ -87,6 +90,14 @@ class LineConfig(Plugin):
 
         while self._try_change_item(item) is not True:
             pass
+        
+        # Append to done list
+        self.done.append(item)
+
+        # For a list, also mark all options done
+        if item.type == list:
+            for opt in item.keywords.get('default'):
+                self.done.append(opt)
 
     ##
     # Change a configuration item
@@ -113,8 +124,10 @@ class LineConfig(Plugin):
 
         # Change a boolean
         if item.type == bool:
-            if line == 'Y' or line == 'y': item.value = True # TODO: also set rev. dependencies to True, if any.
-            if line == 'N' or line == 'n': item.value = False
+            if line == 'Y' or line == 'y':
+                item.value = True # Make sure our dependencies are also True now!
+            if line == 'N' or line == 'n':
+                item.value = False
             if line == 'k': pass
             if line == '?': pass
 
