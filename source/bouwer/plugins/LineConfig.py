@@ -44,30 +44,17 @@ class LineConfig(Plugin):
 
         self.item_count = 0
         self.item_total = len(conf.trees)
+        self.done       = []
 
         for tree_name, tree in conf.trees.items():
             self.item_total += len(tree.subitems)
 
         for tree_name, tree in conf.trees.items():
-            print()
-            print(tree.name)
-            
-            # Reset done list
-            self.done = []
-            
-            for path in sorted(tree.bouwfiles):
-                print()
-                print(str(os.path.relpath(path)))
+            for path in sorted(tree.bouwconfigs):
+                self.print_path = False
 
-                for item in tree.bouwfiles[path]:
-                    for dep in item.depends:
-                        if dep not in self.done: # and dep in tree.bouwfiles[path]:
-                            self._change_item(dep)
-
-                    if item in self.done or not item.satisfied():
-                        continue
-                    else:
-                        self._change_item(item)
+                for item in tree.bouwconfigs[path]:
+                    self._change_item(conf, tree, path, item)
 
         # Ask to save the modified configuration.
         print()
@@ -78,67 +65,110 @@ class LineConfig(Plugin):
             if sys.stdin.readline().strip().lower() == 'y':
                 conf.save()
                 print('Configuration saved!')
+                print()                
+                conf.dump()
         except KeyboardInterrupt:
             print()
             return 1
         return 0
 
-    def _change_item(self, item):
+    ##
+    # Attempt to change a configuration item
+    #
+    def _change_item(self, conf, tree, path, item):
 
-        # Increase item count
-        self.item_count += 1
+        # First ask for our dependencies, if needed
+        for dep in item.keywords.get('depends', []):
+            if dep in tree.subitems:
+                self._change_item(conf, tree, path, tree.subitems[dep])
 
-        while self._try_change_item(item) is not True:
-            pass
+        # TODO: only ask for a default item value + keywords,
+        # if it's inherited by at least one tree, or itself if no other trees
+
+        # If this item is not satisfied in this tree, skip it
+        if not item.satisfied(tree):
+            return
+
+        # If item already done, don't bother again
+        if item in self.done:
+            return
+
+        # Ask the user for the item value, if not only selectable list item.
+        if item.keywords.get('in_list', None) is None:
+            while self._try_change_item(conf, tree, path, item) is not True:
+                pass
+
+        # Otherwise, just print the item type and title for asking keywords?
+        # TODO: if no keywords available, this is useless..
+        else:
+            self._print_prompt(tree, path, item, False)
+            print()
+        
+        # Ask the user for the item keywords.
+        for key in item.keywords:
+            while self._try_change_keyword(conf, tree, item, key) is not True:
+                pass
         
         # Append to done list
         self.done.append(item)
 
         # For a list, also mark all options done
         if item.type == list:
-            for opt in item.keywords.get('default'):
-                self.done.append(opt)
+            for opt in item.keywords.get('default', []):
+                self.done.append(tree.subitems[opt])
+
+    def _read_input(self):
+
+        # Read the user input
+        try:
+            return sys.stdin.readline().strip()
+        except KeyboardInterrupt:
+            print()
+            sys.exit(1)
+
 
     ##
     # Change a configuration item
     #
-    def _try_change_item(self, item):
+    def _try_change_item(self, conf, tree, path, item):
 
         # Print the prompt for this item
-        self._print_prompt(item)
-
-        # Read the user input
-        try:
-            line = sys.stdin.readline().strip()
-        except KeyboardInterrupt:
-            print()
-            sys.exit(1)
+        self._print_prompt(tree, path, item)
+        
+        # Read input from user
+        line = self._read_input()
 
         # No input means keep the current value
         if len(line) == 0: return True
 
         # Question mark means print the help
         if line == '?':
-            print(item.keywords['help'])
+            print(item.keywords.get('help', 'No help available'))
             return False
 
         # Change a boolean
         if item.type == bool:
-            if line == 'Y' or line == 'y':
-                item.value = True # Make sure our dependencies are also True now!
-            if line == 'N' or line == 'n':
-                item.value = False
+            if line == 'Y' or line == 'y': item.update(True)
+            if line == 'N' or line == 'n': item.update(False)
             if line == 'k': pass
             if line == '?': pass
 
         # Change a string
-        if item.type == str:
-            item.value = line
+        if item.type == str: item.update(line)
+
+        # Change an integer
+        if item.type == int: item.update(int(line))
+        
+        # Change a float
+        if item.type == float: item.update(float(line))
 
         # Change a list
         if item.type == list:
             try:
-                item.value = item.keywords['default'][int(line) - 1]
+                item.update(item.keywords['default'][int(line) - 1])
+                
+                # TODO: ask for the selected item's keywords too
+                
             except ValueError as e:
                 return False
 
@@ -146,36 +176,64 @@ class LineConfig(Plugin):
         return True
 
     ##
-    # Print the prompt for changing the given item.
+    # Change a configuration keyword
     #
-    def _print_prompt(self, item):
+    def _try_change_keyword(self, conf, tree, item, key):
+    
+        # Ignore special keywords
+        if key in ['title', 'help', 'default', 'childs', 'depends', 'in_list', 'tree']:
+            return True
+    
+        print('  [key]   ' + key + ' [' + str(item.keywords[key]) + '] ', end = '')
+        sys.stdout.flush()
+        line = self._read_input()
+        return True
 
-        prompt = '{' + str(self.item_count) + '/' + str(self.item_total) + '} '
+    ##
+    # Print the input prompt for changing the given item.
+    #
+    def _print_prompt(self, tree, path, item, input = True):
 
-        if 'title' in item.keywords:
-            prompt += item.keywords['title']
-        else:
-            prompt += item.name
+        # Do we first need to print the Bouwconfig path?
+        if not self.print_path:
+            print()
+            print(tree.name + ' : ' + str(os.path.dirname(os.path.relpath(path))))
+            self.print_path = True
+
+        title = item.keywords.get('title', item.name)
 
         if item.type == list:
-            prompt += ' [' + str(item.value) + '] '
-            print(prompt)
+            print('[list]  ' + title +' [' + str(item.value) + '] ')
 
             n = 1
-            for item in item.keywords['default']:
-                print('\t(' + str(n) + ') : ' + item.keywords['title'])
+            for item_name in item.keywords['default']:
+                subitem = tree.subitems[item_name]
+                print('\t(' + str(n) + ') : ' + subitem.keywords.get('title', subitem.name))
                 n += 1
 
-            prompt = '\t(1-' + str(n - 1) + '/k/?) '
-            print(prompt, end = '')
+            if input:
+                print('\t(1-' + str(n - 1) + '/?) ', end = '')
             sys.stdout.flush()
 
         else:
-            if item.type == bool:  prompt += ' (Y/y/N/n/k/?) '
-            if item.type == str:   prompt += ' (str/k/?) '
-            if item.type == int:   prompt += ' (int/k/?) '
-            if item.type == float: prompt += ' (float/k/?) '
+            if item.type == bool:
+                prompt = '[bool]  ' + title
+                if input: prompt += ' (Y/y/N/n/?) '
 
-            prompt += ' [' + str(item.value) + '] '
+            if item.type == str:
+                prompt = '[str]   ' + title
+                if input: prompt += ' (str/?) '
+
+            if item.type == int:
+                prompt = '[int]   ' + title
+                if input: prompt += ' (int/?) '
+                
+            if item.type == float:
+                prompt = '[float] ' + title
+                if input: prompt += ' (float/?) '
+
+            if input:
+                prompt += ' [' + str(item.value) + '] '
+
             print(prompt, end = '')
             sys.stdout.flush()

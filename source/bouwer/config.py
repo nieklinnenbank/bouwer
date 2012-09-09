@@ -28,66 +28,93 @@ class Config:
 
     ##
     # Constructor
+    # @param name Per-tree unique name of the configuration item.
+    # @param value Initial value for the item.
+    # @param type Type of the configuration item
+    # @param dest_tree Configuration tree of the item
+    # @param keywords Optional list of keywords
     #
-    def __init__(self, name, **keywords):
-        self.name      = name
-        self.keywords  = keywords
-        self.subitems  = {}
-        self.depends   = [] # TODO: problem, this contains strings...
-        self.value     = keywords.get('default', True)
-        self.type      = type(self.value)
-        self.bouwfiles = {}
-
-        # TODO: add circular dependency check somewhere.
-        
-        # Let all of our childs depend on us    
-        for child in keywords.get('childs', []):
-            child.depends.append(self)              # TODO: this NOT!
-
-#        for item in keywords.get('depends', []): # TODO: fix this in synchronize, real object pls!
- #           self.depends.append(item)
-
-        # In case of a list, make the options depend on us
-        if self.type is list:
-
-            # Default selected option is the first.
-            self.value = self.keywords['default'][0]
-
-            # Add dependency to us for all list options
-            for item in self.keywords['default']:
-                item.depends.append(self)       # TODO: don't do this, let synchronize() fix this?
-
-                # It's also possible to configure the default selected item.
-                if 'selected' in item.keywords:
-                    self.value = item
+    def __init__(self, name, value, type, dest_tree, **keywords):
+        self.name        = name
+        self.type        = type
+        self.tree        = dest_tree
+        self.keywords    = keywords
+        self.subitems    = {}
+        self.bouwconfigs = {}
+        self.update(value)
 
     ##
-    # See if all our dependencies are met.
+    # See if all our dependencies are met in the given tree.
+    # @param tree Reference to a tree Config object.
     # @return True if dependencies met, False otherwise.
     #
-    def satisfied(self):
-        for dep in self.depends:
-            if not dep.value:
+    def satisfied(self, tree):
+
+        # See if our dependencies are met.
+        for dep in self.keywords.get('depends', []):
+
+            # Is the dependency an item?
+            if dep in tree.subitems:
+                if not tree.subitems[dep].satisfied(tree):
+                    return False
+                    
+            # It's a tree
+            elif dep is not tree.name or not tree.value:
                 return False
-        return True
 
-    def __getattr__(self, name):
-        return self.__dict__[name]
-        
-    def __setattr__(self, name, value):    
-        if self.__dict__.get('type', None) == list and name == 'value':
+        # Only booleans are interesting.        
+        if self.type == bool:
+            return self.value
+        else:
+            return True
 
-            # Value must contain item from the default list
+    ##
+    # Retrieve our values, also taking dependencies into account.
+    # @param tree Reference tree to evaluate against
+    # @return Current value of the item, respecting dependencies.
+    #
+    def evaluate(self, tree):
+        if self.type is bool:
+            return self.value and self.satisfied(tree)
+        else:
+            return self.value
+
+    ##
+    # Assign a new value to the item.
+    # @param value New value for the item
+    #
+    def update(self, value):
+
+        # Are we updating a list item?
+        if self.type is list:
+
+            # Given value must contain item from the default list
             if value not in self.keywords.get('default'):
                 raise Exception("item " + str(value) + " not in list " + self.name)
 
-            # Make sure only one boolean option is True for lists
-            for item in self.keywords.get('default'):
-                if item.type == bool:
-                    item.value = (item == value)
+            # Update selected option in the list
+            self.value = value
 
-        return object.__setattr__(self, name, value)
-                                
+            # Make sure only the selected item is true, for boolean lists
+            if self.tree.subitems[value].type == bool:
+                for opt_name in self.keywords.get('default'):
+                    self.tree.subitems[opt_name].value = (opt_name == value)
+
+        else:
+            # TODO: Objects inside a list may not be updated directly
+            self.value = value
+
+    ##
+    # Add an extra dependency.
+    # @param item_name The given item name is the new dependency for us
+    #
+    def add_dependency(self, item_name):
+        if 'depends' not in self.keywords:
+            self.keywords['depends'] = []
+
+        if item_name not in self.keywords['depends']:
+            self.keywords['depends'].append(item_name)
+
     def __str__(self):
         return self.name
 
@@ -95,27 +122,76 @@ class Config:
         return self.name
 
 ##
-# Wrapper for accessing Configuration
+# Parser class for Bouwconfig files.
 #
-class ConfigWrapper:
+class ConfigParser:
 
     ##
     # Constructor
+    # @param conf Reference to Configuration object
     #
     def __init__(self, conf):
         self.conf = conf
 
     ##
-    # Add an item to the Configuration
+    # Prepare arguments for creating a Config() object.
     #
-    def put_item(self, name, **keywords):
-        return self.conf.insert_item(Config(name, **keywords))
+    def _prepare(self, name, **keywords):
+
+        item_value = keywords.get('default', True)
+        item_type  = type(item_value)
+        dest_tree  = self.conf.trees[keywords.get('tree', 'DEFAULT')]
+
+        # Let all childs depend on the item
+        for child in keywords.get('childs', []):
+            dest_tree.subitems[child].add_dependency(name)
+
+        return item_type, item_value, dest_tree
 
     ##
-    # Add a new configuration tree
+    # Parse a Config() line.
+    # @param name
+    # @param keywords
+    # @return Name of the item just added
     #
-    def put_tree(self, name, **keywords):
-        return self.conf.insert_tree(Config(name, **keywords))
+    def parse_config(self, name, **keywords):
+
+        item_type, item_value, dest_tree = self._prepare(name, **keywords)
+
+        # In case of a list, make the options depend on us
+        if item_type is list:
+
+            # Default selected option is the first.
+            item_value = keywords['default'][0]
+
+            # Add dependency to us for all list options
+            for opt in keywords['default']:
+                dest_tree.subitems[opt].add_dependency(name)
+                dest_tree.subitems[opt].keywords['in_list'] = name
+
+                # It's also possible to configure the default selected item.
+                if 'selected' in dest_tree.subitems[opt].keywords:
+                    item_value = opt
+
+        # Create the config item
+        self.conf.insert_item(name, item_value, item_type, dest_tree, **keywords)
+        return name
+
+    ##
+    # Parse a ConfigTree() line.
+    # @param name
+    # @param keywords
+    # @return Name of the tree just added
+    #
+    def parse_config_tree(self, name, **keywords):
+
+        item_type, item_value, dest_tree = self._prepare(name, **keywords)
+
+        assert(item_type is bool)
+        assert(type(item_value) is bool)
+
+        self.conf.insert_tree(name, item_value, **keywords)
+        return name
         
 
 ##
@@ -130,7 +206,7 @@ class Configuration:
     def __init__(self, cli):
         self.cli   = cli
         self.args  = cli.args
-        self.trees = { 'DEFAULT': Config('DEFAULT') }
+        self.trees = {}
 
         # Attempt to load saved config, otherwise reset to predefined.
         if not self.load():
@@ -142,27 +218,32 @@ class Configuration:
 
     ##
     # Introduce a new configuration item
-    # @param obj Config object to insert
-    # @param tree Name of the tree to insert object or NONE for default tree.
     #
-    def insert_item(self, obj, tree = None):
-        dest_tree = self.trees[obj.keywords.get('tree', 'DEFAULT')]
-        dest_tree.subitems[obj.name] = obj
-        
-        path = os.path.abspath(inspect.getfile(inspect.currentframe().f_back.f_back))
-        if not path in dest_tree.bouwfiles:
-            dest_tree.bouwfiles[path] = []
+    def insert_item(self, name, value, type, dest_tree, **keywords):
 
-        dest_tree.bouwfiles[path].append(obj)
-        return obj
+        # Does the item already exist?        
+        if name in dest_tree.subitems:
+            raise Exception('item ' + name + ' already exists in tree ' + dest_tree.name)
+
+        # Create item
+        item = Config(name, value, type, dest_tree, **keywords)
+        
+        # Insert item to the tree
+        dest_tree.subitems[name] = item
+        
+        # Lookup Bouwconfig path
+        path = os.path.abspath(inspect.getfile(inspect.currentframe().f_back.f_back))
+        if not path in dest_tree.bouwconfigs:
+            dest_tree.bouwconfigs[path] = []
+
+        # Insert item to the bouwconfig mapping
+        dest_tree.bouwconfigs[path].append(item)
 
     ##
     # Introduce a new configuration tree
-    # @param obj Config object for the tree
     #
-    def insert_tree(self, obj):
-        self.trees[obj.name] = obj
-        return obj
+    def insert_tree(self, name, value, **keywords):
+        self.trees[name] = Config(name, value, bool, None, **keywords)
 
     ##
     # Load a saved configuration from the given file
@@ -182,6 +263,9 @@ class Configuration:
     # Reset configuration to the initial predefined state
     #
     def reset(self):
+
+        # Insert the default tree.
+        self.insert_tree('DEFAULT', True)
 
         # Find the path to the Bouwer predefined configuration files
         curr_file = inspect.getfile(inspect.currentframe())
@@ -203,24 +287,73 @@ class Configuration:
     #
     def dump(self):
         for tree_name, tree in self.trees.items():
-            self._dump_item(tree)
+            self._dump_item(tree, tree)
 
     ##
     # Make sure all configuration trees contain at least the default items
     #
     def _synchronize(self):    
-        pass
+
+        def_tree = self.trees.get('DEFAULT')
+
+        # Make sure user-defined trees inherit all items from
+        # the default tree, unless they are overwriten.
+        for tree_name, tree in self.trees.items():
+            if tree_name is def_tree.name:
+                continue
+
+            # Inherit every default item per bouwconfig
+            for path in def_tree.bouwconfigs:
+                for item in def_tree.bouwconfigs[path]:
+
+                    # Create path in custom tree, if needed.
+                    if path not in tree.bouwconfigs:
+                        tree.bouwconfigs[path] = []
+
+                    # Is the item overwritten?
+                    if item.name in tree.subitems:
+                        # Inherit keywords from the default item, if not overwritten
+                        custom_item = tree.subitems[item.name]
+
+                        for key in item.keywords:
+                            if key not in custom_item.keywords:
+                                custom_item.keywords[key] = item.keywords[key]
+
+                        # TODO: be careful when overwriting lists, or list items!
+                        pass
+
+                    # Inherit the item
+                    else:
+                        tree.bouwconfigs[path].append(item)
+                        tree.subitems[item.name] = item
+
+        # Validate & enforce dependencies in all trees.
+        for tree_name, tree in self.trees.items():
+            for item_name, item in tree.subitems.items():
+                for dep in item.keywords.get('depends', []):
+
+                    # Is it an unknown dependency?
+                    if dep not in tree.subitems and \
+                       dep not in self.trees:
+                        raise Exception('Unknown dependency item ' + dep + ' in ' + item_name)
+
+                    # TODO: add circular dependency check
 
     ##
     # Dump a single configuration item to stdout
     # @param item Config object to dump
+    # @param tree Tree of the item
     # @param parent Text describing the parent item
     #
-    def _dump_item(self, item, parent = ''):
-        print(parent + str(item) + ' ' + str(item.keywords))
+    def _dump_item(self, item, tree, parent = ''):
+        print(parent + str(item) + ':' + str(item.type) + ' = ' + str(item.evaluate(tree)) + '(' + str(item.value) + ')')
+                
+        for key in item.keywords:
+            print('\t' + key + ' => ' + str(item.keywords[key]))
+        print()
 
         for child_item_name, child_item in item.subitems.items():
-            self._dump_item(child_item, parent + item.name + '.')
+            self._dump_item(child_item, tree, parent + item.name + '.')
 
     ##
     # Scan a directory for configuration definition files.
@@ -259,10 +392,10 @@ class Configuration:
             print(sys.argv[0] + ": could not read config file '" + filename + "': " + str(e))
             sys.exit(1)
 
-        # Initialize wrapper for adding item to ourselves
-        wrapper = ConfigWrapper(self)
-        globs = { 'Config':     wrapper.put_item,
-                  'ConfigTree': wrapper.put_tree }
+        # Initialize parser of Bouwconfig files.
+        parser =  ConfigParser(self)
+        globs  = { 'Config':     parser.parse_config,
+                   'ConfigTree': parser.parse_config_tree }
 
         # Parse the given file
         exec(compile(open(filename).read(), filename, 'exec'), globs)
