@@ -76,14 +76,11 @@ class LineConfig(Plugin):
     # Attempt to change a configuration item
     #
     def _change_item(self, conf, tree, path, item):
-
+    
         # First ask for our dependencies, if needed
         for dep in item.keywords.get('depends', []):
             if dep in tree.subitems:
                 self._change_item(conf, tree, path, tree.subitems[dep])
-
-        # TODO: only ask for a default item value + keywords,
-        # if it's inherited by at least one tree, or itself if no other trees
 
         # If this item is not satisfied in this tree, skip it
         if not item.satisfied(tree):
@@ -94,6 +91,7 @@ class LineConfig(Plugin):
             return
 
         # Ask the user for the item value, if not only selectable list item.
+        # TODO: broken!!! GCC isn't asked anymore for TARGET and HOST...
         if item.keywords.get('in_list', None) is None:
             while self._try_change_item(conf, tree, path, item) is not True:
                 pass
@@ -203,7 +201,7 @@ class LineConfig(Plugin):
         title = item.keywords.get('title', item.name)
 
         if item.type == list:
-            print('[list]  ' + title +' [' + str(item.value) + '] ')
+            print('[list]  ' + title +' [' + str(item.value(tree)) + '] ')
 
             n = 1
             for item_name in item.keywords['default']:
@@ -233,7 +231,7 @@ class LineConfig(Plugin):
                 if input: prompt += ' (float/?) '
 
             if input:
-                prompt += ' [' + str(item.value) + '] '
+                prompt += ' [' + str(item.value(tree)) + '] '
 
             print(prompt, end = '')
             sys.stdout.flush()

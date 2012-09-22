@@ -17,22 +17,17 @@
 
 import os
 import os.path
+from bouwer.plugin import *
 
 ##
 # Build an executable object
 #
-class Object:
-
-    ##
-    # Constructor
-    #
-    def __init__(self, env):
-        self.env = env
+class Object(Plugin):
 
     ##
     # Detect a valid compiler configuration
     #
-    def detect(self, conf):
+    def inspect(self, conf):
         # Todo: attempt to compile a C program with this config
         pass
 
@@ -43,8 +38,11 @@ class Object:
     #
     def execute(self, source):
 
+        # Retrieve C compiler configuration.
+        chain = self.get_item('CC')
+        cc    = self.get_item(chain.value())
+
         # TODO: add '#include' implicit dependencies
-        # TODO: decide here with timestamps if we need to redo this action
         splitfile = os.path.splitext(source)
 
         # Compile a C source file into an object file
@@ -54,10 +52,11 @@ class Object:
             outfile = splitfile[0] + '.o'
 
             # Register compile action
-            self.env.register_action(outfile,
-                                     self.env['cc'] + ' ' + self.env['ccflags'],
-                                     [source],
-                                     "CC")
+            self.action(outfile,
+                        [ source ],
+                        cc.keywords.get('cc') + ' ' + outfile + ' ' + cc.keywords.get('ccflags') + ' ' + source)
+
+            # Success
             return outfile
 
         # Unknown filetype

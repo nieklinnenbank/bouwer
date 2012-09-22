@@ -60,11 +60,10 @@ class CommandLine:
 
         # Parse the arguments
         self.parser = argparse.ArgumentParser(parents = [self.parser],
-        description='Bouwer build automation tool.',
+                                     description='Bouwer build automation tool.',
                                      epilog='Copyright (c) 2012 Niek Linnenbank.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         self.args = self.parser.parse_args()
-#        self.parser.format_help()
         return self.args
 
     ##

@@ -24,12 +24,6 @@ import os.path
 class UseLibrary:
 
     ##
-    # Constructor
-    #
-    def __init__(self, env):
-        self.env = env
-
-    ##
     # Build and link against a library
     #
     # @param libraries List of library names

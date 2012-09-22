@@ -32,5 +32,14 @@ class ProgressBarOutput(Plugin):
     ##
     # See if we have all dependencies for this plugin
     #
-    def exists():
+    def exists(self):
         return True
+
+    ##
+    # Output the current status of the action layer
+    #
+    # @param action The action which is about to begin executing
+    # @param action_tree ActionTree instance
+    #
+    def output(self, action, action_tree):
+        pass

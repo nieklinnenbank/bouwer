@@ -32,5 +32,8 @@ class PrettyOutput(Plugin):
     ##
     # See if we have all dependencies for this plugin
     #
-    def exists():
+    def exists(self):
         return True
+
+    def output(self, action):
+        pass

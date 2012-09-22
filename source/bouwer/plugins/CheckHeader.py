@@ -16,23 +16,17 @@
 #
 
 import os
-from bouwer.plugin import *
-from bouwer.config import *
+import os.path
 
 ##
-# Run a shell command
+# Check if a configuration supports the given header file.
 #
-class Command(Plugin):
+class CheckHeader:
 
     ##
-    # Run a shell command
+    # Decide if we "agree" with the given configuration.
     #
-    # @param cmd The command to run
-    # @param item Optional configuration item or None.
-    #
-    def execute(self, cmd, item = False):
-
-        if (type(item) is Config and item.value) or item is False:
-            os.system(cmd)
-        # self.build.generate_action(...)
-        # os.system(cmd)
+    def inspect(self, conf):
+        # Todo: attempt to compile a C program with this config.
+        # Then modify the configuration based on if the header file exists and compiles
+        pass

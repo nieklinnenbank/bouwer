@@ -18,14 +18,11 @@
 import os
 import os.path
 import sys
-import argparse
-import inspect
-import bouwer.config
-import bouwer.environment
-import bouwer.action
-import bouwer.work
-import bouwer.plugin
 import bouwer.cli
+import bouwer.plugin
+import bouwer.config
+import bouwer.builder
+import bouwer.action
 
 ##
 # Execute the given target in all directories
@@ -46,6 +43,16 @@ def execute():
     plugins = bouwer.plugin.PluginLoader(conf)
 
     # Generate final list of command line arguments
+
+    # TODO: we probably want to output the list of possible targets in the help too!
+    # documented using PyDoc :-) Fancy!
+    
+    # e.g. overwrite the print_help() method of argparse:
+    # http://stackoverflow.com/questions/4042452/display-help-message-with-python-argparse-when-script-is-called-without-any-argu
+
+    # OR: we let buildermanager initialize first somehow and then e.g. build.target_list()
+    # BUT: buildermanager also needs the final conf.args...
+    
     conf.args = cli.parse()
 
     # If we have a configuration plugin enabled by cli, invoke it
@@ -57,6 +64,9 @@ def execute():
 
     if conf_plugin is not None:
         sys.exit(conf_plugin.configure(conf))
+
+    # Initialize the builder manager
+    build = bouwer.builder.BuilderManager(conf, plugins)
 
     #
     # TODO: the core runs all targets inside a Bouwfile to let them *REGISTER*
@@ -71,26 +81,26 @@ def execute():
     #     Library('zzz', 'asdf.c') <- written to obj_dir
     #
 
-"""
     # Execute each target in turn.
-    for target in args.targets:
+    for target in conf.args.targets:
 
         # Initialize action tree
-        action_tree = bouwer.action.ActionTree()
+        actions = bouwer.action.ActionManager(conf.args)
 
-        # Traverse directory tree for each configured environment
-        if len(conf.sections()) >= 1:
-            for section_name in conf.sections():
-                env = bouwer.environment.Environment(section_name, conf, args, action_tree)
-                env.register_targets(target)
+        # TODO: generate an error if no targets are executed.
 
-        # Use the default if not any environments configured
+        # Traverse Bouwfiles for each custom tree
+        if len(conf.trees) > 1:
+            for tree_name, tree in conf.trees.items():
+                if tree_name is not 'DEFAULT':
+                    build.execute_target(target, tree, actions)
+
+        # Use the default tree
         else:
-            env = bouwer.environment.Environment('DEFAULT', conf, args, action_tree)
-            env.register_targets(target)
+            build.execute_target(target, conf.trees.get('DEFAULT'), actions)
+
+        # Dump the generated actions
+        actions.dump()
 
         # Execute the generated actions
-        master = bouwer.work.Master(action_tree, conf, args)
-        master.execute()
-"""
-
+        actions.run()

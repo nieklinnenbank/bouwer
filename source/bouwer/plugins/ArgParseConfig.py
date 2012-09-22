@@ -25,14 +25,5 @@ from bouwer.plugin import *
 #
 class ArgParseConfig(Plugin):
 
-    ##
-    # Initialize plugin
-    #
-    def initialize(self, cli):
+    def configure(self, conf):
         pass
-
-    ##
-    # See if we have all dependencies for this plugin
-    #
-    def exists():
-        return True

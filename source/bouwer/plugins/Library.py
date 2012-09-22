@@ -17,26 +17,48 @@
 
 import os
 import os.path
+from bouwer.plugin import *
+from bouwer.config import *
 
 ##
-# Build a static library
+# Build a software library
 #
-class Library:
+class Library(Plugin):
 
     ##
-    # Constructor
+    # Build a software library
     #
-    def __init__(self, env):
-        self.env = env
-
-    ##
-    # Build a static library
-    #
-    # @param target Name of the library to build
+    # @param target Name of the library to build or Config item.
     # @param sources List of source files of the library
     #
     def execute(self, target, sources):
 
+        if type(target) is Config and target.value():
+            libname = target.keywords.get('library', target.name.lower())
+        elif type(target) is str:
+            libname = target
+        else:
+            return
+
+        cc = self.get_item('CC')
+        compiler = self.get_item(cc.value())
+
+        objects = []
+
+        # TODO: ask the build manager for the path to our invocation.
+        # then, if a BUILDROOT is set, we should put the object there.
+        # otherwise, put the object in this directory.
+        # optionally, if a BUILDPATH is set, put the object in this directory,
+        # plus the BUILDPATH appended to it (e.g. bld directory @ ASML)
+        
+        # --> provide a generic mechanism for this!
+
+        for src in sources:
+            objects.append(self.Object(src))
+
+        self.action(libname + '.a', objects, compiler.keywords.get('ar') + ' ' + libname + '.a')
+        
+        """
         # Make a list of objects on which we depend
         objects = []
 
@@ -48,3 +70,4 @@ class Library:
         self.env.register_action(target + '.a',
                                  self.env['ar'] + ' ' + self.env['arflags'],
                                  objects, "AR")
+        """

@@ -16,142 +16,273 @@
 #
 
 import os
+import multiprocessing
+import queue
+import os
+import os.path
 
+##
+# Function executed by the worker processes
+#
+# @param num ID number of the worker
+# @param actions Reference to the ActionManager
+# @param work_queue Reference to the worker queue
+# @param done_queue Reference to the done queue
+#
+def worker(num, actions, work_queue, done_queue):
+
+    while True:
+        print(str(num) + ": waiting for work")
+        name = work_queue.get()
+        
+        print(str(num) + ": exec( " + actions[name].command + " )")
+        os.system(actions[name].command)
+        print(str(num) + ": done")
+        done_queue.put((num, name))
+
+##
+# This class contains a single action to be executed.
+#
 class Action:
 
     ##
     # Constructor
     #
-    def __init__(self, target, command, sources, action_map, pretty):
+    def __init__(self, target, sources, command):
         self.target  = target
-        self.command = command
         self.sources = sources
-        self.taken   = False
-        self.done    = False
-        self.action_map = action_map
-        self.pretty  = pretty
+        self.command = command
+        self.provide = []
 
     ##
-    # Decide if this Action needs execution, based on the sources timestamps.
+    # See if our dependencies are done.
     #
-    def decide_execution(self):
-        try:
-            my_st = os.stat(self.target)
-            num_done = 0
-
-            for src in self.sources:
-
-                # If the source is not marked done, we must always build
-                if src in self.action_map and not self.action_map[src].done:
-                    break
-
-                # See if the timestamp is larger than ours
-                st = os.stat(src)
-                if st.st_mtime <= my_st.st_mtime:
-                    num_done = num_done + 1
-
-            if num_done >= len(self.sources):
-                self.done = True
-                self.taken = True
-
-        except OSError:
-            pass
-
-    def sources_done(self):
+    # @param pending list of pending actions
+    # @param running list of running actions
+    #
+    def satisfied(self, pending, running):
         for src in self.sources:
-            if src in self.action_map and not self.action_map[src].done:
+            if src in pending or src in running:
                 return False
         return True
 
     ##
-    # Execute only when not already (being) executed and dependencies done.
+    # Decide if this action needs to run.
     #
-    def can_execute(self):
-        return not self.taken and not self.done and self.sources_done()
+    def decide(self, pending, running):
+
+        # Try to see if the target exists
+        try:
+            my_st = os.stat(self.target)
+        except OSError:
+            return True
+
+        # See if any of the sources changed.
+        for src in self.sources:
+            
+            # If the source to-be-completed, we always build.
+            if src in pending or src in running:
+                return True
+
+            # See if their timestamp is larger than ours
+            st = os.stat(src)
+            if st.st_mtime > my_st.st_mtime:
+                return True
+                    
+        # None of the sources is updated and we exist. Don't build.
+        return False
+
+    ##
+    # Convert action to string representation.
+    #
+    def __str__(self):
+        return self.target   + " <<< sources=" + \
+           str(self.sources) + " provide=" + \
+           str(self.provide) + "  :  [" + \
+           str(self.command) + "]"
+
+    ##
+    # Convert to short string representation.
+    #
+    def __repr__(self):
+        return self.target
 
 ##
 # Represents all Actions registered for execution.
 #
-class ActionTree:
+class ActionManager:
 
     ##
     # Constructor
     #
-    def __init__(self):
-        self.buildroot_map = {} # translates the full project path to the
-                                # build root path, e.g:
-                                #   src/module/foo.o -> build/src/module/foo.o
-        self.actions = {}
-        self.reverse_actions = {}
-        self.num_done = 0
-        self.num_needed = 0
-
-    def get_available(self, command_ready = None):
-
-        ret = []
-
-        # Try to release all actions depending on the completed command
-        if command_ready is not None:
-
-            self.actions[command_ready].done = True
-            self.num_done = self.num_done + 1
-
-            if command_ready in self.reverse_actions:
-                for action in self.reverse_actions[command_ready]:
-                    if action.can_execute():
-                        action.taken = True
-                        ret.append(action)
-
-        # Loop the whole actions list for available actions
-        else:
-            for act in self.actions:
-                action = self.actions[act]
-
-                # Only add if all dependencies ready and we're not already processed
-                if action.can_execute():
-                    action.taken = True
-                    ret.append(action)
-
-        return ret
+    # @param args command line arguments
+    #
+    def __init__(self, args):
+        self.args = args
+        # TODO: this must be configurable using args
+        self.num_workers = multiprocessing.cpu_count()
+        self.clear()
 
     ##
-    # Check whether all Actions are executed.
+    # Remove all submitted actions.
     #
-    def is_done(self):
-        return self.num_done == self.num_needed
+    def clear(self):
+        self.pending    = {}
+        self.running    = {}
+        self.finished   = {}
+        self.work_queue = multiprocessing.Queue()
+        self.done_queue = multiprocessing.Queue()
+        self.workers    = []
 
     ##
     # Put a new Action on the ActionTree.
     #
-    def add(self, target, cmd, sources, env, pretty):
+    # @param target Name of the output file or None
+    # @param sources List of dependencies
+    # @param command Command to execute or a python function
+    #
+    def submit(self, target, sources, command):
 
-        # Prepare command string
-        command = cmd
-        command = command.replace("%TARGET%", target)
-        command = command.replace("%SOURCES%", " ".join(sources))
-        command = command.replace("\n", " ")
-        command = command.replace("\r", " ")
+        if target in self.pending:
+            raise Exception("target " + str(target) + " already submitted")
 
-        # Make target directory, if not existing
-        if not os.path.exists(os.path.dirname(target)):
-            os.makedirs(os.path.dirname(target))
+        action = Action(target, sources, command)
+        self.pending[target] = action
 
-        # Add the action
-        action = Action(target, command, sources, self.actions, pretty)
+        # TODO: circular dep check
+        for src in sources:
+            if src in self.pending:
+                self.pending[src].provide.append(target)
+        
+        if self.args.verbose:
+            print("ActionManager: submitted action: " + str(action))
 
-        # If not forced, decide on avoiding this Action
-        if not env.args.force:
-            action.decide_execution()
+    ##
+    # Run all submitted actions.
+    #
+    def run(self):
 
-        # Increment num_needed
-        if not action.done:
-            self.num_needed = self.num_needed + 1
+        if self.args.verbose:
+            print("ActionManager: running actions")
 
-        # Add to the target -> action map
-        self.actions[target] = action
+        # Create workers
+        for i in range(self.num_workers):
+            p = multiprocessing.Process(target = worker,
+                                        args = (i, self.pending,
+                                                   self.work_queue,
+                                                   self.done_queue,))
+            p.start()
+            self.workers.append(p)
 
-        # Add to the dependency -> action map
-        for dep in action.sources:
-            if not dep in self.reverse_actions:
-                self.reverse_actions[dep] = []
-            self.reverse_actions[dep].append(action)
+        # Fill the queue initially with work not having dependencies
+        for work in self._collect():
+            self.work_queue.put(work.target)
+
+        # Now keep processing until all dependencies are done
+        while not self._done():
+            print("ActionManager: waiting for results")
+            num, work_done = self.done_queue.get()
+            
+            if self.args.verbose:
+                print("ActionManager: finished " + str(work_done) + " by " + str(num))
+
+            for action in self._collect(work_done):
+                print("ActionManager: running " + str(action))
+                self.work_queue.put(action.target)
+
+        print("ActionManager: completed")
+
+        # Stop all workers
+        # TODO: possible to output stats, e.g. number of actions per worker, etc
+        #       this should be part of an output plugin too?
+        for proc in self.workers:
+            proc.terminate()
+
+    ##
+    # Retrieve the next available Action for execution.
+    #
+    # @param target Optional completed action or None.
+    # @return List of Actions for execution.
+    #
+    def _collect(self, target = None):
+
+        if target is None:
+            runnable = []
+        else:
+            runnable = self._finish(target)
+        
+        for name in list(self.pending.keys()):
+
+            if name not in self.pending:
+                continue
+
+            work = self.pending[name]
+
+            if work.satisfied(self.pending, self.running):
+
+                self.running[name] = work
+                del self.pending[name]
+
+                if work.decide(self.pending, self.running):
+                    runnable.append(work)
+                else:
+                    runnable = runnable + self._finish(name)
+
+        print("ActionManager: runnable = " + str(runnable))
+        return runnable
+
+    ##
+    # Called when an action is completed.
+    #
+    # @param target Target of the action which just completed
+    #
+    def _finish(self, target):
+        action = self.running.pop(target)
+        self.finished[target] = action
+
+        # TODO: release all reverse dependencies now
+        ret = []
+        
+        for name in action.provide:
+            if name in self.pending:
+                act = self.pending.pop(name)
+                
+                if act.satisfied(self.pending, self.running) and \
+                   act.decide(self.pending, self.running):
+                    self.running[name] = act
+                    ret.append(act)
+                else:
+                    self.finished[name] = act
+        
+        return ret
+
+    ##
+    # See if all Actions are done.
+    #
+    # @return True if finished, False otherwise.
+    #
+    def _done(self):
+        return len(self.pending) == 0 and len(self.running) == 0
+        
+    ##
+    # Dump all our information to stdout for diagnosis.
+    #
+    def dump(self):
+
+        print("--- Actions Pending ---")
+        print()
+        for name, action in self.pending.items():
+            print(str(action))
+        print()
+
+        print("--- Actions Running ---")
+        print()
+        for name, action in self.running.items():
+            print(str(action))
+        print()
+        
+        print("--- Actions Finished ---")
+        print()
+        for name, action in self.finished.items():
+            print(str(action))
+        print()

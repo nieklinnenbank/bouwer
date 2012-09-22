@@ -35,7 +35,7 @@ class MenuConfig(Plugin):
     ##
     # See if we have ncurses installed
     #
-    def exists():
+    def inspect(self, conf):
         # Look for the ncurses module
         return True
 
@@ -43,8 +43,6 @@ class MenuConfig(Plugin):
     # Runs the menu configuration
     #
     def configure(self, conf):
-        print('Running menuconfig!')
-        conf.trees['HOST'].items['GCC'].keywords['asm'] = 'assemblytool.exe'
-        conf.save()
-        print('Configuration saved!')
+        pass
+
 

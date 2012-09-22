@@ -17,9 +17,9 @@
 
 import os
 import sys
-import configparser
 import inspect
-import pickle
+import json
+import bouwer.builder
 
 ##
 # Represents a single configuration item
@@ -28,27 +28,32 @@ class Config:
 
     ##
     # Constructor
+    #
     # @param name Per-tree unique name of the configuration item.
     # @param value Initial value for the item.
     # @param type Type of the configuration item
-    # @param dest_tree Configuration tree of the item
+    # @param config Reference to the Configuration we belong in
     # @param keywords Optional list of keywords
     #
-    def __init__(self, name, value, type, dest_tree, **keywords):
+    def __init__(self, name, value, type, config, **keywords):
         self.name        = name
         self.type        = type
-        self.tree        = dest_tree
         self.keywords    = keywords
+        self.config      = config
         self.subitems    = {}
         self.bouwconfigs = {}
         self.update(value)
 
     ##
     # See if all our dependencies are met in the given tree.
+    #
     # @param tree Reference to a tree Config object.
     # @return True if dependencies met, False otherwise.
     #
-    def satisfied(self, tree):
+    def satisfied(self, tree = None):
+
+        if tree is None:
+            tree = self.config.active_tree
 
         # See if our dependencies are met.
         for dep in self.keywords.get('depends', []):
@@ -62,25 +67,36 @@ class Config:
             elif dep is not tree.name or not tree.value:
                 return False
 
-        # Only booleans are interesting.        
+        # If we are in a list, then we must be selected to satisfy.
+        if self.keywords.get('in_list', False):
+            lst = tree.subitems[self.keywords.get('in_list')]
+            return lst.value(tree) == self.name
+
+        # Only booleans are interesting.
         if self.type == bool:
-            return self.value
+            return self._value
         else:
             return True
 
     ##
     # Retrieve our values, also taking dependencies into account.
+    #
     # @param tree Reference tree to evaluate against
     # @return Current value of the item, respecting dependencies.
     #
-    def evaluate(self, tree):
+    def value(self, tree = None):
+
+        if tree is None:
+            tree = self.config.active_tree
+    
         if self.type is bool:
-            return self.value and self.satisfied(tree)
+            return self._value and self.satisfied(tree)
         else:
-            return self.value
+            return self._value
 
     ##
     # Assign a new value to the item.
+    #
     # @param value New value for the item
     #
     def update(self, value):
@@ -88,24 +104,16 @@ class Config:
         # Are we updating a list item?
         if self.type is list:
 
-            # Given value must contain item from the default list
+            # Sanity check. Given value must be in the list.
             if value not in self.keywords.get('default'):
                 raise Exception("item " + str(value) + " not in list " + self.name)
-
-            # Update selected option in the list
-            self.value = value
-
-            # Make sure only the selected item is true, for boolean lists
-            if self.tree.subitems[value].type == bool:
-                for opt_name in self.keywords.get('default'):
-                    self.tree.subitems[opt_name].value = (opt_name == value)
-
-        else:
-            # TODO: Objects inside a list may not be updated directly
-            self.value = value
+        
+        # Assign value        
+        self._value = value
 
     ##
     # Add an extra dependency.
+    #
     # @param item_name The given item name is the new dependency for us
     #
     def add_dependency(self, item_name):
@@ -115,8 +123,41 @@ class Config:
         if item_name not in self.keywords['depends']:
             self.keywords['depends'].append(item_name)
 
+    ##
+    # Return a JSON serializable representation
+    #
+    def serialize(self):
+    
+        # TODO: can we improve this?
+        bouwconf_map = {}
+
+        for path in self.bouwconfigs:
+            bouwconf_map[path] = []
+        
+            for item in self.bouwconfigs[path]:
+                bouwconf_map[path].append(item.name)
+    
+        return dict(name = self.name,
+                    type = str(self.type),
+                    value = str(self._value),
+                    keywords = self.keywords,
+                    bouwconfigs = bouwconf_map)
+
+    ##
+    # Implements the conf.ITEM mechanism
+    #
+    def __getattr__(self, name):
+
+        if name == self.name:
+            return self
+
+        try:
+            return self.__dict__[name]
+        except KeyError:
+            return self.subitems[name]
+
     def __str__(self):
-        return self.name
+        return str(self.value()) #value) # TODO: this is wrong. we need to evaluate() against the *active* tree
 
     def __repr__(self):
         return self.name
@@ -207,6 +248,9 @@ class Configuration:
         self.cli   = cli
         self.args  = cli.args
         self.trees = {}
+        
+        # The active tree is used for evaluation in Config, if needed.
+        self.active_tree = None
 
         # Attempt to load saved config, otherwise reset to predefined.
         if not self.load():
@@ -226,7 +270,7 @@ class Configuration:
             raise Exception('item ' + name + ' already exists in tree ' + dest_tree.name)
 
         # Create item
-        item = Config(name, value, type, dest_tree, **keywords)
+        item = Config(name, value, type, self, **keywords)
         
         # Insert item to the tree
         dest_tree.subitems[name] = item
@@ -243,13 +287,14 @@ class Configuration:
     # Introduce a new configuration tree
     #
     def insert_tree(self, name, value, **keywords):
-        self.trees[name] = Config(name, value, bool, None, **keywords)
+        self.trees[name] = Config(name, value, bool, self, **keywords)
 
     ##
     # Load a saved configuration from the given file
     # @param filename Path to the saved configuration file
     #
     def load(self, filename = '.bouwconf'):
+        # TODO
         return False
 
     ##
@@ -257,7 +302,22 @@ class Configuration:
     # @param filename Path to the configuration output file
     #
     def save(self, filename = '.bouwconf'):
-        pass
+    
+        fp = open(filename, 'w')
+
+        # Save only default tree items and overwrites        
+        for tree_name, tree in self.trees.items():
+            self._save_item(tree, fp)
+        
+            for item_name, item in tree.subitems.items():
+                if tree_name is 'DEFAULT' or 'tree' in item.keywords:
+                    self._save_item(item, fp)
+
+        fp.close()
+
+    def _save_item(self, item, fp):
+        json.dump(item.serialize(), fp, sort_keys=True, indent=4)
+        fp.write(os.linesep)
 
     ##
     # Reset configuration to the initial predefined state
@@ -319,7 +379,7 @@ class Configuration:
                             if key not in custom_item.keywords:
                                 custom_item.keywords[key] = item.keywords[key]
 
-                        # TODO: be careful when overwriting lists, or list items!
+                        # TODO: make sure to remove orphan childs, when a list is overwritten!
                         pass
 
                     # Inherit the item
@@ -346,7 +406,7 @@ class Configuration:
     # @param parent Text describing the parent item
     #
     def _dump_item(self, item, tree, parent = ''):
-        print(parent + str(item) + ':' + str(item.type) + ' = ' + str(item.evaluate(tree)) + '(' + str(item.value) + ')')
+        print(parent + item.name + ':' + str(item.type) + ' = ' + str(item.value(tree)))
                 
         for key in item.keywords:
             print('\t' + key + ' => ' + str(item.keywords[key]))

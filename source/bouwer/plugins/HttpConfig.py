@@ -24,13 +24,7 @@ from bouwer.plugin import *
 class HttpConfig(Plugin):
 
     ##
-    # Initialize plugin
+    # Configure routine.
     #
-    def initialize(self, cli):
+    def configure(self, conf):
         pass
-
-    ##
-    # See if we have all dependencies for this plugin
-    #
-    def exists():
-        return True

@@ -30,10 +30,11 @@ class Plugin:
     # Constructor
     #
     def __init__(self, conf):
-        pass
+        self.conf  = conf
+        self.build = None
 
     ##
-    # Startup the plugin
+    # Initialization routine of the plugin
     #
     def initialize(self, conf):
         pass
@@ -41,8 +42,35 @@ class Plugin:
     ##
     # Check to see if this module has all external dependencies
     #
-    def exists(self):
+    def inspect(self):
         return True
+
+    ##
+    # Retrieve an Config item from the active tree.
+    #
+    # @param name Name of the Config item.
+    # @return Config instance
+    #
+    def get_item(self, name):
+        return self.conf.active_tree.subitems.get(name)
+
+    ##
+    # Generate an action
+    #
+    def action(self, target, command, sources):
+        self.build.generate_action(target, command, sources)
+
+    ##
+    # Implements the self.OtherBuilder() mechanism
+    #
+    def __getattr__(self, name):
+    
+        if name in self.__dict__:
+            return self.__dict__[name]
+        elif name in self.__dict__['build'].executes:
+            return self.__dict__['build'].executes[name]
+        else:
+            raise AttributeError(name)
 
 ##
 # Load all plugins in the given directory
@@ -108,4 +136,6 @@ class PluginLoader:
                 if class_ is not None and Plugin in class_.__bases__:
                     instance = class_(self.conf)
                     instance.initialize(self.conf)
+
+                    # Add plugin to the list
                     self.plugins[name] = instance

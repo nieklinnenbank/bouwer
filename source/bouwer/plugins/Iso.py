@@ -24,13 +24,6 @@ from bouwer.plugin import *
 class Iso(Plugin):
 
     ##
-    # Initialize plugin
-    #
-    def initialize(self, conf):
-        # TODO: register builder
-        pass
-
-    ##
     # Builders always exist.
     #
     def exists():
@@ -40,13 +33,14 @@ class Iso(Plugin):
     # See if we have the mkisofs/genisoimage command
     # If we don't have any valid configuration, we are disabled.
     #
-    def detect(conf):
+    def inspect(conf):
         pass
 
     ##
     # Generate an ISO image
     #
-    # @param filename Name of the image
+    # @param target Name of the image or a Config item.
+    # @param sources List of files to include in the ISO.
     #
-    def execute(self, filename):
-        pass
+    def execute(self, target, sources):
+        print('Iso.execute(' + str(target) + ',' + str(sources) + ')')
