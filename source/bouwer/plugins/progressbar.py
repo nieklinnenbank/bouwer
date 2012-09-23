@@ -46,7 +46,7 @@ class ProgressBar(object):
         inline_msg_len = 0
         if message:
             # The length of the first line in the message
-            inline_msg_len = len(message.splitlines()[0])
+            inline_msg_len = len(message.splitlines()[0]) + 1
         if inline_msg_len + self.width + self.PADDING > terminal.COLUMNS:
             # The message is too long to fit in one line.
             # Adjust the bar width to fit.
@@ -61,9 +61,9 @@ class ProgressBar(object):
         data = self.TEMPLATE % {
             'percent': percent,
             'color': self.color,
-            'progress': self.block * self.progress,
+            'progress': self.block * int(self.progress),
             'normal': terminal.NORMAL,
-            'empty': self.empty * (bar_width - self.progress),
+            'empty': self.empty * (bar_width - int(self.progress)),
             'message': message
         }
         sys.stdout.write(data)

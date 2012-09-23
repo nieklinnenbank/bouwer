@@ -101,6 +101,7 @@ class PluginLoader:
         # Append source directory to the python path, if exists.
         if os.path.exists(path + os.sep + "__init__.py"):
             sys.path.insert(1, os.path.dirname(path))
+            sys.path.insert(1, path)
 
         # Attempt to load all plugins in the given path
         for dirname, dirnames, filenames in os.walk(path):

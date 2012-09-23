@@ -28,14 +28,17 @@ import os.path
 # @param actions Reference to the ActionManager
 # @param work_queue Reference to the worker queue
 # @param done_queue Reference to the done queue
-# @param output Output function
+# @param output_plugin Output function
 #
-def worker(num, actions, work_queue, done_queue, output):
+def worker(num, actions, work_queue, done_queue, output_plugin):
 
     while True:
         name = work_queue.get()
-        output(actions[name], stage='running', worker=num)
+
+        output_plugin.output(actions[name], stage='running', worker=num)
+
         os.system(actions[name].command)
+
         done_queue.put((num, name))
 
 ##
@@ -122,9 +125,9 @@ class ActionManager:
     #
     def __init__(self, args, plugins):
         self.args    = args
-        self.output  = plugins.output_plugin().output
+        self.output_plugin = plugins.output_plugin()
         # TODO: this must be configurable using args
-        self.num_workers = multiprocessing.cpu_count()
+        self.num_workers = args.workers #multiprocessing.cpu_count()
         self.clear()
 
     ##
@@ -175,7 +178,7 @@ class ActionManager:
                                         args = (i, self.pending,
                                                    self.work_queue,
                                                    self.done_queue,
-                                                   self.output,))
+                                                   self.output_plugin,))
             p.start()
             self.workers.append(p)
 
@@ -192,7 +195,11 @@ class ActionManager:
             if self.args.verbose:
                 print("ActionManager: finished " + str(work_done) + " by " + str(num))
 
-            self.output(self.running[work_done], stage='finished')
+            self.output_plugin.output(self.running[work_done],
+                                      stage='finished',
+                                      pending=len(self.pending),
+                                      running=len(self.running) - 1,
+                                      finished=len(self.finished) + 1)
 
             for action in self._collect(work_done):
                 if self.args.verbose:

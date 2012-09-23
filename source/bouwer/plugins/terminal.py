@@ -53,14 +53,18 @@ def setup():
         # Get the color index from curses
         colorIndex = getattr(curses, 'COLOR_%s' % color)
         # Set the color escape sequence after filling the template with index
-        setattr(MODULE, color, curses.tparm(fgColorSeq, colorIndex))
+        
+#        print(str(color) + ' = ' + curses.tparm(fgColorSeq, colorIndex))
+        
+        setattr(MODULE, color, curses.tparm(fgColorSeq, colorIndex).decode("utf-8"))
         # Set background escape sequence
         setattr(
-            MODULE, 'BG_%s' % color, curses.tparm(bgColorSeq, colorIndex)
+            MODULE, 'BG_%s' % color, curses.tparm(bgColorSeq, colorIndex).decode("utf-8")
         )
     for control in CONTROLS:
         # Set the control escape sequence
-        setattr(MODULE, control, curses.tigetstr(CONTROLS[control]) or '')
+        cstr = curses.tigetstr(CONTROLS[control]) or b''
+        setattr(MODULE, control, cstr.decode("utf-8"))
     for value in VALUES:
         # Set terminal related values
         setattr(MODULE, value, curses.tigetnum(VALUES[value]))
@@ -75,7 +79,7 @@ def render(text):
 try:
     import curses
     setup()
-except Exception, e:
+except Exception as e:
     # There is a failure; set all attributes to default
-    print 'Warning: %s' % e
+    print('Warning: %s' % e)
     default()
