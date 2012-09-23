@@ -28,16 +28,14 @@ import os.path
 # @param actions Reference to the ActionManager
 # @param work_queue Reference to the worker queue
 # @param done_queue Reference to the done queue
+# @param output Output function
 #
-def worker(num, actions, work_queue, done_queue):
+def worker(num, actions, work_queue, done_queue, output):
 
     while True:
-        print(str(num) + ": waiting for work")
         name = work_queue.get()
-        
-        print(str(num) + ": exec( " + actions[name].command + " )")
+        output(actions[name], stage='running', worker=num)
         os.system(actions[name].command)
-        print(str(num) + ": done")
         done_queue.put((num, name))
 
 ##
@@ -48,7 +46,8 @@ class Action:
     ##
     # Constructor
     #
-    def __init__(self, target, sources, command):
+    def __init__(self, args, target, sources, command):
+        self.args    = args
         self.target  = target
         self.sources = sources
         self.command = command
@@ -88,9 +87,12 @@ class Action:
             st = os.stat(src)
             if st.st_mtime > my_st.st_mtime:
                 return True
+
+        # TODO: also decide() against the .bouwconf / Configuration!
+        # Since, we need to (partly) rebuild if the config has changed.
                     
         # None of the sources is updated and we exist. Don't build.
-        return False
+        return self.args.force
 
     ##
     # Convert action to string representation.
@@ -116,9 +118,11 @@ class ActionManager:
     # Constructor
     #
     # @param args command line arguments
+    # @param plugins Access to the plugin layer.
     #
-    def __init__(self, args):
-        self.args = args
+    def __init__(self, args, plugins):
+        self.args    = args
+        self.output  = plugins.output_plugin().output
         # TODO: this must be configurable using args
         self.num_workers = multiprocessing.cpu_count()
         self.clear()
@@ -146,7 +150,7 @@ class ActionManager:
         if target in self.pending:
             raise Exception("target " + str(target) + " already submitted")
 
-        action = Action(target, sources, command)
+        action = Action(self.args, target, sources, command)
         self.pending[target] = action
 
         # TODO: circular dep check
@@ -170,7 +174,8 @@ class ActionManager:
             p = multiprocessing.Process(target = worker,
                                         args = (i, self.pending,
                                                    self.work_queue,
-                                                   self.done_queue,))
+                                                   self.done_queue,
+                                                   self.output,))
             p.start()
             self.workers.append(p)
 
@@ -180,17 +185,22 @@ class ActionManager:
 
         # Now keep processing until all dependencies are done
         while not self._done():
-            print("ActionManager: waiting for results")
+            if self.args.verbose:
+                print("ActionManager: waiting for results")
             num, work_done = self.done_queue.get()
             
             if self.args.verbose:
                 print("ActionManager: finished " + str(work_done) + " by " + str(num))
 
+            self.output(self.running[work_done], stage='finished')
+
             for action in self._collect(work_done):
-                print("ActionManager: running " + str(action))
+                if self.args.verbose:
+                    print("ActionManager: running " + str(action))
                 self.work_queue.put(action.target)
 
-        print("ActionManager: completed")
+        if self.args.verbose:
+            print("ActionManager: completed")
 
         # Stop all workers
         # TODO: possible to output stats, e.g. number of actions per worker, etc
@@ -228,7 +238,8 @@ class ActionManager:
                 else:
                     runnable = runnable + self._finish(name)
 
-        print("ActionManager: runnable = " + str(runnable))
+        if self.args.verbose:
+            print("ActionManager: runnable = " + str(runnable))
         return runnable
 
     ##

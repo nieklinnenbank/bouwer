@@ -139,3 +139,25 @@ class PluginLoader:
 
                     # Add plugin to the list
                     self.plugins[name] = instance
+
+    ##
+    # Retrieves the active output plugin
+    #
+    def output_plugin(self):
+
+        # If the output_plugin parameter is set, use that.
+        try:
+            return self.conf.args.output_plugin
+        except AttributeError:
+            pass
+    
+        # Look for the first plugin with an output() function.
+        for plugin_name, plugin in self.plugins.items():
+            try:
+                getattr(plugin, 'output')
+                return plugin
+            except AttributeError:
+                pass
+
+        # No output plugin available.
+        return None

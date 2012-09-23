@@ -85,7 +85,7 @@ def execute():
     for target in conf.args.targets:
 
         # Initialize action tree
-        actions = bouwer.action.ActionManager(conf.args)
+        actions = bouwer.action.ActionManager(conf.args, plugins)
 
         # TODO: generate an error if no targets are executed.
 
@@ -100,7 +100,8 @@ def execute():
             build.execute_target(target, conf.trees.get('DEFAULT'), actions)
 
         # Dump the generated actions
-        actions.dump()
+        if conf.args.verbose:
+            actions.dump()
 
         # Execute the generated actions
         actions.run()

@@ -20,21 +20,27 @@ import argparse
 from bouwer.plugin import *
 
 ##
-# Output prettyfied commands
+# Output the full command of each Action
 #
-class PrettyOutput(Plugin):
+class FullOutput(Plugin):
 
     ##
     # Initialize plugin
     #
     def initialize(self, conf):
-        conf.cli.parser.add_argument('--pretty',
+        conf.cli.parser.add_argument('--full',
             dest    = 'output_plugin',
             action  = 'store_const',
             const   = self,
             default = argparse.SUPPRESS,
-            help    = 'Output only the builder name and target of each action')
+            help    = 'Output full commands for each action')
 
+    ##
+    # Called just before the Action is executed by the worker.
+    #
+    # @param action The action to output
+    # @param tags Optional statistical information of the status of the action.
+    #
     def output(self, action, **tags):
         if tags['stage'] == 'running':
-            print('Action  ' + str(action.target))
+            print(str(action.command))

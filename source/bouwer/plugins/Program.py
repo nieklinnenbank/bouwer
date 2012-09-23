@@ -56,8 +56,5 @@ class Program(Plugin):
         # Link the program
         self.action(prog,
                     objects,
-                    cc.keywords.get('cc') + ' ' + prog + ' ' + (' '.join(objects)))
-
-        #self.env.register_action(target,
-        #                         self.env['ld'] + ' ' + self.env['ldscript'] + ' '
-        #                        + self.env['ldflags'], objects, "LD")
+                    cc.keywords.get('ld') + ' ' + prog + ' ' + \
+                    cc.keywords.get('ldflags') + ' ' + (' '.join(objects)))
