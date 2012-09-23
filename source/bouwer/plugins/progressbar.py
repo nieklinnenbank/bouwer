@@ -59,7 +59,7 @@ class ProgressBar(object):
             self.clear()
         self.progress = (bar_width * percent) / 100
         data = self.TEMPLATE % {
-            'percent': percent,
+            'percent': int(percent),
             'color': self.color,
             'progress': self.block * int(self.progress),
             'normal': terminal.NORMAL,

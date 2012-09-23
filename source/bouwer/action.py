@@ -15,11 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os
 import multiprocessing
 import queue
 import os
 import os.path
+import sys
 
 ##
 # Function executed by the worker processes
@@ -37,9 +37,9 @@ def worker(num, actions, work_queue, done_queue, output_plugin):
 
         output_plugin.output(actions[name], stage='running', worker=num)
 
-        os.system(actions[name].command)
+        result = os.system(actions[name].command)
 
-        done_queue.put((num, name))
+        done_queue.put((num, name, result))
 
 ##
 # This class contains a single action to be executed.
@@ -190,7 +190,10 @@ class ActionManager:
         while not self._done():
             if self.args.verbose:
                 print("ActionManager: waiting for results")
-            num, work_done = self.done_queue.get()
+            num, work_done, result = self.done_queue.get()
+
+            if result != 0:
+                break
             
             if self.args.verbose:
                 print("ActionManager: finished " + str(work_done) + " by " + str(num))
@@ -237,6 +240,9 @@ class ActionManager:
 
             if work.satisfied(self.pending, self.running):
 
+                if self.args.verbose:
+                    print("ActionManager: satisfied with " + str(work))
+
                 self.running[name] = work
                 del self.pending[name]
 
@@ -263,14 +269,23 @@ class ActionManager:
         
         for name in action.provide:
             if name in self.pending:
-                act = self.pending.pop(name)
+                act = self.pending.get(name)
                 
-                if act.satisfied(self.pending, self.running) and \
-                   act.decide(self.pending, self.running):
-                    self.running[name] = act
-                    ret.append(act)
-                else:
-                    self.finished[name] = act
+                if self.args.verbose:
+                    print("ActionManager: trying to release providing " + str(act))
+                
+                if act.satisfied(self.pending, self.running):
+                    del self.pending[name]
+                    if self.args.verbose: print("ActionManager: satisfied with providing " + str(act))
+                    
+                    if act.decide(self.pending, self.running):
+                        if self.args.verbose: print("ActionManager: running providing " + str(act))
+                        
+                        self.running[name] = act
+                        ret.append(act)
+                    else:
+                        if self.args.verbose: print("ActionManager: finising providing " + str(act))
+                        self.finished[name] = act
         
         return ret
 
