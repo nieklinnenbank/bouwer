@@ -19,6 +19,7 @@ import sys
 import os
 import os.path
 import inspect
+import logging
 import importlib
 
 ##
@@ -80,6 +81,7 @@ class PluginLoader:
     def __init__(self, conf):
 
         self.conf    = conf
+        self.log     = logging.getLogger(__name__)
         self.plugins = {}
 
         # TODO: ugly long code!
@@ -112,8 +114,7 @@ class PluginLoader:
                     continue
 
                 # Begin loading the plugin
-                if self.conf.args.verbose:
-                    print('Loading ' + path + os.sep + filename)
+                self.log.debug('loading ' + path + os.sep + filename)
 
                 # Setup variables
                 name, ext = os.path.splitext(filename)

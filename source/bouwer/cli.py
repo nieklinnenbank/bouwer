@@ -36,7 +36,9 @@ class CommandLine:
                                      epilog='Copyright (c) 2012 Niek Linnenbank.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help = False)
         self.parser.add_argument('--version', action='version', version='0.0.1')
-        self.parser.add_argument('-v', '--verbose', help='Output verbose build information', action='store_true', default=False)
+        self.parser.add_argument('-l', '--log', help='Send logging output to the given file', type=str, default=None)
+        self.parser.add_argument('-L', '--log-level', help='Set the logging level', type=str, default='WARNING', choices = [ 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL' ])
+        self.parser.add_argument('-v', '--verbose', help='alias for -L DEBUG', action='store_true', default=False)
         self.parser.add_argument('-f', '--force', help='Force a rebuild of all targets', action='store_true', default=False)
         self.parser.add_argument('-P', '--plugin-dir', help='Directory containing plugins', type=str, default='bouw_plugins')
         self.parser.add_argument('-w', '--workers', help='Number of worker processes to start', type=int, default=multiprocessing.cpu_count())
@@ -47,6 +49,10 @@ class CommandLine:
 
         # Execute command line parser to retrieve known arguments
         self.args, self.unknowns = self.parser.parse_known_args()
+
+        # -v is an alias for -L DEBUG
+        if self.args.verbose:
+            self.args.log_level = 'DEBUG'
 
     ##
     # Interpret all command line arguments

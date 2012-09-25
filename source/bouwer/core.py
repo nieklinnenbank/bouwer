@@ -18,6 +18,7 @@
 import os
 import os.path
 import sys
+import logging
 import bouwer.cli
 import bouwer.plugin
 import bouwer.config
@@ -35,6 +36,11 @@ def execute():
 
     # Create command line interface object
     cli = bouwer.cli.CommandLine()
+
+    # Initialize logging
+    logging.basicConfig(format   = '[%(asctime)s] [%(name)s] %(levelname)s -- %(message)s',
+                        level    = getattr(logging, cli.args.log_level),
+                        filename = cli.args.log )
 
     # (Re)load configuration
     conf = bouwer.config.Configuration(cli)

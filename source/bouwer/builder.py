@@ -21,6 +21,7 @@ import sys
 import copy
 import inspect
 import importlib
+import logging
 
 ##
 # Responsible for access to the Builder layer.
@@ -36,6 +37,7 @@ class BuilderManager:
     def __init__(self, conf, plugins):
         self.conf     = conf
         self.args     = conf.args
+        self.log      = logging.getLogger(__name__)
         self.executes = {}
 
         # Detects all plugins with an execute() builder function
@@ -55,10 +57,7 @@ class BuilderManager:
     # @param actions
     #
     def execute_target(self, target, tree, actions):
-
-        if self.args.verbose:
-            print(sys.argv[0] + ": executing `" + tree.name + ':' + target + "'")
-
+        self.log.debug("executing `" + tree.name + ':' + target + "'")
         self.conf.active_tree = tree
         self.actions = actions
         self._scan_dir(os.getcwd(), target, tree, actions)
@@ -97,14 +96,13 @@ class BuilderManager:
     #
     def _parse(self, filename, target, tree, actions):
 
-        if self.args.verbose:
-            print(sys.argv[0] + ": parsing `" + filename + "'")
+        self.log.debug("parsing `" + filename + "'")
     
         # Config file must be readable
         try:
             os.stat(filename)
         except OSError as e:
-            print(sys.argv[0] + ": could not read Bouwfile `" + filename + "': " + str(e))
+            self.log.critical("could not read Bouwfile `" + filename + "': " + str(e))
             sys.exit(1)
 
         globs = copy.copy(self.executes)

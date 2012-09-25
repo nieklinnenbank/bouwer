@@ -21,6 +21,7 @@ import os
 import os.path
 import sys
 import datetime
+import logging
 
 ##
 # Implements a worker for executing Actions.
@@ -164,6 +165,7 @@ class ActionManager:
     #
     def __init__(self, args, plugins):
         self.args = args
+        self.log  = logging.getLogger(__name__)
         self.output_plugin = plugins.output_plugin()
         self.num_workers   = args.workers
         self.clear()
@@ -198,17 +200,15 @@ class ActionManager:
         for src in sources:
             if src in self.pending:
                 self.pending[src].provide.append(target)
-        
-        if self.args.verbose:
-            print("ActionManager: submitted action: " + str(action))
+
+        self.log.debug("submitted action " + str(action))
 
     ##
     # Run all submitted actions.
     #
     def run(self):
-
-        if self.args.verbose:
-            print("ActionManager: running actions")
+        
+        self.log.debug("running actions")
 
         # Create workers
         for i in range(self.num_workers):
@@ -222,8 +222,7 @@ class ActionManager:
 
         # Now keep processing until all dependencies are done
         while not self._done():
-            if self.args.verbose:
-                print("ActionManager: waiting for results")
+            self.log.debug("waiting for event")
 
             ev = self.events.get()
 
@@ -238,8 +237,7 @@ class ActionManager:
                 if ev.result != 0:
                     break
 
-                if self.args.verbose:
-                    print("ActionManager: finished " + str(ev.target) + " by " + str(ev.worker))
+                self.log.debug("finished " + str(ev.target) + " by " + str(ev.worker))
                 
                 self.output_plugin.output(self.running[ev.target],
                                           ev,
@@ -248,13 +246,10 @@ class ActionManager:
                                           finished=len(self.finished) + 1)
             
                 for action in self._collect(ev.target):
-                    if self.args.verbose:
-                        print("ActionManager: running " + str(action))
+                    self.log.debug("sending " + str(action))
                     self.work.put(action.target)
             
-
-        if self.args.verbose:
-            print("ActionManager: completed")
+        self.log.debug("completed")
 
         # Stop all workers
         # TODO: possible to output stats, e.g. number of actions per worker, etc
@@ -284,8 +279,7 @@ class ActionManager:
 
             if work.satisfied(self.pending, self.running):
 
-                if self.args.verbose:
-                    print("ActionManager: satisfied with " + str(work))
+                self.log.debug("satisfied with " + str(work))
 
                 self.running[name] = work
                 del self.pending[name]
@@ -295,8 +289,7 @@ class ActionManager:
                 else:
                     runnable = runnable + self._finish(name)
 
-        if self.args.verbose:
-            print("ActionManager: runnable = " + str(runnable))
+        self.log.debug("runnable is " + str(runnable))
         return runnable
 
     ##
@@ -315,20 +308,19 @@ class ActionManager:
             if name in self.pending:
                 act = self.pending.get(name)
                 
-                if self.args.verbose:
-                    print("ActionManager: trying to release providing " + str(act))
+                self.log.debug("trying to release providing " + str(act))
                 
                 if act.satisfied(self.pending, self.running):
                     del self.pending[name]
-                    if self.args.verbose: print("ActionManager: satisfied with providing " + str(act))
+                    self.log.debug("satisfied with providing " + str(act))
                     
                     if act.decide(self.pending, self.running):
-                        if self.args.verbose: print("ActionManager: running providing " + str(act))
+                        self.log.debug("running providing " + str(act))
                         
                         self.running[name] = act
                         ret.append(act)
                     else:
-                        if self.args.verbose: print("ActionManager: finising providing " + str(act))
+                        self.log.debug("finising providing " + str(act))
                         self.finished[name] = act
         
         return ret
@@ -345,21 +337,6 @@ class ActionManager:
     # Dump all our information to stdout for diagnosis.
     #
     def dump(self):
-
-        print("--- Actions Pending ---")
-        print()
-        for name, action in self.pending.items():
-            print(str(action))
-        print()
-
-        print("--- Actions Running ---")
-        print()
-        for name, action in self.running.items():
-            print(str(action))
-        print()
-        
-        print("--- Actions Finished ---")
-        print()
-        for name, action in self.finished.items():
-            print(str(action))
-        print()
+        self.log.debug("pending  = " + str(self.pending.keys()))
+        self.log.debug("running  = " + str(self.running.keys()))
+        self.log.debug("finished = " + str(self.finished.keys()))

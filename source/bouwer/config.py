@@ -17,6 +17,7 @@
 
 import os
 import sys
+import logging
 import inspect
 import json
 import bouwer.builder
@@ -246,6 +247,7 @@ class Configuration:
     #
     def __init__(self, cli):
         self.cli   = cli
+        self.log   = logging.getLogger(__name__)
         self.args  = cli.args
         self.trees = {}
         
@@ -257,8 +259,7 @@ class Configuration:
             self.reset()
 
         # Dump configuration for debugging
-        if self.args.verbose:
-            self.dump()
+        self.dump()
 
     ##
     # Introduce a new configuration item
@@ -406,11 +407,12 @@ class Configuration:
     # @param parent Text describing the parent item
     #
     def _dump_item(self, item, tree, parent = ''):
-        print(parent + item.name + ':' + str(item.type) + ' = ' + str(item.value(tree)))
+        
+        self.log.debug(parent + item.name + ':' + str(item.type) + ' = ' + str(item.value(tree)))
                 
         for key in item.keywords:
-            print('\t' + key + ' => ' + str(item.keywords[key]))
-        print()
+            self.log.debug('\t' + key + ' => ' + str(item.keywords[key]))
+        self.log.debug('')
 
         for child_item_name, child_item in item.subitems.items():
             self._dump_item(child_item, tree, parent + item.name + '.')
@@ -442,14 +444,13 @@ class Configuration:
     def _parse(self, filename):
 
         # Output message
-        if self.args.verbose:
-            print(sys.argv[0] + ': reading `' + filename + '\'')
+        self.log.debug('reading `' + filename + '\'')
 
         # Config file must be readable
         try:
             os.stat(filename)
         except OSError as e:
-            print(sys.argv[0] + ": could not read config file '" + filename + "': " + str(e))
+            self.log.critical("could not read config file '" + filename + "': " + str(e))
             sys.exit(1)
 
         # Initialize parser of Bouwconfig files.
