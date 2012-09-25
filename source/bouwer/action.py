@@ -20,6 +20,7 @@ import queue
 import os
 import os.path
 import sys
+import datetime
 
 ##
 # Implements a worker for executing Actions.
@@ -45,14 +46,12 @@ class Worker(multiprocessing.Process):
     def run(self):
 
         while True:
+            # Retrieve the next Action target
             target = self.work.get()
-
-            #output_plugin.output(actions[name], stage='running', worker=num)
-
-            self.events.put(ActionEvent(self.name, target, 'execute'))
             
-            # TODO: add a __call__ to Action instead!
-            result = os.system(self.actions[target].command)
+            # Trigger ActionEvents and execute the action
+            self.events.put(ActionEvent(self.name, target, 'execute'))
+            result = self.actions[target]()
             self.events.put(ActionEvent(self.name, target, 'finish', result))
 
 ##
@@ -73,6 +72,7 @@ class ActionEvent:
         self.target = target
         self.event  = event
         self.result = result
+        self.time   = datetime.datetime.now()
 
 ##
 # This class contains a single action to be executed.
@@ -88,8 +88,6 @@ class Action:
         self.sources = sources
         self.command = command
         self.provide = []
-
-    # TODO: add a __call__ instead!
 
     ##
     # See if our dependencies are done.
@@ -133,6 +131,12 @@ class Action:
         return self.args.force
 
     ##
+    # Execute the Action
+    #
+    def __call__(self):
+        return os.system(self.command)
+
+    ##
     # Convert action to string representation.
     #
     def __str__(self):
@@ -159,10 +163,9 @@ class ActionManager:
     # @param plugins Access to the plugin layer.
     #
     def __init__(self, args, plugins):
-        self.args    = args
+        self.args = args
         self.output_plugin = plugins.output_plugin()
-        # TODO: this must be configurable using args
-        self.num_workers = args.workers #multiprocessing.cpu_count()
+        self.num_workers   = args.workers
         self.clear()
 
     ##
