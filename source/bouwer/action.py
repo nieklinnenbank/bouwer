@@ -22,24 +22,57 @@ import os.path
 import sys
 
 ##
-# Function executed by the worker processes
+# Implements a worker for executing Actions.
 #
-# @param num ID number of the worker
-# @param actions Reference to the ActionManager
-# @param work_queue Reference to the worker queue
-# @param done_queue Reference to the done queue
-# @param output_plugin Output function
+class Worker(multiprocessing.Process):
+
+    ##
+    # Constructor
+    #
+    # @param actions Reference to the ActionManager
+    # @param work Reference to the work queue
+    # @param events Reference to the events queue
+    #
+    def __init__(self, actions, work, events):
+        super().__init__()
+        self.actions = actions
+        self.work    = work
+        self.events  = events
+
+    ##
+    # Main execution loop of the worker.
+    #
+    def run(self):
+
+        while True:
+            target = self.work.get()
+
+            #output_plugin.output(actions[name], stage='running', worker=num)
+
+            self.events.put(ActionEvent(self.name, target, 'execute'))
+            
+            # TODO: add a __call__ to Action instead!
+            result = os.system(self.actions[target].command)
+            self.events.put(ActionEvent(self.name, target, 'finish', result))
+
+##
+# Represents an event which occurred for an Action.
 #
-def worker(num, actions, work_queue, done_queue, output_plugin):
+class ActionEvent:
 
-    while True:
-        name = work_queue.get()
-
-        output_plugin.output(actions[name], stage='running', worker=num)
-
-        result = os.system(actions[name].command)
-
-        done_queue.put((num, name, result))
+    ##
+    # Constructor
+    #
+    # @param worker Name of the worker causing the event
+    # @param target Target of the action
+    # @param event String describing the event that occurred
+    # @param result Optional result code of the event
+    #
+    def __init__(self, worker, target, event, result = None):
+        self.worker = worker
+        self.target = target
+        self.event  = event
+        self.result = result
 
 ##
 # This class contains a single action to be executed.
@@ -55,6 +88,8 @@ class Action:
         self.sources = sources
         self.command = command
         self.provide = []
+
+    # TODO: add a __call__ instead!
 
     ##
     # See if our dependencies are done.
@@ -134,12 +169,12 @@ class ActionManager:
     # Remove all submitted actions.
     #
     def clear(self):
-        self.pending    = {}
-        self.running    = {}
-        self.finished   = {}
-        self.work_queue = multiprocessing.Queue()
-        self.done_queue = multiprocessing.Queue()
-        self.workers    = []
+        self.pending  = {}
+        self.running  = {}
+        self.finished = {}
+        self.work     = multiprocessing.Queue()
+        self.events   = multiprocessing.Queue()
+        self.workers  = []
 
     ##
     # Put a new Action on the ActionTree.
@@ -174,40 +209,46 @@ class ActionManager:
 
         # Create workers
         for i in range(self.num_workers):
-            p = multiprocessing.Process(target = worker,
-                                        args = (i, self.pending,
-                                                   self.work_queue,
-                                                   self.done_queue,
-                                                   self.output_plugin,))
-            p.start()
-            self.workers.append(p)
+            w = Worker(self.pending, self.work, self.events)
+            self.workers.append(w)
+            w.start()
 
         # Fill the queue initially with work not having dependencies
         for work in self._collect():
-            self.work_queue.put(work.target)
+            self.work.put(work.target)
 
         # Now keep processing until all dependencies are done
         while not self._done():
             if self.args.verbose:
                 print("ActionManager: waiting for results")
-            num, work_done, result = self.done_queue.get()
 
-            if result != 0:
-                break
+            ev = self.events.get()
+
+            if ev.event == 'execute':
+                self.output_plugin.output(self.running[ev.target],
+                                          ev,
+                                          pending=len(self.pending),
+                                          running=len(self.running),
+                                          finished=len(self.finished))
             
-            if self.args.verbose:
-                print("ActionManager: finished " + str(work_done) + " by " + str(num))
+            elif ev.event == 'finish':
+                if ev.result != 0:
+                    break
 
-            self.output_plugin.output(self.running[work_done],
-                                      stage='finished',
-                                      pending=len(self.pending),
-                                      running=len(self.running) - 1,
-                                      finished=len(self.finished) + 1)
-
-            for action in self._collect(work_done):
                 if self.args.verbose:
-                    print("ActionManager: running " + str(action))
-                self.work_queue.put(action.target)
+                    print("ActionManager: finished " + str(ev.target) + " by " + str(ev.worker))
+                
+                self.output_plugin.output(self.running[ev.target],
+                                          ev,
+                                          pending=len(self.pending),
+                                          running=len(self.running) - 1,
+                                          finished=len(self.finished) + 1)
+            
+                for action in self._collect(ev.target):
+                    if self.args.verbose:
+                        print("ActionManager: running " + str(action))
+                    self.work.put(action.target)
+            
 
         if self.args.verbose:
             print("ActionManager: completed")

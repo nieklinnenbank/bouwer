@@ -35,6 +35,6 @@ class PrettyOutput(Plugin):
             default = argparse.SUPPRESS,
             help    = 'Output only the builder name and target of each action')
 
-    def output(self, action, **tags):
-        if tags['stage'] == 'running':
-            print('Action  ' + str(action.target))
+    def output(self, action, event, **tags):
+        if event.event == 'execute':
+            print('  Object  ' + str(action.target))

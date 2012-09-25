@@ -46,19 +46,12 @@ class ProgressBar(Plugin):
         return True
 
     ##
-    # Called just before the Action is executed by the worker.
+    # Called when an ActionEvent is triggered.
     #
-    # @param action The action to output
-    # @param tags Optional statistical information of the status of the action.
-    #
-    def output(self, action, **tags):
-
-#        if tags['stage'] == 'running':
-            #bar = progressbar.ProgressBar("blue")
-        if tags['stage'] == 'finished':
+    def output(self, action, event, **tags):
         
-            todo  = tags['pending'] + tags['running']
-            done  = tags['finished']
-            perc  = (done / (todo + done)) * 100
+        todo  = tags['pending'] + tags['running']
+        done  = tags['finished']
+        perc  = (done / (todo + done)) * 100
         
-            self.bar.render(perc, action.target)#, action.target)
+        self.bar.render(perc, action.target)#, action.target)

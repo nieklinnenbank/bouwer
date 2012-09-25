@@ -38,9 +38,6 @@ class FullOutput(Plugin):
     ##
     # Called just before the Action is executed by the worker.
     #
-    # @param action The action to output
-    # @param tags Optional statistical information of the status of the action.
-    #
-    def output(self, action, **tags):
-        if tags['stage'] == 'running':
-            print(str(action.command))
+    def output(self, action, event, **tags):
+        if event.event == 'execute':
+            print(str(event.worker) + ' : ' + str(action.command))
