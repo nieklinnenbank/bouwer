@@ -7,12 +7,13 @@ Example of usage:
     print BLUE + UNDERLINE + 'Blue underlined text' + NORMAL
     print BLUE + BG_YELLOW + BOLD + 'text' + NORMAL
 """
- 
+
 import sys
- 
+import curses
+
 # The current module
 MODULE = sys.modules[__name__]
- 
+
 COLORS = "BLUE GREEN CYAN RED MAGENTA YELLOW WHITE BLACK".split()
 # List of terminal controls, you can add more to the list.
 CONTROLS = {
@@ -22,14 +23,14 @@ CONTROLS = {
     'REVERSE':'rev', 'UNDERLINE':'smul', 'NORMAL':'sgr0',
     'HIDE_CURSOR':'cinvis', 'SHOW_CURSOR':'cnorm'
 }
- 
+
 # List of numeric capabilities
 VALUES = {
     'COLUMNS':'cols', # Width of the terminal (None for unknown)
     'LINES':'lines',  # Height of the terminal (None for unknown)
     'MAX_COLORS': 'colors',
 }
- 
+
 def default():
     """Set the default attribute values"""
     for color in COLORS:
@@ -39,23 +40,22 @@ def default():
         setattr(MODULE, control, '')
     for value in VALUES:
         setattr(MODULE, value, None)
- 
+
 def setup():
     """Set the terminal control strings"""
+
     # Initializing the terminal
     curses.setupterm()
     # Get the color escape sequence template or '' if not supported
     # setab and setaf are for ANSI escape sequences
-    bgColorSeq = curses.tigetstr('setab') or curses.tigetstr('setb') or ''
-    fgColorSeq = curses.tigetstr('setaf') or curses.tigetstr('setf') or ''
+    bgColorSeq = (curses.tigetstr('setab') or curses.tigetstr('setb') or '').decode("utf-8")
+    fgColorSeq = (curses.tigetstr('setaf') or curses.tigetstr('setf') or '').decode("utf-8")
  
     for color in COLORS:
         # Get the color index from curses
         colorIndex = getattr(curses, 'COLOR_%s' % color)
         # Set the color escape sequence after filling the template with index
-        
-#        print(str(color) + ' = ' + curses.tparm(fgColorSeq, colorIndex))
-        
+
         setattr(MODULE, color, curses.tparm(fgColorSeq, colorIndex).decode("utf-8"))
         # Set background escape sequence
         setattr(
@@ -65,21 +65,16 @@ def setup():
         # Set the control escape sequence
         cstr = curses.tigetstr(CONTROLS[control]) or b''
         setattr(MODULE, control, cstr.decode("utf-8"))
+
     for value in VALUES:
         # Set terminal related values
         setattr(MODULE, value, curses.tigetnum(VALUES[value]))
- 
+
 def render(text):
     """Helper function to render text easily
     Example:
     render("%(GREEN)s%(BOLD)stext%(NORMAL)s") -> a bold green text
     """
     return text % MODULE.__dict__
- 
-try:
-    import curses
-    setup()
-except Exception as e:
-    # There is a failure; set all attributes to default
-    print('Warning: %s' % e)
-    default()
+
+setup()
