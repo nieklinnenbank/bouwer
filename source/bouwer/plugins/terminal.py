@@ -48,18 +48,28 @@ def setup():
     curses.setupterm()
     # Get the color escape sequence template or '' if not supported
     # setab and setaf are for ANSI escape sequences
-    bgColorSeq = (curses.tigetstr('setab') or curses.tigetstr('setb') or '').decode("utf-8")
-    fgColorSeq = (curses.tigetstr('setaf') or curses.tigetstr('setf') or '').decode("utf-8")
+    bgColorSeq = curses.tigetstr('setab') or curses.tigetstr('setb') or ''
+    fgColorSeq = curses.tigetstr('setaf') or curses.tigetstr('setf') or ''
  
     for color in COLORS:
         # Get the color index from curses
         colorIndex = getattr(curses, 'COLOR_%s' % color)
-        # Set the color escape sequence after filling the template with index
 
-        setattr(MODULE, color, curses.tparm(fgColorSeq, colorIndex).decode("utf-8"))
+        # Try to retrieve the color escape sequence with TypeError workaround.
+        # See http://bugs.python.org/issue10570
+        try:
+            bg_color_escape = curses.tparm(bgColorSeq, colorIndex)
+            fg_color_escape = curses.tparm(fgColorSeq, colorIndex)
+        except TypeError:
+            bg_color_escape = curses.tparm(bgColorSeq.decode("utf-8"), colorIndex)
+            fg_color_escape = curses.tparm(fgColorSeq.decode("utf-8"), colorIndex)
+
+        # Set the color escape sequence after filling the template with index
+        setattr(MODULE, color, fg_color_escape.decode("utf-8"))
+
         # Set background escape sequence
         setattr(
-            MODULE, 'BG_%s' % color, curses.tparm(bgColorSeq, colorIndex).decode("utf-8")
+            MODULE, 'BG_%s' % color, bg_color_escape.decode("utf-8")
         )
     for control in CONTROLS:
         # Set the control escape sequence
