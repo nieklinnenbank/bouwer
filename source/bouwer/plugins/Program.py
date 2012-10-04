@@ -17,6 +17,7 @@
 
 import os
 import os.path
+import glob
 from bouwer.plugin import *
 from bouwer.config import *
 
@@ -40,12 +41,16 @@ class Program(Plugin):
         else:
             return
 
+        if type(sources) is str:
+            sources = [sources]
+
         # Make a list of objects on which we depend
         objects = []
 
         # Traverse all source files given
         for src in sources:
-            objects.append(self.Object(src))
+            for src_file in glob.glob(src):
+                objects.append(self.Object(src_file))
 
         # Retrieve compiler chain
         chain = self.get_item('CC')
@@ -58,3 +63,4 @@ class Program(Plugin):
                     objects,
                     cc.keywords.get('ld') + ' ' + prog + ' ' + \
                     cc.keywords.get('ldflags') + ' ' + (' '.join(objects)))
+

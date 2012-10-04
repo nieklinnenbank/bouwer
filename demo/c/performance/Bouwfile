@@ -1,0 +1,2 @@
+def build(conf):
+    Program('hello', '*.c')

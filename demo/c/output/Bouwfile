@@ -19,6 +19,4 @@
 # Build the hello world program
 #
 def build(conf):
-    Program('hello', ['main.c', 'hello1.c', 'hello2.c', 'hello3.c',
-                                'hello4.c', 'hello5.c', 'hello6.c',
-                                'hello7.c', 'hello8.c', 'hello9.c'])
+    Program('hello', ['main.c', 'hello*.c' ])
