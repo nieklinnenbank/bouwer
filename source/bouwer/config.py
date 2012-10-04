@@ -52,6 +52,9 @@ class Config:
     # @return True if dependencies met, False otherwise.
     #
     def satisfied(self, tree = None):
+        """
+        See if we are satisfied
+        """
 
         if tree is None:
             tree = self.config.active_tree

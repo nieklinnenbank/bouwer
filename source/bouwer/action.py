@@ -23,89 +23,156 @@ import sys
 import datetime
 import logging
 
-##
-# Implements a worker for executing Actions.
-#
 class Worker(multiprocessing.Process):
+    """
+    Implements a consumer process for executable actions
 
-    ##
-    # Constructor
-    #
-    # @param actions Reference to the ActionManager
-    # @param work Reference to the work queue
-    # @param events Reference to the events queue
-    #
+    The :class:`Worker` class implements a simple consumer for
+    executing :class:`Action` objects. It takes a :obj:`list`
+    of available `actions` and receives target names of the
+    appropriate action to execute from the `work` :class:`Queue`.
+    The worker sends an :class:`ActionEvent` on the `events` :class:`Queue`
+    before and after executing an action.
+
+    """
+
     def __init__(self, actions, work, events):
+        """
+        Constructor
+        """
         super().__init__()
-        self.actions = actions
-        self.work    = work
-        self.events  = events
+        self._actions = actions
+        self._work    = work
+        self._events  = events
 
-    ##
-    # Main execution loop of the worker.
-    #
     def run(self):
+        """
+        Main execution loop of the Worker.
+        """
 
         while True:
             # Retrieve the next Action target
-            target = self.work.get()
+            target = self._work.get()
             
             # Trigger ActionEvents and execute the action
-            self.events.put(ActionEvent(self.name, target, 'execute'))
-            result = self.actions[target]()
-            self.events.put(ActionEvent(self.name, target, 'finish', result))
+            self._events.put(ActionEvent(self.name, target, 'execute'))
+            result = self._actions[target]()
+            self._events.put(ActionEvent(self.name, target, 'finish', result))
 
-##
-# Represents an event which occurred for an Action.
-#
+class WorkerManager:
+    """
+    Manages a pool of :class:`Worker` processes
+    """
+
+    def __init__(self, actions, num_workers, plugins):
+        """
+        Constructor
+        """
+        self._workers = []
+        self._work    = multiprocessing.Queue()
+        self._events  = multiprocessing.Queue()
+        self.log      = logging.getLogger(__name__)
+
+        # Create workers
+        for i in range(num_workers):
+            worker = Worker(actions, self._work, self._events)
+            self._workers.append(worker)
+            worker.start()
+
+    def __del__(self):
+        """
+        Destructor
+        """
+        for proc in self._workers:
+            proc.terminate()
+
+    def execute(self, collect, finished, handle_event):
+        """
+        Execute the given :obj:`list` of actions
+        """
+        self.log.debug("executing actions")
+
+        # Fill the work queue initially with work
+        for work in collect():
+            self._work.put(work.target)
+
+        # Now keep processing until all dependencies are done
+        while True:
+            
+            if finished() and self._work.empty():
+                break
+
+            self.log.debug("waiting for event")
+            ev = self._events.get()
+            self.log.debug("got event: " + str(ev))
+            
+            if ev.event == 'finish':
+                if ev.result != 0:
+                    break
+
+                self.log.debug("finished " + str(ev.target) + " by " + str(ev.worker))
+            
+                for action in collect(ev.target):
+                    self.log.debug("sending " + str(action))
+                    self._work.put(action.target)
+            
+            # Let our caller post process the event
+            handle_event(ev)
+
+        # TODO: possible to output stats, e.g. number of actions per worker, etc
+        #       this should be part of an output plugin too?
+        self.log.debug("completed")
+ 
 class ActionEvent:
+    """
+    Represents an event which occurred for an action.
+    """
 
-    ##
-    # Constructor
-    #
-    # @param worker Name of the worker causing the event
-    # @param target Target of the action
-    # @param event String describing the event that occurred
-    # @param result Optional result code of the event
-    #
     def __init__(self, worker, target, event, result = None):
+        """
+        Constructor
+        """ 
         self.worker = worker
         self.target = target
         self.event  = event
         self.result = result
         self.time   = datetime.datetime.now()
 
-##
-# This class contains a single action to be executed.
-#
 class Action:
+    """
+    Represents an executable action.
+    """
 
-    ##
-    # Constructor
-    #
     def __init__(self, args, target, sources, command):
+        """
+        Constructor
+        """
         self.args    = args
         self.target  = target
         self.sources = sources
         self.command = command
         self.provide = []
 
-    ##
-    # See if our dependencies are done.
-    #
-    # @param pending list of pending actions
-    # @param running list of running actions
-    #
     def satisfied(self, pending, running):
+        """
+        See if our dependencies are satisfied.
+        
+        >>> action.satisfied(pending, running)
+        True
+        
+        """
         for src in self.sources:
             if src in pending or src in running:
                 return False
         return True
 
-    ##
-    # Decide if this action needs to run.
-    #
     def decide(self, pending, running):
+        """
+        Decide if this action needs to run.
+       
+        >>> action.decide(pending, running)
+            True
+        """
 
         # Try to see if the target exists
         try:
@@ -131,49 +198,49 @@ class Action:
         # None of the sources is updated and we exist. Don't build.
         return self.args.force
 
-    ##
-    # Execute the Action
-    #
     def __call__(self):
+        """
+        Execute the action
+        """
         return os.system(self.command)
 
-    ##
-    # Convert action to string representation.
-    #
     def __str__(self):
+        """
+        Convert to string representation
+        """
         return self.target   + " <<< sources=" + \
            str(self.sources) + " provide=" + \
            str(self.provide) + "  :  [" + \
            str(self.command) + "]"
 
-    ##
-    # Convert to short string representation.
-    #
     def __repr__(self):
+        """
+        Convert to short string representation
+        """
         return self.target
 
-##
-# Represents all Actions registered for execution.
-#
 class ActionManager:
+    """
+    Represents all actions registered for execution.
+    """
 
-    ##
-    # Constructor
-    #
-    # @param args command line arguments
-    # @param plugins Access to the plugin layer.
-    #
     def __init__(self, args, plugins):
+        """
+        Constructor
+        """
         self.args = args
+        self.plugins = plugins
         self.log  = logging.getLogger(__name__)
-        self.output_plugin = plugins.output_plugin()
-        self.num_workers   = args.workers
+        # TODO: replace with invoke()
+        self._output_plugin = plugins.output_plugin()
         self.clear()
 
-    ##
-    # Remove all submitted actions.
-    #
     def clear(self):
+        """
+        Remove all submitted actions.
+        """
+
+        # TODO: don't do this with lists?
         self.pending  = {}
         self.running  = {}
         self.finished = {}
@@ -181,15 +248,12 @@ class ActionManager:
         self.events   = multiprocessing.Queue()
         self.workers  = []
 
-    ##
-    # Put a new Action on the ActionTree.
-    #
-    # @param target Name of the output file or None
-    # @param sources List of dependencies
-    # @param command Command to execute or a python function
-    #
     def submit(self, target, sources, command):
-
+        """
+        Submit a new :class:`.Action` for execution
+        
+        >>> manager.submit('hello', ['hello.c'], 'gcc -o hello hello.c')
+        """ 
         if target in self.pending:
             raise Exception("target " + str(target) + " already submitted")
 
@@ -203,68 +267,35 @@ class ActionManager:
 
         self.log.debug("submitted action " + str(action))
 
-    ##
-    # Run all submitted actions.
-    #
     def run(self):
-        
-        self.log.debug("running actions")
+        """
+        Run all registered actions
+        """
+        master = WorkerManager(self.pending, self.args.workers, self.plugins)
+        master.execute(self.collect, self._done, self._event)
 
-        # Create workers
-        for i in range(self.num_workers):
-            w = Worker(self.pending, self.work, self.events)
-            self.workers.append(w)
-            w.start()
-
-        # Fill the queue initially with work not having dependencies
-        for work in self._collect():
-            self.work.put(work.target)
-
-        # Now keep processing until all dependencies are done
-        while not self._done():
-            self.log.debug("waiting for event")
-
-            ev = self.events.get()
-
-            if ev.event == 'execute':
-                self.output_plugin.output(self.running[ev.target],
-                                          ev,
-                                          pending=len(self.pending),
-                                          running=len(self.running),
-                                          finished=len(self.finished))
+    def _event(self, ev):
+        """
+        Process an ActionEvent by invoking output plugins
+        """
+        if ev.event == 'execute':
+            self._output_plugin.output(self.running[ev.target],
+                                       ev,
+                                       pending=len(self.pending),
+                                       running=len(self.running),
+                                       finished=len(self.finished))
             
-            elif ev.event == 'finish':
-                if ev.result != 0:
-                    break
-
-                self.log.debug("finished " + str(ev.target) + " by " + str(ev.worker))
-                
-                self.output_plugin.output(self.running[ev.target],
-                                          ev,
-                                          pending=len(self.pending),
-                                          running=len(self.running) - 1,
-                                          finished=len(self.finished) + 1)
-            
-                for action in self._collect(ev.target):
-                    self.log.debug("sending " + str(action))
-                    self.work.put(action.target)
-            
-        self.log.debug("completed")
-
-        # Stop all workers
-        # TODO: possible to output stats, e.g. number of actions per worker, etc
-        #       this should be part of an output plugin too?
-        for proc in self.workers:
-            proc.terminate()
-
-    ##
-    # Retrieve the next available Action for execution.
-    #
-    # @param target Optional completed action or None.
-    # @return List of Actions for execution.
-    #
-    def _collect(self, target = None):
-
+        elif ev.event == 'finish':
+            self._output_plugin.output(self.finished[ev.target],
+                                       ev,
+                                       pending=len(self.pending),
+                                       running=len(self.running),
+                                       finished=len(self.finished))
+ 
+    def collect(self, target = None):
+        """
+        Retrieve more actions to execute
+        """
         if target is None:
             runnable = []
         else:
@@ -292,12 +323,10 @@ class ActionManager:
         self.log.debug("runnable is " + str(runnable))
         return runnable
 
-    ##
-    # Called when an action is completed.
-    #
-    # @param target Target of the action which just completed
-    #
     def _finish(self, target):
+        """
+        Post-process an action after completion.
+        """
         action = self.running.pop(target)
         self.finished[target] = action
 
@@ -325,18 +354,17 @@ class ActionManager:
         
         return ret
 
-    ##
-    # See if all Actions are done.
-    #
-    # @return True if finished, False otherwise.
-    #
     def _done(self):
+        """
+        Check if all actions are done
+        """
         return len(self.pending) == 0 and len(self.running) == 0
         
-    ##
-    # Dump all our information to stdout for diagnosis.
-    #
     def dump(self):
+        """
+        Dump internal information to standard output
+        """
         self.log.debug("pending  = " + str(self.pending.keys()))
         self.log.debug("running  = " + str(self.running.keys()))
         self.log.debug("finished = " + str(self.finished.keys()))
+

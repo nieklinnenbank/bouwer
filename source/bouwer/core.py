@@ -29,6 +29,7 @@ import bouwer.action
 # Execute the given target in all directories
 #
 def execute():
+    """ Execute Bouwfiles with the current configuration """
 
     # Traverse current directory to the top-level Bouwfile
     while os.path.exists('..' + os.sep + 'Bouwfile'):

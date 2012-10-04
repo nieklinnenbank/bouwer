@@ -58,6 +58,8 @@ class Plugin:
     ##
     # Generate an action
     #
+
+    # TODO: replace with a glob{} action key instead
     def action(self, target, command, sources):
         self.build.generate_action(target, command, sources)
 
@@ -141,6 +143,8 @@ class PluginLoader:
 
                     # Add plugin to the list
                     self.plugins[name] = instance
+
+    # TODO: replace this with: def invoke(func, ...), e.g. invoke('output', foo, bar, zzz):
 
     ##
     # Retrieves the active output plugin
