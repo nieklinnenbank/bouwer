@@ -1,19 +1,48 @@
 + only rescan Bouwconfig files if there is no .bouwconf available pls.
 
-- use the python logging module instead of self.args.verbose!
++ use the python logging module instead of self.args.verbose!
+
+- implement implicit C header dependency scanner please!
+    --> watch out for performance here!
+
+- implement inspect()
+
+- implement mapping + ordering of builders (for Library->UseLibrary->Program)
+
+- implement per-directory configuration overrides (for kernel linkscript override)
+
+- implement simple cherrypy frontend
+
+- implement daemon mode
+
+- implement --clean / -c
+
+- implement on-the-fly action generation from Workers, to support source generators
+
+- support python 2.6.1 for MacOSX?
+
+- fix error messages in plugins, especially on unknown attributes:
+    Traceback (most recent call last):
+      File "/home/fox/Repositories/Bouwer.git/source/bouwer/config.py", line 159, in __getattr__
+          return self.__dict__[name]
+
 
 - also decide() against the .bouwconf/Configuration!
 
 - check with pylint, pychecker please
 
-- use a Bus pub/sub a-like system for events? this may also be handy for the plugins.
+- implement plugin.invoke('output', ...)
 
-- Checking for valid CC configuration must happen in a PREBUILD work queue, in parallel
+- test bouwer on existing projects
+    - replace its build system completely with bouwer, e.g. apache or gcc or whatever
+
+- implement checking for a valid CC configuration in inspect() of Object
+
     --> do this in a detect() function of the Object() builder plz
 - There can also be a POSTBUILD work queue for post processing
 - i.e. the work queues must have different levels or so
 
-- add testoob test cases for bouwer?
+- add unittest/testoob test cases for bouwer?
 
 - localizable configuration text/titles?
 + loadable plugins/modules

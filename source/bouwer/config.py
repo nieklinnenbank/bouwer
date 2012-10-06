@@ -161,7 +161,7 @@ class Config:
             return self.subitems[name]
 
     def __str__(self):
-        return str(self.value()) #value) # TODO: this is wrong. we need to evaluate() against the *active* tree
+        return str(self.value())
 
     def __repr__(self):
         return self.name
@@ -346,6 +346,18 @@ class Configuration:
         # Synchronize configuration trees
         self._synchronize()
 
+    def write_header(self, filename, tree_name = None):
+        """
+        Output the given configuration tree as a C header file
+
+        The settings will be encoded as #define's
+        """
+        if tree_name is None:
+            tree = self.active_tree
+        else:
+            tree = self.trees.get(tree_name)
+        pass
+
     ##
     # Dump the current configuration to standard output
     #
@@ -463,3 +475,4 @@ class Configuration:
 
         # Parse the given file
         exec(compile(open(filename).read(), filename, 'exec'), globs)
+

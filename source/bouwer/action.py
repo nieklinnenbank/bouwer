@@ -33,7 +33,6 @@ class Worker(multiprocessing.Process):
     appropriate action to execute from the `work` :class:`Queue`.
     The worker sends an :class:`ActionEvent` on the `events` :class:`Queue`
     before and after executing an action.
-
     """
 
     def __init__(self, actions, work, events):
@@ -49,7 +48,6 @@ class Worker(multiprocessing.Process):
         """
         Main execution loop of the Worker.
         """
-
         while True:
             # Retrieve the next Action target
             target = self._work.get()
@@ -121,6 +119,7 @@ class WorkerManager:
 
         # TODO: possible to output stats, e.g. number of actions per worker, etc
         #       this should be part of an output plugin too?
+        # TODO: output a completed ActionEvent here
         self.log.debug("completed")
  
 class ActionEvent:
@@ -159,7 +158,6 @@ class Action:
         
         >>> action.satisfied(pending, running)
         True
-        
         """
         for src in self.sources:
             if src in pending or src in running:
@@ -278,6 +276,10 @@ class ActionManager:
         """
         Process an ActionEvent by invoking output plugins
         """
+
+        # TODO: use class constants instead of strings
+        # TODO: pass the action manager instead?
+        #       together with the current configuration
         if ev.event == 'execute':
             self._output_plugin.output(self.running[ev.target],
                                        ev,
@@ -332,7 +334,8 @@ class ActionManager:
 
         # TODO: release all reverse dependencies now
         ret = []
-        
+
+        # TODO: cleanup this bit please..
         for name in action.provide:
             if name in self.pending:
                 act = self.pending.get(name)

@@ -20,25 +20,27 @@ import os.path
 from bouwer.plugin import *
 from bouwer.config import *
 
-##
-# Build a software library
-#
 class Library(Plugin):
+    """ Build a software library """
 
-    ##
-    # Build a software library
-    #
-    # @param target Name of the library to build or Config item.
-    # @param sources List of source files of the library
-    #
     def execute(self, target, sources):
-
+        """
+        Builder implementation for Library()
+        """
         if type(target) is Config and target.value():
             libname = target.keywords.get('library', target.name.lower())
+
+            # Look for optional sources in our child config items
+            for child_name in target.keywords.get('childs', []):
+                child = self.get_item(child_name)
+
+                if child.type == bool and child.value() and 'source' in child.keywords:
+                    sources.append(child.keywords.get('source'))
+
         elif type(target) is str:
             libname = target
         else:
-            return
+            raise Exception('Library target must be string or Config')
 
         cc = self.get_item('CC')
         compiler = self.get_item(cc.value())
@@ -50,24 +52,13 @@ class Library(Plugin):
         # otherwise, put the object in this directory.
         # optionally, if a BUILDPATH is set, put the object in this directory,
         # plus the BUILDPATH appended to it (e.g. bld directory @ ASML)
-        
-        # --> provide a generic mechanism for this!
-
+        # TODO: provide a generic mechanism for this!
         for src in sources:
             objects.append(self.Object(src))
 
-        self.action(libname + '.a', objects, compiler.keywords.get('ar') + ' ' + libname + '.a')
-        
-        """
-        # Make a list of objects on which we depend
-        objects = []
+        # TODO: replace this with action() instead?
+        self.action(libname + '.a', objects,
+                    compiler.keywords.get('ar') + ' ' +
+                    compiler.keywords.get('arflags') + ' ' + libname + '.a ' +
+                    ' '.join(objects))
 
-        # Traverse all source files given
-        for src in sources:
-            objects.append(self.env.Object(src))
-
-        # Create the archive after all objects are done
-        self.env.register_action(target + '.a',
-                                 self.env['ar'] + ' ' + self.env['arflags'],
-                                 objects, "AR")
-        """
