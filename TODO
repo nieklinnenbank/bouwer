@@ -2,6 +2,11 @@
 
 + use the python logging module instead of self.args.verbose!
 
+- let the build manager translate paths instead of the builders!
+    - make it so, that the builder's execute_*() automatically receive the translated paths always
+
+- put docstrings instead of doxygen tags
+
 - implement implicit C header dependency scanner please!
     --> watch out for performance here!
 
@@ -15,7 +20,11 @@
 
 - implement daemon mode
 
+- implement a --pretend mode, which doesn't really execute commands
+
 - implement --clean / -c
+
+- implement --quiet / -q output plugin
 
 - implement on-the-fly action generation from Workers, to support source generators
 
@@ -26,8 +35,10 @@
       File "/home/fox/Repositories/Bouwer.git/source/bouwer/config.py", line 159, in __getattr__
           return self.__dict__[name]
 
-
 - also decide() against the .bouwconf/Configuration!
+    --> we may need to cache all Action command's... i.e. if the command changed, rebuild
+    --> but then what about python functions?
+    --> or, timestamp each Config object also
 
 - check with pylint, pychecker please
 
@@ -35,6 +46,8 @@
 
 - test bouwer on existing projects
     - replace its build system completely with bouwer, e.g. apache or gcc or whatever
+
+- test bouwer on all interesting operating systems and compilers
 
 - implement checking for a valid CC configuration in inspect() of Object
 

@@ -18,47 +18,50 @@
 import os
 import os.path
 from bouwer.plugin import *
+from bouwer.util import *
 
-##
-# Build an executable object
-#
 class Object(Plugin):
+    """
+    Build an executable object
+    """
 
-    ##
-    # Detect a valid compiler configuration
-    #
     def inspect(self, conf):
-        # Todo: attempt to compile a C program with this config
+        """
+        Detect a valid compiler configuration
+        """
+        # Todo: register actions attempting to compile a C program with these CC configs
         pass
 
-    ##
-    # Build an executable Object
-    #
-    # @param source Source file
-    #
-    def execute(self, source):
+    def execute_source(self, source):
+        """
+        Build an executable object given its `source` file
+        """
 
         # Retrieve C compiler configuration.
-        chain = self.get_item('CC')
-        cc    = self.get_item(chain.value())
-
+        chain    = self.get_item('CC')
+        cc       = self.get_item(chain.value())
+    
         # TODO: add '#include' implicit dependencies
-        splitfile = os.path.splitext(source)
+
+        splitfile = os.path.splitext(source.relative)
 
         # Compile a C source file into an object file
         if splitfile[1] == '.c':
 
-            # Output file is the name with the .o suffix
-            outfile = splitfile[0] + '.o'
+            # Translate source and target paths relative from project-root
+            # TODO: we MUST have the translated outfile here, because it needs
+            # to go in the command ...
+            outfile = TargetPath(splitfile[0] + '.o')
 
             # Register compile action
-            self.action(outfile,
-                        [ source ],
-                        cc.keywords.get('cc') + ' ' + outfile + ' ' + cc.keywords.get('ccflags') + ' ' + source)
-
-            # Success
+            self.action(outfile, [ source ],
+                        cc.keywords.get('cc') + ' ' +
+                        str(outfile) + ' ' +
+                        cc.keywords.get('ccflags') + ' ' +
+                        str(source))
             return outfile
 
         # Unknown filetype
         else:
             raise Exception('unknown filetype: ' + source)
+

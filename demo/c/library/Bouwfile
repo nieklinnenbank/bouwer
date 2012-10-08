@@ -16,7 +16,9 @@
 #
 
 def build(conf):
-    """ Build the dummy library """
+    """
+    Build the dummy library
+    """
     ConfigHeader('config.h')
     Library(conf.LIBDUMMY, [ 'lookup.c' ])
 

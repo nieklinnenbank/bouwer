@@ -18,32 +18,38 @@
 import os
 import os.path
 from bouwer.plugin import *
-from bouwer.config import *
+from bouwer.util import *
 
 class Library(Plugin):
     """ Build a software library """
 
-    def execute(self, target, sources):
+    def execute_config(self, item, sources):
         """
-        Builder implementation for Library()
+        Build a library using a :class:`.Config` and list of `sources`
         """
-        if type(target) is Config and target.value():
-            libname = target.keywords.get('library', target.name.lower())
+        if not item.value():
+            return
 
-            # Look for optional sources in our child config items
-            for child_name in target.keywords.get('childs', []):
-                child = self.get_item(child_name)
+        target = item.keywords.get('library', item.name.lower())
 
-                if child.type == bool and child.value() and 'source' in child.keywords:
-                    sources.append(child.keywords.get('source'))
+        # Look for optional sources in our child config items
+        for child_name in item.keywords.get('childs', []):
+            child = self.get_item(child_name)
 
-        elif type(target) is str:
-            libname = target
-        else:
-            raise Exception('Library target must be string or Config')
+            if child.type == bool and child.value() and 'source' in child.keywords:
+                sources.append(SourcePath(child.keywords.get('source')))
 
+        self.execute_target(TargetPath(target), sources)
+
+    def execute_target(self, target, sources):
+        """
+        Build a library using a `target` name and list of `sources`
+        """
+
+        #libname = self.build.translate_target(libname, self.conf.active_tree)
         cc = self.get_item('CC')
         compiler = self.get_item(cc.value())
+        target.append('.a')
 
         objects = []
 
@@ -57,8 +63,11 @@ class Library(Plugin):
             objects.append(self.Object(src))
 
         # TODO: replace this with action() instead?
-        self.action(libname + '.a', objects,
+
+        # TODO: why not do self.target( ... ) self.source( ... )
+
+        self.action(target, objects,
                     compiler.keywords.get('ar') + ' ' +
-                    compiler.keywords.get('arflags') + ' ' + libname + '.a ' +
-                    ' '.join(objects))
+                    compiler.keywords.get('arflags') + ' ' + str(target) + ' ' +
+                    (' '.join([str(o) for o in objects])))
 

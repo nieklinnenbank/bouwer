@@ -24,13 +24,74 @@ import os.path
 import sys
 import copy
 import logging
+import inspect
+import glob
 
-class BuilderManager:
+import bouwer.config
+from bouwer.util import *
+
+class BuilderInvoker:
+    """
+    Responsible for calling the correct execute function of a builder
+    """
+
+    def __init__(self, manager, builder):
+        """ Constructor """
+        self.manager = manager
+        self.builder = builder
+
+    def _source_path_list(self, input_list):
+
+        if type(input_list) is str:
+            input_list = [input_list]
+
+        out = []
+        for src in input_list:
+
+            bouwfile = self.manager.active_bouwfile
+            caller   = os.path.abspath(bouwfile)
+            relative = os.path.relpath(os.path.dirname(caller))
+
+            # TODO: hmm. a lot of convertions here. needed?
+            for src_file in glob.glob(relative + os.sep + src):
+                out.append(SourcePath(os.path.dirname(src) + os.sep + os.path.basename(src_file)))
+
+        return out
+
+    def invoke(self, *arguments, **keywords):
+        """
+        Call the correct execute function of the builder
+        """
+
+        # TODO: implement glob.glob support here somewhere
+
+        # if called with (target:str, source:str), convert to (target:str, [source:str]) automatically
+        if type(arguments[0]) is bouwer.config.Config:
+            return self.builder.execute_config(arguments[0],
+                                               self._source_path_list(arguments[1]))
+
+        elif type(arguments[0]) is str:
+            if len(arguments) == 1 and hasattr(self.builder, 'execute_source'):
+                return self.builder.execute_source(SourcePath(arguments[0]))
+
+            elif hasattr(self.builder, 'execute_target'):
+                return self.builder.execute_target(TargetPath(arguments[0]),
+                                                   self._source_path_list(arguments[1]))
+
+        elif type(arguments[0]) is TargetPath:
+            return self.builder.execute_target(*arguments)
+
+        elif type(arguments[0]) is SourcePath:
+            return self.builder.execute_source(*arguments)
+
+        return self.builder.execute_any(*arguments, **keywords)
+
+class BuilderManager(Singleton):
     """ 
     Manages access to the builder layer
     """
 
-    def __init__(self, conf, plugins):
+    def __init__(self, conf = None, plugins = None):
         """ 
         Class constructor
 
@@ -42,16 +103,17 @@ class BuilderManager:
         self.conf     = conf
         self.args     = conf.args
         self.log      = logging.getLogger(__name__)
-        self.executes = {}
+        self.invokers = {}
 
         # Detects all plugins with an execute() builder function
         for plugin_name, plugin in plugins.plugins.items():
-            try:
-                getattr(plugin, "execute")
-                self.executes[plugin_name] = plugin.execute
+            if hasattr(plugin, 'execute_target') or \
+               hasattr(plugin, 'execute_config') or \
+               hasattr(plugin, 'execute_source') or \
+               hasattr(plugin, 'execute_any'):
+                
+                self.invokers[plugin_name] = BuilderInvoker(self, plugin).invoke
                 plugin.build = self
-            except AttributeError:
-                pass
 
     def execute_target(self, target, tree, actions):
         """ 
@@ -115,7 +177,11 @@ class BuilderManager:
                                filename + "': " + str(e))
             sys.exit(1)
 
-        globs = copy.copy(self.executes)
+        # Keep track of the Bouwfile being parsed
+        self.active_bouwfile = filename
+
+        # Set globals
+        globs = copy.copy(self.invokers)
 
         # Parse the given file
         exec(compile(open(filename).read(), filename, 'exec'), globs)
@@ -123,6 +189,32 @@ class BuilderManager:
         # Execute the target routine, if defined in this Bouwfile.
         if target in globs:
             globs[target](tree)
+
+    def translate_source(self, source, conf):
+        """
+        Translate Bouwfile-relative source to project-wide source path
+        """
+        caller   = os.path.abspath(self.active_bouwfile)
+        relative = os.path.relpath(os.path.dirname(caller))
+        return os.path.normpath(relative + os.sep + source)
+
+    def translate_target(self, target, conf):
+        """
+        Translate Bouwfile-relative target to project-wide target path
+        """
+        # TODO: if only DEFAULT is active, don't add the tree name in the path
+        # TODO: support the BUILDROOT, BUILDPATH configuration items
+
+        # TODO: remove conf, or make it always conf.active_tree
+
+        caller   = os.path.abspath(self.active_bouwfile)
+        #inspect.getfile(inspect.currentframe().f_back.f_back))
+        relative = os.path.relpath(os.path.dirname(caller))
+
+        if len(self.conf.trees) == 1:
+            return os.path.normpath(relative + os.sep + target)
+        else:
+            return os.path.normpath(conf.name + os.sep + relative + os.sep + target)
 
     def generate_action(self, target, sources, command):
         """ 
@@ -133,5 +225,18 @@ class BuilderManager:
         :param str command: Command to execute
 
         """
-        self.actions.submit(target, sources, command)
+
+        # TODO: inefficient!
+        src_list = []
+        for src in sources:
+            src_list.append(src.absolute)
+
+        # TODO: measure what is the best place to put this: inside the worker,
+        # or here at the master?
+        dirname = os.path.dirname(target.absolute)
+        
+        if len(dirname) > 0 and not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        self.actions.submit(target.absolute, src_list, command)
 

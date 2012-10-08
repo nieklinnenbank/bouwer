@@ -15,22 +15,24 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os
-import os.path
+ConfigTree('DEBUG',
+    title = 'Build in debug mode',
+    help  = 'Build configuration for debugging.',
+)
 
-##
-# Check if a configuration supports the given header file.
-#
-class CheckHeader:
+Config('GCC',
+    tree = 'DEBUG',
+    ccflags = '-g3 -Wall -Werror -Wextra -O0 -c',
+    ldflags = '-g3 -Wall -Werror -Wextra -O0',
+)
 
-    ##
-    # Decide if we "agree" with the given configuration.
-    #
-    def inspect(self, conf):
-        # Todo: attempt to compile a C program with this config.
-        # Then modify the configuration based on if the header file exists and compiles
-        pass
+ConfigTree('RELEASE',
+    title = 'Build for releasing',
+    help  = 'Build configuration for releasing',
+)
 
-    def execute_any(self, filename):
-        print("outputting header to " + str(filename))
+Config('GCC',
+    tree = 'RELEASE',
+    ccflags = '-O3 -c',
+)
 

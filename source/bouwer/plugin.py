@@ -70,8 +70,8 @@ class Plugin:
     
         if name in self.__dict__:
             return self.__dict__[name]
-        elif name in self.__dict__['build'].executes:
-            return self.__dict__['build'].executes[name]
+        elif name in self.__dict__['build'].invokers:
+            return self.__dict__['build'].invokers[name]
         else:
             raise AttributeError(name)
 

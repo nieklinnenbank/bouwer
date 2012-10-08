@@ -15,22 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os
-import os.path
-
-##
-# Check if a configuration supports the given header file.
-#
-class CheckHeader:
-
-    ##
-    # Decide if we "agree" with the given configuration.
-    #
-    def inspect(self, conf):
-        # Todo: attempt to compile a C program with this config.
-        # Then modify the configuration based on if the header file exists and compiles
-        pass
-
-    def execute_any(self, filename):
-        print("outputting header to " + str(filename))
+def build(conf):
+    """ Build the hello world program """
+    Program('hello3', 'hello3.c')
 

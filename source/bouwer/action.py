@@ -51,7 +51,7 @@ class Worker(multiprocessing.Process):
         while True:
             # Retrieve the next Action target
             target = self._work.get()
-            
+
             # Trigger ActionEvents and execute the action
             self._events.put(ActionEvent(self.name, target, 'execute'))
             result = self._actions[target]()

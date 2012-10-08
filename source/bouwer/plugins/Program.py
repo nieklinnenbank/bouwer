@@ -19,48 +19,39 @@ import os
 import os.path
 import glob
 from bouwer.plugin import *
-from bouwer.config import *
+from bouwer.util import *
 
-##
-# Build an executable program
-#
 class Program(Plugin):
+    """
+    Build an executable program
+    """
 
-    ##
-    # Build an executable program
-    #
-    # @param target Name of the executable or Config item
-    # @param sources List of source files of the program
-    #
-    def execute(self, target, sources):
+    def execute_config(self, item, sources):
+        """
+        Build a program given a :class:`.Config` `item` and `sources` list.
+        """
+        # TODO: also support the program = keyword, like library =
+        self.execute_target(TargetPath(item.name.lower()), sources)
 
-        if type(target) is Config:
-            prog = target.name.lower()
-        elif type(target) is str:
-            prog = target
-        else:
-            return
-
-        if type(sources) is str:
-            sources = [sources]
+    def execute_target(self, target, sources):
+        """
+        Build an program given its `target` name and `sources` list
+        """
 
         # Make a list of objects on which we depend
         objects = []
 
         # Traverse all source files given
         for src in sources:
-            for src_file in glob.glob(src):
-                objects.append(self.Object(src_file))
+            objects.append(self.Object(src))
 
         # Retrieve compiler chain
         chain = self.get_item('CC')
         cc    = self.get_item(chain.value())                
 
-        # TODO: use BUILDROOT, BUILDPATH
-
         # Link the program
-        self.action(prog,
+        self.action(target,
                     objects,
-                    cc.keywords.get('ld') + ' ' + prog + ' ' + \
-                    cc.keywords.get('ldflags') + ' ' + (' '.join(objects)))
+                    cc.keywords.get('ld') + ' ' + str(target) + ' ' + \
+                    cc.keywords.get('ldflags') + ' ' + (' '.join([str(o) for o in objects])))
 

@@ -28,7 +28,7 @@ class ConfigHeader(Plugin):
         """ Decide if we agree with the given configuration """
         pass
 
-    def execute(self, filename):
+    def execute_any(self, filename):
         """ Builder implementation for ConfigHeader() """
         self.conf.write_header(filename)
 

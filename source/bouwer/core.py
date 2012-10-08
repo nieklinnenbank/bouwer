@@ -44,7 +44,7 @@ def execute():
                         filename = cli.args.log )
 
     # (Re)load configuration
-    conf = bouwer.config.Configuration(cli)
+    conf = bouwer.config.Configuration.instance(cli)
 
     # Load all plugins
     plugins = bouwer.plugin.PluginLoader(conf)
@@ -73,7 +73,7 @@ def execute():
         sys.exit(conf_plugin.configure(conf))
 
     # Initialize the builder manager
-    build = bouwer.builder.BuilderManager(conf, plugins)
+    build = bouwer.builder.BuilderManager.instance(conf, plugins)
 
     #
     # TODO: the core runs all targets inside a Bouwfile to let them *REGISTER*

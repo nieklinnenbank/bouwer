@@ -30,7 +30,7 @@ class Command(Plugin):
     # @param cmd The command to run
     # @param item Optional configuration item or None.
     #
-    def execute(self, cmd, item = False):
+    def execute_any(self, cmd, item = False):
 
         if (type(item) is Config and item.value) or item is False:
             os.system(cmd)

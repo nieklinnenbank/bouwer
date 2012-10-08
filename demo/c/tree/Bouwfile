@@ -15,8 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-##
-# Build the hello world program
-#
 def build(conf):
-    Program('hello', ['main.c', 'hello*.c' ])
+    """ Build the hello world program """
+    Program('hello', 'hello.c')
+

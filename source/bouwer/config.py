@@ -21,6 +21,7 @@ import logging
 import inspect
 import json
 import bouwer.builder
+from bouwer.util import *
 
 ##
 # Represents a single configuration item
@@ -242,13 +243,13 @@ class ConfigParser:
 ##
 # Represents the current configuration
 #
-class Configuration:
+class Configuration(Singleton):
 
     ##
     # Constructor
     # @param cli CommandLine object for reading arguments
     #
-    def __init__(self, cli):
+    def __init__(self, cli = None):
         self.cli   = cli
         self.log   = logging.getLogger(__name__)
         self.args  = cli.args
@@ -352,6 +353,8 @@ class Configuration:
 
         The settings will be encoded as #define's
         """
+        self.log.debug("writing configuration to header: " + str(filename))
+
         if tree_name is None:
             tree = self.active_tree
         else:

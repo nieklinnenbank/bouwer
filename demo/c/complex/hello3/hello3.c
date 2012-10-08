@@ -17,7 +17,8 @@
 
 #include <stdio.h>
 
-void hello6()
+int main(void)
 {
-    printf("Hello6\n");
+    printf("Hello World 3!\n");
+    return 0;
 }

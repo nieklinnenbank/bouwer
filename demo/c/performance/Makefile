@@ -1,5 +1,6 @@
 _GCC 		 = $(CROSS)gcc
-_CFLAGS 	 = -g3 -O0 -Wall -MD $(CFLAGS)
+#_CFLAGS 	 = -g3 -O0 -Wall -MD $(CFLAGS)
+_CFLAGS      = -Wall $(CFLAGS)
 _CPPFLAGS 	 = $(CPPFLAGS) -I.
 _LDFLAGS	 = $(LDFLAGS)
 _CXXFLAGS        = $(CXXFLAGS)
@@ -19,7 +20,9 @@ $(_GCC_TARGET) : $(_C_OBJECTS) $(_CPP_OBJECTS) $(_S_OBJECTS)
 	$(_GCC) $(_CFLAGS) $(_CPPFLAGS) $(_LDFLAGS) -o $@ $(_OBJECTS)
 
 $(_C_OBJECTS) : %.o : %.c
-	$(_GCC) $(_CFLAGS) $(_CPPFLAGS) -o $@ -MQ $@ -c $<
+	$(_GCC) $(_CFLAGS) $(_CPPFLAGS) -o $@ -c $<
+#	$(_GCC) $(_CFLAGS) $(_CPPFLAGS) -o $@ -MQ $@ -c $<
+
 
 $(_CPP_OBJECTS) : %.o : %.cpp
 	$(_GCC) $(_CFLAGS) $(_CPPFLAGS) $(CXXFLAGS) -o $@ -MQ $@ -c $<
