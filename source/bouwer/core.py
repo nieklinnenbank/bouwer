@@ -110,5 +110,9 @@ def execute():
         if conf.args.verbose:
             actions.dump()
 
-        # Execute the generated actions
-        actions.run()
+        # Execute the generated actions or perform cleanup
+        if conf.args.clean:
+            actions.clean()
+        else:
+            actions.run()
+

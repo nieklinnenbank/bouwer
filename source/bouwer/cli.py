@@ -40,6 +40,7 @@ class CommandLine:
         self.parser.add_argument('-L', '--log-level', help='Set the logging level', type=str, default='WARNING', choices = [ 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL' ])
         self.parser.add_argument('-v', '--verbose', help='alias for -L DEBUG', action='store_true', default=False)
         self.parser.add_argument('-f', '--force', help='Force a rebuild of all targets', action='store_true', default=False)
+        self.parser.add_argument('-c', '--clean', help='Remove all targets and generated dependencies', action='store_true', default=False)
         self.parser.add_argument('-P', '--plugin-dir', help='Directory containing plugins', type=str, default='bouw_plugins')
         self.parser.add_argument('-w', '--workers', help='Number of worker processes to start', type=int, default=multiprocessing.cpu_count())
         self.parser.add_argument('targets', metavar='TARGET', type=str, nargs='*', default=['build'], help='Build targets to execute')

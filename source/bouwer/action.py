@@ -272,6 +272,13 @@ class ActionManager:
         master = WorkerManager(self.pending, self.args.workers, self.plugins)
         master.execute(self.collect, self._done, self._event)
 
+    def clean(self):
+        self.log.debug("cleaning all Actions")
+
+        for action_name, action in self.pending.items():
+            self.log.debug("removing " + str(action.target))
+            os.remove(action.target)
+
     def _event(self, ev):
         """
         Process an ActionEvent by invoking output plugins
