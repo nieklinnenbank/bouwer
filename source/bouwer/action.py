@@ -25,7 +25,7 @@ import logging
 
 class Worker(multiprocessing.Process):
     """
-    Implements a consumer process for executable actions
+    Implements a consumer process for executable :class:`Action` objects.
 
     The :class:`Worker` class implements a simple consumer for
     executing :class:`Action` objects. It takes a :obj:`list`
@@ -86,7 +86,7 @@ class WorkerManager:
 
     def execute(self, collect, finished, handle_event):
         """
-        Execute the given :obj:`list` of actions
+        Execute the :obj:`list` of :class:`.Action` objects
         """
         self.log.debug("executing actions")
 
@@ -124,7 +124,7 @@ class WorkerManager:
  
 class ActionEvent:
     """
-    Represents an event which occurred for an action.
+    Represents an event which occurred for an :class:`.Action`
     """
 
     def __init__(self, worker, target, event, result = None):
@@ -219,7 +219,7 @@ class Action:
 
 class ActionManager:
     """
-    Represents all actions registered for execution.
+    Manages all :class:`.Action` objects registered for execution.
     """
 
     def __init__(self, args, plugins):
@@ -231,11 +231,11 @@ class ActionManager:
         self.log  = logging.getLogger(__name__)
         # TODO: replace with invoke()
         self._output_plugin = plugins.output_plugin()
-        self.clear()
+        self.reset()
 
-    def clear(self):
+    def reset(self):
         """
-        Remove all submitted actions.
+        Reset the list of submitted :class:`.Action` objects.
         """
 
         # TODO: don't do this with lists?
@@ -267,12 +267,15 @@ class ActionManager:
 
     def run(self):
         """
-        Run all registered actions
+        Run all registered :class:`.Action` objects
         """
         master = WorkerManager(self.pending, self.args.workers, self.plugins)
         master.execute(self.collect, self._done, self._event)
 
     def clean(self):
+        """
+        Remove all :class:`.Action` target files
+        """
         self.log.debug("cleaning all Actions")
 
         for action_name, action in self.pending.items():
@@ -281,7 +284,7 @@ class ActionManager:
 
     def _event(self, ev):
         """
-        Process an ActionEvent by invoking output plugins
+        Process an :class:`.ActionEvent` by invoking output plugins
         """
 
         # TODO: use class constants instead of strings
@@ -303,7 +306,7 @@ class ActionManager:
  
     def collect(self, target = None):
         """
-        Retrieve more actions to execute
+        Retrieve more :class:`.Action` objects to execute
         """
         if target is None:
             runnable = []
@@ -334,7 +337,7 @@ class ActionManager:
 
     def _finish(self, target):
         """
-        Post-process an action after completion.
+        Post-process an :class:`.Action` after completion.
         """
         action = self.running.pop(target)
         self.finished[target] = action
@@ -366,7 +369,7 @@ class ActionManager:
 
     def _done(self):
         """
-        Check if all actions are done
+        Check if all :class:`.Actions` are done
         """
         return len(self.pending) == 0 and len(self.running) == 0
         

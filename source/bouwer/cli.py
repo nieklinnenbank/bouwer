@@ -21,6 +21,8 @@ import argparse
 import configparser
 import multiprocessing
 
+# TODO: extend somekind of argparse class here
+
 ##
 # Represents the command line interface
 #

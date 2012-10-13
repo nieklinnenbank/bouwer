@@ -63,8 +63,6 @@ class BuilderInvoker:
         Call the correct execute function of the builder
         """
 
-        # TODO: implement glob.glob support here somewhere
-
         # if called with (target:str, source:str), convert to (target:str, [source:str]) automatically
         if type(arguments[0]) is bouwer.config.Config:
             return self.builder.execute_config(arguments[0],

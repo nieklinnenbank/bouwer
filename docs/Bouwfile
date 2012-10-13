@@ -15,20 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os
-from bouwer.plugin import *
-from bouwer.config import *
+def html(conf):
+    """ Generate HTML documentation """
+    Command('sphinx-build -b html -d _build/doctrees   . _build/html')
 
-class Command(Plugin):
-    """
-    Run a shell command
-    """
-
-    def execute_any(self, cmd, item = False):
-        """ Run a shell command """
-
-        if (type(item) is Config and item.value) or item is False:
-            os.system(cmd)
-
-        # self.build.generate_action(...)
-        # os.system(cmd)

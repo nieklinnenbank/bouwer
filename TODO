@@ -10,6 +10,8 @@
 - implement implicit C header dependency scanner please!
     --> watch out for performance here!
 
+- make a builder for sphinx
+
 - implement inspect()
 
 - implement mapping + ordering of builders (for Library->UseLibrary->Program)
@@ -22,7 +24,7 @@
 
 - implement a --pretend mode, which doesn't really execute commands
 
-- implement --clean / -c
++ implement --clean / -c
 
 - implement --quiet / -q output plugin
 
