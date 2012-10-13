@@ -64,6 +64,13 @@ def generate_hello_program(count):
         write_hello_func(i)
     write_hello_world(count)
 
+def generate(count = 100):
+    """ Generate all programs """
+    return generate_hello_program(count)
+
 if __name__ == '__main__':
-    generate_hello_program(int(sys.argv[1]))
+    if len(sys.argv) >= 2:
+        generate(int(sys.argv[1]))
+    else:
+        generate()
 

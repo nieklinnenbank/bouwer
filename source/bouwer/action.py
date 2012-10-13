@@ -106,7 +106,8 @@ class WorkerManager:
             
             if ev.event == 'finish':
                 if ev.result != 0:
-                    break
+                    self.log.critical('non-zero exit status ' + str(ev.result) + ' from ' + str(ev.worker))
+                    sys.exit(1)
 
                 self.log.debug("finished " + str(ev.target) + " by " + str(ev.worker))
             
