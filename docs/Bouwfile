@@ -15,7 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+def build(conf):
+    """ Default build target """
+    html(conf)
+
 def html(conf):
     """ Generate HTML documentation """
-    Command('sphinx-build -b html -d _build/doctrees   . _build/html')
+    Command('sphinx-build -b html -d _build/doctrees . _build/html')
 

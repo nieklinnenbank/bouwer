@@ -1,15 +1,12 @@
-.. Bouwer documentation master file, created by
-   sphinx-quickstart on Sat Sep 29 21:20:28 2012.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Understanding Bouwer
+====================
 
-Bouwer Architecture
-===================
+This document describes the architecture of Bouwer and implementation details.
 
 .. toctree::
-   :maxdepth: 1
-   :glob:
+   :maxdepth: 2 
    :numbered:
 
-   *
-
+   configuration
+   builder
+   action

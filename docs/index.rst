@@ -1,17 +1,11 @@
-########################
 Bouwer Documentation
-########################
+====================
 
 .. toctree::
+   :maxdepth: 2
 
-   installation/index
+   introduction
+   installation
    understanding/index
-   tutorial/index
-
-.. Indices and tables
-.. ==================
-.. 
-.. * :ref:`genindex`
-.. * :ref:`modindex`
-.. * :ref:`search`
+   tutorials/index
 
