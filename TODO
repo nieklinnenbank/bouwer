@@ -18,7 +18,20 @@
 
 - implement per-directory configuration overrides (for kernel linkscript override)
 
+- how to deal with the 'tristate' type from kbuild ...
+
 - implement simple cherrypy frontend
+
+- support this syntax for overriding a tree specific item:
+
+    Config('MYITEM', 'MYTREE',
+            keyword1 = True,
+            keyword2 = 'bar zzz')
+
+- see if we could support interpolation in keywords, e.g.:
+    
+    Config('GCC', 'TARGET',
+            ldscript = 'architecture/$ARCH/kernel.ld')
 
 - implement daemon mode
 

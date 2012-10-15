@@ -373,7 +373,8 @@ class ActionManager:
         Check if all :class:`.Actions` are done
         """
         return len(self.pending) == 0 and len(self.running) == 0
-        
+
+    # TODO: replace with __str__
     def dump(self):
         """
         Dump internal information to standard output

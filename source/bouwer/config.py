@@ -182,11 +182,15 @@ class ConfigParser:
     ##
     # Prepare arguments for creating a Config() object.
     #
-    def _prepare(self, name, **keywords):
+    def _prepare(self, name, *opts, **keywords):
 
         item_value = keywords.get('default', True)
         item_type  = type(item_value)
-        dest_tree  = self.conf.trees[keywords.get('tree', 'DEFAULT')]
+
+        if len(opts) > 0:
+            dest_tree = self.conf.trees[opts[0]]
+        else:
+            dest_tree = self.conf.trees[keywords.get('tree', 'DEFAULT')]
 
         # Let all childs depend on the item
         for child in keywords.get('childs', []):
@@ -200,9 +204,9 @@ class ConfigParser:
     # @param keywords
     # @return Name of the item just added
     #
-    def parse_config(self, name, **keywords):
+    def parse_config(self, name, *args, **keywords):
 
-        item_type, item_value, dest_tree = self._prepare(name, **keywords)
+        item_type, item_value, dest_tree = self._prepare(name, *args, **keywords)
 
         # In case of a list, make the options depend on us
         if item_type is list:

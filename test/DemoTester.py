@@ -42,3 +42,5 @@ class DemoTester(common.BouwerTester):
                 result = os.system(self.bouwer + ' -c')
                 self.assertEqual(result, 0, 'cleaning ' + lang + ' demo ' + demo + ' failed')
 
+                # TODO: assert that the targets are there!
+

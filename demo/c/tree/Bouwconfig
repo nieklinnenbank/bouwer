@@ -20,8 +20,7 @@ ConfigTree('DEBUG',
     help  = 'Build configuration for debugging.',
 )
 
-Config('GCC',
-    tree = 'DEBUG',
+Config('GCC', 'DEBUG',
     ccflags = '-g3 -Wall -Werror -Wextra -O0 -c',
     ldflags = '-g3 -Wall -Werror -Wextra -O0',
 )
@@ -31,8 +30,7 @@ ConfigTree('RELEASE',
     help  = 'Build configuration for releasing',
 )
 
-Config('GCC',
-    tree = 'RELEASE',
+Config('GCC', 'RELEASE',
     ccflags = '-O3 -c',
 )
 
