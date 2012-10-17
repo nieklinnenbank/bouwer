@@ -38,9 +38,9 @@ class DemoTester(common.BouwerTester):
                     generate.generate()
 
                 result = os.system(self.bouwer + ' -qf')
-                self.assertEqual(result, 0, 'building ' + lang + ' demo ' + demo + ' failed')
+                self.assertEqual(result, 0, 'building ' + os.getcwd() + ' failed')
                 result = os.system(self.bouwer + ' -c')
-                self.assertEqual(result, 0, 'cleaning ' + lang + ' demo ' + demo + ' failed')
+                self.assertEqual(result, 0, 'cleaning ' + os.getcwd() + ' failed')
 
                 # TODO: assert that the targets are there!
 
