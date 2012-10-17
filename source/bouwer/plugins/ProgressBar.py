@@ -15,21 +15,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os
 import argparse
-import sys
 import progressbar
-from bouwer.plugin import *
+from bouwer.plugin import Plugin
 
-##
-# Output a progress bar to the terminal
-#
 class ProgressBar(Plugin):
+    """
+    Output a textual progress bar on the terminal
+    """
 
-    ##
-    # Initialize plugin
-    #
     def initialize(self, conf):
+        """
+        Initialize plugin
+        """
         conf.cli.parser.add_argument('-p', '--progress',
             dest    = 'output_plugin',
             action  = 'store_const',
@@ -39,17 +37,11 @@ class ProgressBar(Plugin):
 
         self.bar = progressbar.ProgressBar('blue')
 
-    ##
-    # See if we have all dependencies for this plugin
-    #
-    def exists(self):
-        return True
-
-    ##
-    # Called when an ActionEvent is triggered.
-    #
     def output(self, action, event, **tags):
-        
+        """
+        Called when an :class:`.ActionEvent` is triggered
+        """
+
         todo  = tags['pending'] + tags['running']
         done  = tags['finished']
         perc  = (done / (todo + done)) * 100

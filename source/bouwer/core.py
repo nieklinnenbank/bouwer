@@ -15,6 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+Bouwer core functionality
+"""
+
 import os
 import os.path
 import sys
@@ -25,11 +29,10 @@ import bouwer.config
 import bouwer.builder
 import bouwer.action
 
-##
-# Execute the given target in all directories
-#
 def execute():
-    """ Execute Bouwfiles with the current configuration """
+    """
+    Execute Bouwfiles with the current configuration
+    """
 
     # Traverse current directory to the top-level Bouwfile
     while os.path.exists('..' + os.sep + 'Bouwfile'):
@@ -39,9 +42,10 @@ def execute():
     cli = bouwer.cli.CommandLine()
 
     # Initialize logging
-    logging.basicConfig(format   = '[%(asctime)s] [%(name)s] %(levelname)s -- %(message)s',
-                        level    = getattr(logging, cli.args.log_level),
-                        filename = cli.args.log )
+    logging.basicConfig(
+        format   = '[%(asctime)s] [%(name)s] %(levelname)s -- %(message)s',
+        level    = getattr(logging, cli.args.log_level),
+        filename = cli.args.log )
 
     # (Re)load configuration
     conf = bouwer.config.Configuration.instance(cli)

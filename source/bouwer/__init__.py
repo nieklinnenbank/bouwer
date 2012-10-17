@@ -15,4 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+Bouwer: build automation for humans
+"""
+
 # This file must exist for python to mark this directory as a module
