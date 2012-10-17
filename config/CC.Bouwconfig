@@ -15,38 +15,37 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-Config('CC',
-
+ConfigList('CC',
     title   = 'C compiler toolchain',
     help    = 'Choose a C compiler toolchain for compiling C programs and libraries',
-    default = [
+    default = 'GCC',
+    options = [
 
-    Config('GCC',
-            title   = 'GNU C Compiler',
-            help    = 'See the GNU C compiler homepage at http://gcc.gnu.org',
-            default =  True,
-            cc      = 'gcc -o',
-            asm     = 'gcc -o',
-            ld      = 'gcc -o',
-            ar      = 'ar',
-            ccflags = '-Wall -Wextra -c',
-            ldflags = '-Wall -Wextra',
-            arflags = 'crs'),
+    ConfigBool('GCC',
+        title   = 'GNU C Compiler',
+        help    = 'See the GNU C compiler homepage at http://gcc.gnu.org',
+        cc      = 'gcc -o',
+        asm     = 'gcc -o',
+        ld      = 'gcc -o',
+        ar      = 'ar',
+        ccflags = '-Wall -Wextra -c',
+        ldflags = '-Wall -Wextra',
+        arflags = 'crs'),
 
-    Config('CLANG',
-            title   = 'LLVM Clang',
-            help    = 'See the Clang compiler homepage at http://llvm.org',
-            cc      = 'clang',
-            asm     = 'llvm-as',
-            ld      = 'llvm-ld',
-            ccflags = '-Wall -Wextra'),
+    ConfigBool('CLANG',
+        title   = 'LLVM Clang',
+        help    = 'See the Clang compiler homepage at http://llvm.org',
+        cc      = 'clang',
+        asm     = 'llvm-as',
+        ld      = 'llvm-ld',
+        ccflags = '-Wall -Wextra'),
 
-    Config('MSVC10',
-            title   = 'Microsoft Visual Studio 10',
-            help    = 'See microsoft homepage at http://www.microsoft.com',
-            cc      = 'csc.exe',
-            asm     = 'asm.exe',
-            ld      = 'link.exe',
-            ccflags = '\err:full \extra:all')
+    ConfigBool('MSVC10',
+        title   = 'Microsoft Visual Studio 10',
+        help    = 'See microsoft homepage at http://www.microsoft.com',
+        cc      = 'csc.exe',
+        asm     = 'asm.exe',
+        ld      = 'link.exe',
+        ccflags = '\err:full \extra:all')
     ]
 )

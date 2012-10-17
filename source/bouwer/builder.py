@@ -64,7 +64,7 @@ class BuilderInvoker:
         """
 
         # if called with (target:str, source:str), convert to (target:str, [source:str]) automatically
-        if type(arguments[0]) is bouwer.config.Config:
+        if isinstance(arguments[0], bouwer.config.Config):
             return self.builder.execute_config(arguments[0],
                                                self._source_path_list(arguments[1]))
 

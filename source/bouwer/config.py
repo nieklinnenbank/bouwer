@@ -23,42 +23,28 @@ import json
 import bouwer.builder
 from bouwer.util import *
 
-##
-# Represents a single configuration item
-#
-class Config:
+class Config(object):
+    """
+    Represents a single generic configuration item
+    """
 
-    ##
-    # Constructor
-    #
-    # @param name Per-tree unique name of the configuration item.
-    # @param value Initial value for the item.
-    # @param type Type of the configuration item
-    # @param config Reference to the Configuration we belong in
-    # @param keywords Optional list of keywords
-    #
-    def __init__(self, name, value, type, config, **keywords):
+    def __init__(self, name, value, **keywords):
+        """
+        Constructor
+        """
         self.name        = name
-        self.type        = type
+        self._value      = value
         self.keywords    = keywords
-        self.config      = config
-        self.subitems    = {}
-        self.bouwconfigs = {}
         self.update(value)
 
-    ##
-    # See if all our dependencies are met in the given tree.
-    #
-    # @param tree Reference to a tree Config object.
-    # @return True if dependencies met, False otherwise.
-    #
     def satisfied(self, tree = None):
         """
-        See if we are satisfied
-        """
+        See if we are satisfied with all our dependencies in `tree`
 
+        If no `tree` is specified, the currently active tree will be searched
+        """
         if tree is None:
-            tree = self.config.active_tree
+            tree = Configuration.instance().active_tree
 
         # See if our dependencies are met.
         for dep in self.keywords.get('depends', []):
@@ -77,62 +63,38 @@ class Config:
             lst = tree.subitems[self.keywords.get('in_list')]
             return lst.value(tree) == self.name
 
-        # Only booleans are interesting.
-        if self.type == bool:
+        # TODO: hack
+        if type(self._value) is bool:
             return self._value
         else:
             return True
 
-    ##
-    # Retrieve our values, also taking dependencies into account.
-    #
-    # @param tree Reference tree to evaluate against
-    # @return Current value of the item, respecting dependencies.
-    #
     def value(self, tree = None):
+        """
+        Retrieve the current value of the configuration item
+        """
+        return self._value
 
-        if tree is None:
-            tree = self.config.active_tree
-    
-        if self.type is bool:
-            return self._value and self.satisfied(tree)
-        else:
-            return self._value
-
-    ##
-    # Assign a new value to the item.
-    #
-    # @param value New value for the item
-    #
     def update(self, value):
-
-        # Are we updating a list item?
-        if self.type is list:
-
-            # Sanity check. Given value must be in the list.
-            if value not in self.keywords.get('default'):
-                raise Exception("item " + str(value) + " not in list " + self.name)
-        
-        # Assign value        
+        """
+        Assign a new `value` to the configuration item
+        """
         self._value = value
 
-    ##
-    # Add an extra dependency.
-    #
-    # @param item_name The given item name is the new dependency for us
-    #
     def add_dependency(self, item_name):
+        """
+        Introduce a new dependency on `item_name`
+        """
         if 'depends' not in self.keywords:
             self.keywords['depends'] = []
 
         if item_name not in self.keywords['depends']:
             self.keywords['depends'].append(item_name)
 
-    ##
-    # Return a JSON serializable representation
-    #
     def serialize(self):
-    
+        """
+        Return JSON serializable representation of the item
+        """
         # TODO: can we improve this?
         bouwconf_map = {}
 
@@ -148,63 +110,174 @@ class Config:
                     keywords = self.keywords,
                     bouwconfigs = bouwconf_map)
 
-    ##
-    # Implements the conf.ITEM mechanism
-    #
-    def __getattr__(self, name):
-
-        if name == self.name:
-            return self
-
-        try:
-            return self.__dict__[name]
-        except KeyError:
-            return self.subitems[name]
-
     def __str__(self):
         return str(self.value())
 
     def __repr__(self):
         return self.name
 
-##
-# Parser class for Bouwconfig files.
-#
-class ConfigParser:
+class ConfigBool(Config):
+    """
+    Boolean configuration item
 
-    ##
-    # Constructor
-    # @param conf Reference to Configuration object
-    #
+    This type of configuration item can only be `True` or `False`.
+    """
+
+    def __init__(self, name, value = True, **keywords):
+        """
+        Constructor
+        """
+        super(ConfigBool, self).__init__(name, value, **keywords)
+
+    def value(self, tree = None):
+        """
+        Retrieve our value, also taking dependencies into account.
+        """
+        if tree is None:
+            tree = Configuration.instance().active_tree
+        return self._value and self.satisfied(tree)
+
+    def update(self, value):
+        """
+        Update the `value` of this boolean item
+        """
+        if type(value) is not bool:
+            raise Exception('value must be either True or False')
+        else:
+            super(ConfigBool, self).update(value)
+
+class ConfigString(Config):
+    """
+    String configuration item
+
+    This type of configuration item contains any string value,
+    which must be of the basic type `str`. Empty strings are allowed.
+    """
+
+    def update(self, value):
+        """
+        Update the `value` of this string item
+        """
+        if type(value) is not str:
+            raise Exception('value must be a string')
+        else:
+            super(ConfigString, self).update(value)
+
+class ConfigList(Config):
+    """
+    List configuration item
+    """
+
+    def __init__(self, name, value = None, **keywords):
+        """
+        Constructor
+        """
+        if value is None:
+            value = keywords['options'][0]
+        super(ConfigList, self).__init__(name, value, **keywords)
+
+    # TODO: options specifies the possible choices
+    # TODO: default specifies the default choice
+    def update(self, value):
+        """
+        Update the selected item in this list
+        """
+        if value not in self.keywords.get('options'):
+            raise Exception("item " + str(value) + " not in list " + self.name)
+        else:
+            super(ConfigList, self).update(value)
+
+class IntConfig:
+    pass
+
+class FloatConfig:
+    pass
+
+class TriConfig:
+    pass
+
+class ConfigTree(ConfigBool):
+
+    def __init__(self, name, value = True, **keywords):
+        super(ConfigTree, self).__init__(name, value, **keywords)
+        self.subitems    = {}
+        self.bouwconfigs = {}
+
+    def value(self, tree = None):
+        return super(ConfigTree, self).value(self)
+
+    def __getattr__(self, name):
+        """
+        Implements the `conf.ITEM` mechanism
+        """
+        if name == self.name:
+            return self
+        try:
+            return self.__dict__[name]
+        except KeyError:
+            return self.subitems[name]
+
+class ConfigParser:
+    """
+    Parser for Bouwconfig files
+    """
+
     def __init__(self, conf):
+        """ Constructor """
         self.conf = conf
 
-    ##
-    # Prepare arguments for creating a Config() object.
-    #
-    def _prepare(self, name, *opts, **keywords):
-
-        item_value = keywords.get('default', True)
-        item_type  = type(item_value)
-
-        if len(opts) > 0:
-            dest_tree = self.conf.trees[opts[0]]
+    def _get_value(self, **keywords):
+        if 'default' in keywords:
+            return ( (keywords['default']), )
         else:
-            dest_tree = self.conf.trees[keywords.get('tree', 'DEFAULT')]
+            return ()
 
-        # Let all childs depend on the item
-        for child in keywords.get('childs', []):
-            dest_tree.subitems[child].add_dependency(name)
+    def parse_bool(self, name, *opts, **keywords):
+        """
+        Handles a `ConfigBool` line
+        """
+        self.conf.insert_item(ConfigBool(name,
+                                        *self._get_value(**keywords),
+                                       **keywords), *opts)
+        return name
 
-        return item_type, item_value, dest_tree
+    def parse_string(self, name, *opts, **keywords):
+        """
+        Handles a `ConfigString` line
+        """
+        self.conf.insert_item(ConfigString(name,
+                                          *self._get_value(**keywords),
+                                         **keywords), *opts)
+        return name
 
-    ##
-    # Parse a Config() line.
-    # @param name
-    # @param keywords
-    # @return Name of the item just added
-    #
-    def parse_config(self, name, *args, **keywords):
+    def parse_list(self, name, *opts, **keywords):
+        """
+        Handles a `ConfigList` line
+        """
+
+        # TODO: put the in_list keyword for all childs
+        # TODO: make a dependency to us for all childs
+        # ----> needed????
+        # Add dependency to us for all list options
+        #for opt in keywords['options']:
+        #    dest_tree.subitems[opt].add_dependency(name)
+        #    dest_tree.subitems[opt].keywords['in_list'] = name
+
+        self.conf.insert_item(ConfigList(name,
+                                        *self._get_value(**keywords),
+                                       **keywords), *opts)
+        return name
+
+    def parse_tree(self, name, *opts, **keywords):
+        """
+        Handles a `ConfigTree` line
+        """
+        self.conf.insert_tree(ConfigTree(name,
+                                        *self._get_value(**keywords),
+                                       **keywords))
+        return name
+
+    def _parse_config(self, name, *args, **keywords):
 
         item_type, item_value, dest_tree = self._prepare(name, *args, **keywords)
 
@@ -226,23 +299,6 @@ class ConfigParser:
         # Create the config item
         self.conf.insert_item(name, item_value, item_type, dest_tree, **keywords)
         return name
-
-    ##
-    # Parse a ConfigTree() line.
-    # @param name
-    # @param keywords
-    # @return Name of the tree just added
-    #
-    def parse_config_tree(self, name, **keywords):
-
-        item_type, item_value, dest_tree = self._prepare(name, **keywords)
-
-        assert(item_type is bool)
-        assert(type(item_value) is bool)
-
-        self.conf.insert_tree(name, item_value, **keywords)
-        return name
-        
 
 ##
 # Represents the current configuration
@@ -269,21 +325,24 @@ class Configuration(Singleton):
         # Dump configuration for debugging
         self.dump()
 
-    ##
-    # Introduce a new configuration item
-    #
-    def insert_item(self, name, value, type, dest_tree, **keywords):
+    def insert_item(self, item, tree_name = 'DEFAULT'): 
+        """
+        Introduce a new configuration item
+        """
+        # Find destination tree
+        dest_tree = self.trees[tree_name]
 
         # Does the item already exist?        
-        if name in dest_tree.subitems:
-            raise Exception('item ' + name + ' already exists in tree ' + dest_tree.name)
+        if item.name in dest_tree.subitems:
+            raise Exception('item ' + item.name + ' already exists in tree ' + dest_tree.name)
 
-        # Create item
-        item = Config(name, value, type, self, **keywords)
-        
         # Insert item to the tree
-        dest_tree.subitems[name] = item
-        
+        dest_tree.subitems[item.name] = item
+ 
+        # Let all childs depend on the item
+        for child in item.keywords.get('childs', []):
+            dest_tree.subitems[child].add_dependency(item.name)
+
         # Lookup Bouwconfig path
         path = os.path.abspath(inspect.getfile(inspect.currentframe().f_back.f_back))
         if not path in dest_tree.bouwconfigs:
@@ -292,11 +351,11 @@ class Configuration(Singleton):
         # Insert item to the bouwconfig mapping
         dest_tree.bouwconfigs[path].append(item)
 
-    ##
-    # Introduce a new configuration tree
-    #
-    def insert_tree(self, name, value, **keywords):
-        self.trees[name] = Config(name, value, bool, self, **keywords)
+    def insert_tree(self, tree):
+        """
+        Introduce a new configuration tree
+        """
+        self.trees[tree.name] = tree
 
     ##
     # Load a saved configuration from the given file
@@ -334,7 +393,7 @@ class Configuration(Singleton):
     def reset(self):
 
         # Insert the default tree.
-        self.insert_tree('DEFAULT', True)
+        self.insert_tree(ConfigTree('DEFAULT'))
 
         # Find the path to the Bouwer predefined configuration files
         curr_file = inspect.getfile(inspect.currentframe())
@@ -430,14 +489,16 @@ class Configuration(Singleton):
     #
     def _dump_item(self, item, tree, parent = ''):
         
-        self.log.debug(parent + item.name + ':' + str(item.type) + ' = ' + str(item.value(tree)))
+        self.log.debug(parent + item.name + ':' + str(item.__class__) + ' = ' + str(item.value(tree)))
                 
         for key in item.keywords:
             self.log.debug('\t' + key + ' => ' + str(item.keywords[key]))
         self.log.debug('')
 
-        for child_item_name, child_item in item.subitems.items():
-            self._dump_item(child_item, tree, parent + item.name + '.')
+        # TODO: this dumping could be improved...
+        if isinstance(item, ConfigTree):
+            for child_item_name, child_item in item.subitems.items():
+                self._dump_item(child_item, tree, parent + item.name + '.')
 
     ##
     # Scan a directory for configuration definition files.
@@ -477,8 +538,10 @@ class Configuration(Singleton):
 
         # Initialize parser of Bouwconfig files.
         parser =  ConfigParser(self)
-        globs  = { 'Config':     parser.parse_config,
-                   'ConfigTree': parser.parse_config_tree }
+        globs  = { 'ConfigBool'   : parser.parse_bool,
+                   'ConfigString' : parser.parse_string,
+                   'ConfigList'   : parser.parse_list,
+                   'ConfigTree'   : parser.parse_tree }
 
         # Parse the given file
         exec(compile(open(filename).read(), filename, 'exec'), globs)

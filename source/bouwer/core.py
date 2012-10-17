@@ -99,7 +99,7 @@ def execute():
         # Traverse Bouwfiles for each custom tree
         if len(conf.trees) > 1:
             for tree_name, tree in conf.trees.items():
-                if tree_name is not 'DEFAULT':
+                if tree_name is not 'DEFAULT' and tree.value():
                     build.execute_target(target, tree, actions)
 
         # Use the default tree

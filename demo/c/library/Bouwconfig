@@ -15,24 +15,24 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-Config('LIBDUMMY',
+ConfigBool('LIBDUMMY',
     title   = 'The dummy library',
     childs  = [
 
-    Config('LIBDUMMY_FOO_FEATURE',
+    ConfigBool('LIBDUMMY_FOO_FEATURE',
             title = "Enable the dummy Foo feature",
             help  = "This option enables is all about Foo."
                     "It is a feature which is very Fooish."
                     "Choose Yes if you like Fooing."),
 
-    Config('LIBDUMMY_BAR_FEATURE',
+    ConfigBool('LIBDUMMY_BAR_FEATURE',
             title   = 'Enable the dummy Bar feature',
             help    = "This option enables is all about Bar."
                       "It is a feature which is very Barish."
                       "Choose Yes if you like Barring.",
             default =  True),
 
-    Config('LIBDUMMY_UTIL_STUFF',
+    ConfigBool('LIBDUMMY_UTIL_STUFF',
             title   = 'Enable the dummy util stuffs',
             help    = 'Do you want some utils?'
                       'Choose this option if so.',

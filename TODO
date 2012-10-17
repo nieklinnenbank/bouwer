@@ -5,10 +5,48 @@
 - let the build manager translate paths instead of the builders!
     - make it so, that the builder's execute_*() automatically receive the translated paths always
 
-- put docstrings instead of doxygen tags
++/- put docstrings instead of doxygen tags
+
+- add a testsuite for invoking pychecker/pylint on all sources
 
 - implement implicit C header dependency scanner please!
     --> watch out for performance here!
+    --> maybe caching?
+
+- when overriding, the user may want to only append config keys, e.g.:
+
+  --> maybe we don't need to support appending. only overwriting.
+  --> let the user overwrite ldscript = instead
+
+  ConfigBool('GCC',
+              ccflags = '$ -Wall -Werror',
+              ldflags = '$ -static')
+
+ Append('GCC',
+         ccflags = '-Wall -Werror')
+
+ Override('GCC',
+           ccflags = '-Wall -Werror')
+
+- UseLibrary should look in the ActionTree to fill in -L <path>
+
+    --> if two libraries with the same name, then solve like this:
+
+        library/sub/path/libfoo.a
+        library/other/path/libfoo.a
+
+        UseLibrary(conf.FOO, ['sub/path/libfoo', 'libbar'])
+
+    --> add a config option to also add -I or -isystem for libraries, ie:
+
+        BoolConfig('GCC',
+                    libinc = '.')
+
+        this will make a -I to the directory of the library itself.
+        if the user has like a 'include/' dir for every source lib dir, then:
+        
+        BoolConfig('GCC',
+                    libinc = 'include')
 
 - make a builder for sphinx
 
@@ -19,8 +57,10 @@
 - implement per-directory configuration overrides (for kernel linkscript override)
 
 - how to deal with the 'tristate' type from kbuild ...
+    --> TriConfig() type
 
 - implement simple cherrypy frontend
+    --> do this with threading
 
 - support this syntax for overriding a tree specific item:
 
@@ -63,6 +103,7 @@
     - replace its build system completely with bouwer, e.g. apache or gcc or whatever
 
 - test bouwer on all interesting operating systems and compilers
+    --> we need integration software, e.g. jenkins-ci.org
 
 - implement checking for a valid CC configuration in inspect() of Object
 

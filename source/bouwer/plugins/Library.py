@@ -19,6 +19,7 @@ import os
 import os.path
 from bouwer.plugin import *
 from bouwer.util import *
+from bouwer.config import *
 
 class Library(Plugin):
     """ Build a software library """
@@ -36,7 +37,7 @@ class Library(Plugin):
         for child_name in item.keywords.get('childs', []):
             child = self.get_item(child_name)
 
-            if child.type == bool and child.value() and 'source' in child.keywords:
+            if isinstance(child, ConfigBool) and child.value() and 'source' in child.keywords:
                 sources.append(SourcePath(child.keywords.get('source')))
 
         self.execute_target(TargetPath(target), sources)

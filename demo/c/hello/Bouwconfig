@@ -15,12 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-Config('HELLO',
-        title   = 'Hello World Program',
-        help    = 'This program outputs a message to standard output')
+ConfigBool('HELLO',
+    title = 'Hello World Program',
+    help  = 'This program outputs a message to standard output')
 
-Config('HELLOMSG',
-        title   = 'Hello World Message',
-        help    = 'Message for the Hello World Program',
-        default = 'Hello World!',
-        depends = [ 'HELLO' ])
+ConfigString('HELLOMSG',
+    title   = 'Hello World Message',
+    help    = 'Message for the Hello World Program',
+    default = 'Hello World!',
+    depends = [ 'HELLO' ])
+

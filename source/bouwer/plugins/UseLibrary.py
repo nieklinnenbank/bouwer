@@ -29,6 +29,13 @@ class UseLibrary:
     # @param libraries List of library names
     #
     def execute_any(self, libraries):
+
+        # TODO: find the target library in the ActionTree
+        # for each library, make sure it gets the right -L <path> and -l<name>
+        # as a temporary per-directory override.
+        # do the -L via search in the ActionTree.
+        # we need to have the builder priority/ordering working for this...
+        # also make sure to add libinc <path>, for includes
         pass
 
         #for lib in libraries:

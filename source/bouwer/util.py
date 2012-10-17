@@ -15,6 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+Bouwer generic utilities
+"""
+
 import bouwer.builder
 import bouwer.config
 
@@ -26,41 +30,50 @@ class Singleton(object):
     """
 
     @classmethod
-    def instance(classtype, *args, **kwargs):
+    def instance(cls, *args, **kwargs):
         """
         Called to lookup the singleton instance
         """
-        if classtype.exists():
-            return classtype.__class_obj__
+        if cls.exists():
+            return cls.__class_obj__
         else:
-            classtype.__class_obj__ = classtype.__new__(classtype)
-            classtype.__class_obj__.__init__(*args, **kwargs)
+            cls.__class_obj__ = cls.__new__(cls)
+            cls.__class_obj__.__init__(*args, **kwargs)
         
-        return classtype.__class_obj__
+        return cls.__class_obj__
 
     @classmethod
-    def exists(classtype):
+    def exists(cls):
         """
         Check if the single instance exists
         """
-        return '__class_obj__' in classtype.__dict__
+        return '__class_obj__' in cls.__dict__
 
-class Path:
+class Path(object):
+    """
+    Abstract representation of a file path
+    """
 
     def __init__(self, path):
+        """ Constructor """
         self.relative = path
         self.absolute = path
         self.build    = bouwer.builder.BuilderManager.instance()
         self.conf     = bouwer.config.Configuration.instance()
 
     def append(self, text):
+        """ Append text to the path """
         self.relative += text
         self.absolute += text
 
     def __str__(self):
+        """ Convert path to string """
         return str(self.absolute)
 
 class SourcePath(Path):
+    """
+    Implements a path to a source file
+    """
 
     def __init__(self, path):
         super().__init__(path)
@@ -68,6 +81,9 @@ class SourcePath(Path):
                                                     self.conf.active_tree)
         
 class TargetPath(Path):
+    """
+    Implements a path to a target output file
+    """
 
     def __init__(self, path):
         super().__init__(path)
