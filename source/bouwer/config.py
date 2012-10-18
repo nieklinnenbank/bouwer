@@ -176,8 +176,6 @@ class ConfigList(Config):
             value = keywords['options'][0]
         super(ConfigList, self).__init__(name, value, **keywords)
 
-    # TODO: options specifies the possible choices
-    # TODO: default specifies the default choice
     def update(self, value):
         """
         Update the selected item in this list
@@ -187,23 +185,32 @@ class ConfigList(Config):
         else:
             super(ConfigList, self).update(value)
 
-class IntConfig:
+class ConfigInt:
     pass
 
-class FloatConfig:
+class ConfigFloat:
     pass
 
-class TriConfig:
+class ConfigTri:
     pass
 
 class ConfigTree(ConfigBool):
+    """
+    Tree configuration items can contain other configuration items
+    """
 
     def __init__(self, name, value = True, **keywords):
+        """
+        Constructor
+        """
         super(ConfigTree, self).__init__(name, value, **keywords)
         self.subitems    = {}
         self.bouwconfigs = {}
 
     def value(self, tree = None):
+        """
+        Retrieve value of the tree. Either `True` or `False`.
+        """
         return super(ConfigTree, self).value(self)
 
     def __getattr__(self, name):
@@ -255,17 +262,20 @@ class ConfigParser:
         Handles a `ConfigList` line
         """
 
-        # TODO: put the in_list keyword for all childs
-        # TODO: make a dependency to us for all childs
-        # ----> needed????
+        # Find destination tree
+        if len(opts) > 1:
+            dest_tree = Configuration.instance().trees[opts]
+        else:
+            dest_tree = Configuration.instance().trees['DEFAULT']
+
         # Add dependency to us for all list options
-        #for opt in keywords['options']:
-        #    dest_tree.subitems[opt].add_dependency(name)
-        #    dest_tree.subitems[opt].keywords['in_list'] = name
+        for opt in keywords['options']:
+            dest_tree.subitems[opt].add_dependency(name)
+            dest_tree.subitems[opt].keywords['in_list'] = name
 
         self.conf.insert_item(ConfigList(name,
                                         *self._get_value(**keywords),
-                                       **keywords), *opts)
+                                       **keywords), dest_tree.name)
         return name
 
     def parse_tree(self, name, *opts, **keywords):
