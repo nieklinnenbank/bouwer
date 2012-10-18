@@ -287,39 +287,15 @@ class ConfigParser:
                                        **keywords))
         return name
 
-    def _parse_config(self, name, *args, **keywords):
-
-        item_type, item_value, dest_tree = self._prepare(name, *args, **keywords)
-
-        # In case of a list, make the options depend on us
-        if item_type is list:
-
-            # Default selected option is the first.
-            item_value = keywords['default'][0]
-
-            # Add dependency to us for all list options
-            for opt in keywords['default']:
-                dest_tree.subitems[opt].add_dependency(name)
-                dest_tree.subitems[opt].keywords['in_list'] = name
-
-                # It's also possible to configure the default selected item.
-                if 'selected' in dest_tree.subitems[opt].keywords:
-                    item_value = opt
-
-        # Create the config item
-        self.conf.insert_item(name, item_value, item_type, dest_tree, **keywords)
-        return name
-
-##
-# Represents the current configuration
-#
 class Configuration(Singleton):
+    """
+    Represents the current configuration
+    """
 
-    ##
-    # Constructor
-    # @param cli CommandLine object for reading arguments
-    #
     def __init__(self, cli = None):
+        """
+        Constructor
+        """
         self.cli   = cli
         self.log   = logging.getLogger(__name__)
         self.args  = cli.args
@@ -365,22 +341,21 @@ class Configuration(Singleton):
         """
         Introduce a new configuration tree
         """
+        if not isinstance(tree, ConfigTree):
+            raise TypeError('input tree must be of type ConfigTree')
+
         self.trees[tree.name] = tree
 
-    ##
-    # Load a saved configuration from the given file
-    # @param filename Path to the saved configuration file
-    #
     def load(self, filename = '.bouwconf'):
-        # TODO
+        """
+        Load a saved configuration from the given `filename`
+        """
         return False
 
-    ##
-    # Save current configuration to the given file
-    # @param filename Path to the configuration output file
-    #
     def save(self, filename = '.bouwconf'):
-    
+        """
+        Save the current configuration to `filename`
+        """
         fp = open(filename, 'w')
 
         # Save only default tree items and overwrites        
@@ -394,14 +369,16 @@ class Configuration(Singleton):
         fp.close()
 
     def _save_item(self, item, fp):
+        """
+        Save a single configuration item
+        """
         json.dump(item.serialize(), fp, sort_keys=True, indent=4)
         fp.write(os.linesep)
 
-    ##
-    # Reset configuration to the initial predefined state
-    #
     def reset(self):
-
+        """
+        Reset configuration to the initial predefined state using Bouwconfigs
+        """
         # Insert the default tree.
         self.insert_tree(ConfigTree('DEFAULT'))
 
@@ -426,26 +403,26 @@ class Configuration(Singleton):
 
         The settings will be encoded as #define's
         """
+        # TODO: put this in the ConfigHeader() builder instead...
+
         self.log.debug("writing configuration to header: " + str(filename))
 
         if tree_name is None:
             tree = self.active_tree
         else:
             tree = self.trees.get(tree_name)
-        pass
 
-    ##
-    # Dump the current configuration to standard output
-    #
     def dump(self):
+        """
+        Dump the current configuration to the debug log
+        """
         for tree_name, tree in self.trees.items():
             self._dump_item(tree, tree)
 
-    ##
-    # Make sure all configuration trees contain at least the default items
-    #
-    def _synchronize(self):    
-
+    def _synchronize(self):
+        """
+        Make sure all configuration trees contain at least the default items
+        """
         def_tree = self.trees.get('DEFAULT')
 
         # Make sure user-defined trees inherit all items from
@@ -491,14 +468,11 @@ class Configuration(Singleton):
 
                     # TODO: add circular dependency check
 
-    ##
-    # Dump a single configuration item to stdout
-    # @param item Config object to dump
-    # @param tree Tree of the item
-    # @param parent Text describing the parent item
-    #
     def _dump_item(self, item, tree, parent = ''):
-        
+        """
+        Dump a single configuration item
+        """
+
         self.log.debug(parent + item.name + ':' + str(item.__class__) + ' = ' + str(item.value(tree)))
                 
         for key in item.keywords:
@@ -510,12 +484,10 @@ class Configuration(Singleton):
             for child_item_name, child_item in item.subitems.items():
                 self._dump_item(child_item, tree, parent + item.name + '.')
 
-    ##
-    # Scan a directory for configuration definition files.
-    # @param dirname Path to directory to scan
-    #
     def _scan_dir(self, dirname):
-
+        """
+        Scans a directory for Bouwconfig files
+        """
         found = False
 
         # Look for all Bouwconfig's.
@@ -530,11 +502,11 @@ class Configuration(Singleton):
                 if os.path.isdir(dirname + os.sep + filename):
                     self._scan_dir(dirname + os.sep + filename)
         
-    ##
-    # Parse configuration definition file
-    # @param filename Path to the configuration file
-    ##
     def _parse(self, filename):
+        """
+        Parse a Bouwconfig file
+        """
+        # TODO: perhaps move this to ConfigParser instead?
 
         # Output message
         self.log.debug('reading `' + filename + '\'')
