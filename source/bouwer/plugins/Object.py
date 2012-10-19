@@ -19,6 +19,7 @@ import os
 import os.path
 from bouwer.plugin import *
 from bouwer.builder import *
+from bouwer.config import *
 
 class Object(Plugin):
     """

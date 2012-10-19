@@ -19,30 +19,38 @@
 Bouwer generic utilities
 """
 
-# TODO: strict checks on the singleton please. Add exceptions
-
 class Singleton(object):
     """
     Singleton classes may have only one instance
     """
 
     @classmethod
-    def instance(cls, *args, **kwargs):
+    def _raise_direct(self, *args, **kwargs):
         """
-        Called to lookup the singleton instance
+        Called when a :class:`.Singleton` is not accessed using `Instance`
         """
-        if cls.exists():
+        raise Exception('Singletons may only be created with Instance()')
+
+    @classmethod
+    def Instance(cls, *args, **kwargs):
+        """
+        Called to lookup the :class:`.Singleton` instance
+        """
+        if '__class_obj__' in cls.__dict__:
+            if len(args) > 0 or len(kwargs) > 0:
+                raise Exception('singletons can only be initialized once')
+
             return cls.__class_obj__
         else:
             cls.__class_obj__ = cls.__new__(cls)
-            cls.__class_obj__.__init__(*args, **kwargs)
+            
+            # Overwrite callbacks to raise exception later
+            init = cls.__class_obj__.__init__
+            cls.__init__ = cls._raise_direct
+            cls.__new__ = cls._raise_direct
+
+            # Invoke constructor
+            init(*args, **kwargs)
         
         return cls.__class_obj__
-
-    @classmethod
-    def exists(cls):
-        """
-        Check if the single instance exists
-        """
-        return '__class_obj__' in cls.__dict__
 

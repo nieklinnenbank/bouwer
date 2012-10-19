@@ -43,7 +43,7 @@ class Config(object):
         If no `tree` is specified, the currently active tree will be searched
         """
         if tree is None:
-            tree = Configuration.instance().active_tree
+            tree = Configuration.Instance().active_tree
 
         # See if our dependencies are met.
         for dep in self.keywords.get('depends', []):
@@ -133,7 +133,7 @@ class ConfigBool(Config):
         Retrieve our value, also taking dependencies into account.
         """
         if tree is None:
-            tree = Configuration.instance().active_tree
+            tree = Configuration.Instance().active_tree
         return self._value and self.satisfied(tree)
 
     def update(self, value):
@@ -263,9 +263,9 @@ class ConfigParser:
 
         # Find destination tree
         if len(opts) > 1:
-            dest_tree = Configuration.instance().trees[opts]
+            dest_tree = Configuration.Instance().trees[opts]
         else:
-            dest_tree = Configuration.instance().trees['DEFAULT']
+            dest_tree = Configuration.Instance().trees['DEFAULT']
 
         # Add dependency to us for all list options
         for opt in keywords['options']:

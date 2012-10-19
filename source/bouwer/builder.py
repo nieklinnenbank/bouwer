@@ -37,8 +37,8 @@ class Path(object):
         """ Constructor """
         self.relative = path
         self.absolute = path
-        self.build    = bouwer.builder.BuilderManager.instance()
-        self.conf     = bouwer.config.Configuration.instance()
+        self.build    = bouwer.builder.BuilderManager.Instance()
+        self.conf     = bouwer.config.Configuration.Instance()
 
     def append(self, text):
         """ Append text to the path """
