@@ -20,8 +20,7 @@ import sys
 import logging
 import inspect
 import json
-import bouwer.builder
-from bouwer.util import *
+import bouwer.util
 
 class Config(object):
     """
@@ -287,7 +286,7 @@ class ConfigParser:
                                        **keywords))
         return name
 
-class Configuration(Singleton):
+class Configuration(bouwer.util.Singleton):
     """
     Represents the current configuration
     """
@@ -404,13 +403,7 @@ class Configuration(Singleton):
         The settings will be encoded as #define's
         """
         # TODO: put this in the ConfigHeader() builder instead...
-
         self.log.debug("writing configuration to header: " + str(filename))
-
-        if tree_name is None:
-            tree = self.active_tree
-        else:
-            tree = self.trees.get(tree_name)
 
     def dump(self):
         """

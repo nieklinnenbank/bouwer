@@ -19,7 +19,7 @@ import os
 import os.path
 import glob
 from bouwer.plugin import *
-from bouwer.util import *
+from bouwer.builder import *
 
 class Program(Plugin):
     """

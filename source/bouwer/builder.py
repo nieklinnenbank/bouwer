@@ -24,11 +24,69 @@ import os.path
 import sys
 import copy
 import logging
-import inspect
 import glob
-
 import bouwer.config
-from bouwer.util import *
+import bouwer.util
+
+class Path(object):
+    """
+    Abstract representation of a file path
+    """
+
+    def __init__(self, path):
+        """ Constructor """
+        self.relative = path
+        self.absolute = path
+        self.build    = bouwer.builder.BuilderManager.instance()
+        self.conf     = bouwer.config.Configuration.instance()
+
+    def append(self, text):
+        """ Append text to the path """
+        self.relative += text
+        self.absolute += text
+
+    def __str__(self):
+        """ Convert path to string """
+        return str(self.absolute)
+
+class SourcePath(Path):
+    """
+    Implements a path to a source file
+    """
+
+    def __init__(self, path):
+        super().__init__(path)
+        self.absolute = self.build.translate_source(self.relative,
+                                                    self.conf.active_tree)
+        
+class TargetPath(Path):
+    """
+    Implements a path to a target output file
+    """
+
+    def __init__(self, path):
+        super().__init__(path)
+        self.absolute = self.build.translate_target(self.relative,
+                                                    self.conf.active_tree)
+
+    def _translate(self, target, conf):
+        """
+        Translate Bouwfile-relative target to project-wide target path
+        """
+
+        # TODO: support the BUILDROOT, BUILDPATH configuration items
+
+        # TODO: remove conf, or make it always conf.active_tree
+
+        caller   = os.path.abspath(self.active_bouwfile)
+        #inspect.getfile(inspect.currentframe().f_back.f_back))
+        relative = os.path.relpath(os.path.dirname(caller))
+
+        # If only the default tree is active, don't prefix with tree name.
+        if len(self.conf.trees) == 1:
+            return os.path.normpath(relative + os.sep + target)
+        else:
+            return os.path.normpath(conf.name + os.sep + relative + os.sep + target)
 
 class BuilderInvoker:
     """
@@ -84,7 +142,7 @@ class BuilderInvoker:
 
         return self.builder.execute_any(*arguments, **keywords)
 
-class BuilderManager(Singleton):
+class BuilderManager(bouwer.util.Singleton):
     """ 
     Manages access to the builder layer
     """
@@ -237,4 +295,5 @@ class BuilderManager(Singleton):
             os.makedirs(dirname)
 
         self.actions.submit(target.absolute, src_list, command)
+
 

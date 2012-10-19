@@ -16,7 +16,6 @@
 #
 
 import multiprocessing
-import queue
 import os
 import os.path
 import sys

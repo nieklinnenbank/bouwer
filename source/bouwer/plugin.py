@@ -120,8 +120,6 @@ class PluginLoader:
 
                 # Setup variables
                 name, ext = os.path.splitext(filename)
-                globs  = {}
-                locs   = {}
                 class_ = None
 
                 # Construct load string

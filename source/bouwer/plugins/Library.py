@@ -18,8 +18,8 @@
 import os
 import os.path
 from bouwer.plugin import *
-from bouwer.util import *
 from bouwer.config import *
+from bouwer.builder import *
 
 class Library(Plugin):
     """ Build a software library """
