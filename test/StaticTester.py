@@ -31,6 +31,12 @@ class StaticTester(common.BouwerTester):
         srclist += glob.glob(self.srcdir + os.sep + 'bouwer' + os.sep + 'plugins' + os.sep + '*.py')
         return srclist
 
+    def test_pep8(self):
+        """
+        Run the pep8 code style checker on the bouwer code
+        """
+        pass
+
     def test_pyflakes(self):
         """
         Run pyflakes on the bouwer code

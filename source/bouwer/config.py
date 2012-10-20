@@ -206,6 +206,29 @@ class ConfigTree(ConfigBool):
         self.subitems    = {}
         self.bouwconfigs = {}
 
+    def add(self, item):
+        """
+        Introduce a new :class:`.Config` item to the tree
+        """
+        if item.name in self.subitems:
+            raise Exception('item ' + item.name + ' already exists in tree ' + self.name)
+
+        # Insert item to the tree
+        self.subitems[item.name] = item
+ 
+        # Let all childs depend on the item
+        for child in item.keywords.get('childs', []):
+            # TODO: validate that the child is there!
+            self.subitems[child].add_dependency(item.name)
+
+        # Lookup Bouwconfig path
+        path = os.path.abspath(inspect.getfile(inspect.currentframe().f_back.f_back))
+        if not path in self.bouwconfigs:
+            self.bouwconfigs[path] = []
+
+        # Insert item to the bouwconfig mapping
+        self.bouwconfigs[path].append(item)
+
     def value(self, tree = None):
         """
         Retrieve value of the tree. Either `True` or `False`.
@@ -229,8 +252,15 @@ class ConfigParser:
     """
 
     def __init__(self, conf):
-        """ Constructor """
-        self.conf = conf
+        """
+        Constructor
+        """
+        self.conf  = conf
+        self.log   = logging.getLogger(__name__)
+        self.globs = { 'ConfigBool'   : self._parse_bool,
+                       'ConfigString' : self._parse_string,
+                       'ConfigList'   : self._parse_list,
+                       'ConfigTree'   : self._parse_tree }
 
     def _get_value(self, **keywords):
         if 'default' in keywords:
@@ -238,30 +268,45 @@ class ConfigParser:
         else:
             return ()
 
-    def parse_bool(self, name, *opts, **keywords):
+    def parse(self, filename):
+        """
+        Parse a Bouwconfig file
+        """
+        self.log.debug('reading `' + filename + '\'')
+
+        # Config file must be readable
+        try:
+            os.stat(filename)
+        except OSError as e:
+            self.log.critical("could not read config file '" + filename + "': " + str(e))
+            sys.exit(1)
+
+        # Parse the given file
+        exec(compile(open(filename).read(), filename, 'exec'), self.globs)
+
+
+    def _parse_bool(self, name, *opts, **keywords):
         """
         Handles a `ConfigBool` line
         """
-        self.conf.insert_item(ConfigBool(name,
-                                        *self._get_value(**keywords),
-                                       **keywords), *opts)
+        self.conf.insert(ConfigBool(name,
+                                   *self._get_value(**keywords),
+                                  **keywords), *opts)
         return name
 
-    def parse_string(self, name, *opts, **keywords):
+    def _parse_string(self, name, *opts, **keywords):
         """
         Handles a `ConfigString` line
         """
-        self.conf.insert_item(ConfigString(name,
-                                          *self._get_value(**keywords),
-                                         **keywords), *opts)
+        self.conf.insert(ConfigString(name,
+                                     *self._get_value(**keywords),
+                                    **keywords), *opts)
         return name
 
-    def parse_list(self, name, *opts, **keywords):
+    def _parse_list(self, name, *opts, **keywords):
         """
         Handles a `ConfigList` line
         """
-
-        # Find destination tree
         if len(opts) > 1:
             dest_tree = Configuration.Instance().trees[opts]
         else:
@@ -272,18 +317,18 @@ class ConfigParser:
             dest_tree.subitems[opt].add_dependency(name)
             dest_tree.subitems[opt].keywords['in_list'] = name
 
-        self.conf.insert_item(ConfigList(name,
-                                        *self._get_value(**keywords),
-                                       **keywords), dest_tree.name)
+        self.conf.insert(ConfigList(name,
+                                   *self._get_value(**keywords),
+                                  **keywords), dest_tree.name)
         return name
 
-    def parse_tree(self, name, *opts, **keywords):
+    def _parse_tree(self, name, *opts, **keywords):
         """
         Handles a `ConfigTree` line
         """
-        self.conf.insert_tree(ConfigTree(name,
-                                        *self._get_value(**keywords),
-                                       **keywords))
+        self.conf.insert(ConfigTree(name,
+                                   *self._get_value(**keywords),
+                                  **keywords))
         return name
 
 class Configuration(bouwer.util.Singleton):
@@ -295,10 +340,11 @@ class Configuration(bouwer.util.Singleton):
         """
         Constructor
         """
-        self.cli   = cli
-        self.log   = logging.getLogger(__name__)
-        self.args  = cli.args
-        self.trees = {}
+        self.cli    = cli
+        self.log    = logging.getLogger(__name__)
+        self.args   = cli.args
+        self.trees  = {}
+        self.parser = ConfigParser(self)
         
         # The active tree is used for evaluation in Config, if needed.
         self.active_tree = None
@@ -310,40 +356,14 @@ class Configuration(bouwer.util.Singleton):
         # Dump configuration for debugging
         self.dump()
 
-    def insert_item(self, item, tree_name = 'DEFAULT'): 
+    def insert(self, item, tree_name = 'DEFAULT'): 
         """
-        Introduce a new configuration item
+        Introduce a new :class:`.Config` object `item`
         """
-        # Find destination tree
-        dest_tree = self.trees[tree_name]
-
-        # Does the item already exist?        
-        if item.name in dest_tree.subitems:
-            raise Exception('item ' + item.name + ' already exists in tree ' + dest_tree.name)
-
-        # Insert item to the tree
-        dest_tree.subitems[item.name] = item
- 
-        # Let all childs depend on the item
-        for child in item.keywords.get('childs', []):
-            dest_tree.subitems[child].add_dependency(item.name)
-
-        # Lookup Bouwconfig path
-        path = os.path.abspath(inspect.getfile(inspect.currentframe().f_back.f_back))
-        if not path in dest_tree.bouwconfigs:
-            dest_tree.bouwconfigs[path] = []
-
-        # Insert item to the bouwconfig mapping
-        dest_tree.bouwconfigs[path].append(item)
-
-    def insert_tree(self, tree):
-        """
-        Introduce a new configuration tree
-        """
-        if not isinstance(tree, ConfigTree):
-            raise TypeError('input tree must be of type ConfigTree')
-
-        self.trees[tree.name] = tree
+        if isinstance(item, ConfigTree):
+            self.trees[item.name] = item
+        else:
+            self.trees[tree_name].add(item)
 
     def load(self, filename = '.bouwconf'):
         """
@@ -379,7 +399,7 @@ class Configuration(bouwer.util.Singleton):
         Reset configuration to the initial predefined state using Bouwconfigs
         """
         # Insert the default tree.
-        self.insert_tree(ConfigTree('DEFAULT'))
+        self.insert(ConfigTree('DEFAULT'))
 
         # Find the path to the Bouwer predefined configuration files
         curr_file = inspect.getfile(inspect.currentframe())
@@ -416,6 +436,8 @@ class Configuration(bouwer.util.Singleton):
         """
         Make sure all configuration trees contain at least the default items
         """
+
+        # TODO: replace this with a constant, e.g. Configuration.DEFAULT or ConfigTree.DEFAULT or self.DEFAULT
         def_tree = self.trees.get('DEFAULT')
 
         # Make sure user-defined trees inherit all items from
@@ -485,8 +507,9 @@ class Configuration(bouwer.util.Singleton):
 
         # Look for all Bouwconfig's.
         for filename in os.listdir(dirname):
+            # TODO: replace 'Bouwconfig' literal with a constant, e.g. BOUWCONF or something or CONFFILE
             if filename.endswith('Bouwconfig'):
-                self._parse(dirname + os.sep + filename)
+                self.parser.parse(dirname + os.sep + filename)
                 found = True
 
         # Only scan subdirectories if at least one Bouwconfig found.
@@ -495,29 +518,4 @@ class Configuration(bouwer.util.Singleton):
                 if os.path.isdir(dirname + os.sep + filename):
                     self._scan_dir(dirname + os.sep + filename)
         
-    def _parse(self, filename):
-        """
-        Parse a Bouwconfig file
-        """
-        # TODO: perhaps move this to ConfigParser instead?
-
-        # Output message
-        self.log.debug('reading `' + filename + '\'')
-
-        # Config file must be readable
-        try:
-            os.stat(filename)
-        except OSError as e:
-            self.log.critical("could not read config file '" + filename + "': " + str(e))
-            sys.exit(1)
-
-        # Initialize parser of Bouwconfig files.
-        parser =  ConfigParser(self)
-        globs  = { 'ConfigBool'   : parser.parse_bool,
-                   'ConfigString' : parser.parse_string,
-                   'ConfigList'   : parser.parse_list,
-                   'ConfigTree'   : parser.parse_tree }
-
-        # Parse the given file
-        exec(compile(open(filename).read(), filename, 'exec'), globs)
 
