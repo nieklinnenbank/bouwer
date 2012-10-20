@@ -50,8 +50,6 @@ class Object(Plugin):
         if splitfile[1] == '.c':
 
             # Translate source and target paths relative from project-root
-            # TODO: we MUST have the translated outfile here, because it needs
-            # to go in the command ...
             outfile = TargetPath(splitfile[0] + '.o')
 
             # Register compile action

@@ -213,6 +213,9 @@ class ConfigTree(ConfigBool):
         if item.name in self.subitems:
             raise Exception('item ' + item.name + ' already exists in tree ' + self.name)
 
+        # TODO: support overrides here, by appending to an overrides dict
+        #       in case the item already exists
+
         # Insert item to the tree
         self.subitems[item.name] = item
  
@@ -244,6 +247,14 @@ class ConfigTree(ConfigBool):
         try:
             return self.__dict__[name]
         except KeyError:
+            #
+            # To support per-directory overrides, we need to know the "current" Bouwfile here,
+            # and pick the override, where applicable
+            #
+
+            # TODO: let Configuration contain:
+            # - active tree
+            # - active directory for overrides
             return self.subitems[name]
 
 class ConfigParser:
@@ -283,7 +294,6 @@ class ConfigParser:
 
         # Parse the given file
         exec(compile(open(filename).read(), filename, 'exec'), self.globs)
-
 
     def _parse_bool(self, name, *opts, **keywords):
         """

@@ -51,42 +51,39 @@ class Path(object):
 
 class SourcePath(Path):
     """
-    Implements a path to a source file
+    Implements a `path` to a source file
     """
 
     def __init__(self, path):
+        """
+        Constructor
+        """
         super().__init__(path)
-        self.absolute = self.build.translate_source(self.relative,
-                                                    self.conf.active_tree)
-        
+        caller   = os.path.abspath(self.build.active_bouwfile)
+        location = os.path.relpath(os.path.dirname(caller))
+        self.absolute = os.path.normpath(location + os.sep + path)
+
 class TargetPath(Path):
     """
-    Implements a path to a target output file
+    Path to a target output file based on a source `path`
     """
 
     def __init__(self, path):
+        """
+        Constructor
+        """
         super().__init__(path)
-        self.absolute = self.build.translate_target(self.relative,
-                                                    self.conf.active_tree)
-
-    def _translate(self, target, conf):
-        """
-        Translate Bouwfile-relative target to project-wide target path
-        """
-
         # TODO: support the BUILDROOT, BUILDPATH configuration items
-
-        # TODO: remove conf, or make it always conf.active_tree
-
-        caller   = os.path.abspath(self.active_bouwfile)
-        #inspect.getfile(inspect.currentframe().f_back.f_back))
-        relative = os.path.relpath(os.path.dirname(caller))
+        # TODO: use Configuration.Instance().active_dir instead
+        caller   = os.path.abspath(self.build.active_bouwfile)
+        location = os.path.relpath(os.path.dirname(caller))
 
         # If only the default tree is active, don't prefix with tree name.
         if len(self.conf.trees) == 1:
-            return os.path.normpath(relative + os.sep + target)
+            self.absolute = os.path.normpath(location + os.sep + path)
         else:
-            return os.path.normpath(conf.name + os.sep + relative + os.sep + target)
+            self.absolute = os.path.normpath(self.conf.active_tree.name + \
+                                             os.sep + location + os.sep + path)
 
 class BuilderInvoker:
     """
@@ -245,32 +242,6 @@ class BuilderManager(bouwer.util.Singleton):
         # Execute the target routine, if defined in this Bouwfile.
         if target in globs:
             globs[target](tree)
-
-    def translate_source(self, source, conf):
-        """
-        Translate Bouwfile-relative source to project-wide source path
-        """
-        caller   = os.path.abspath(self.active_bouwfile)
-        relative = os.path.relpath(os.path.dirname(caller))
-        return os.path.normpath(relative + os.sep + source)
-
-    def translate_target(self, target, conf):
-        """
-        Translate Bouwfile-relative target to project-wide target path
-        """
-        # TODO: if only DEFAULT is active, don't add the tree name in the path
-        # TODO: support the BUILDROOT, BUILDPATH configuration items
-
-        # TODO: remove conf, or make it always conf.active_tree
-
-        caller   = os.path.abspath(self.active_bouwfile)
-        #inspect.getfile(inspect.currentframe().f_back.f_back))
-        relative = os.path.relpath(os.path.dirname(caller))
-
-        if len(self.conf.trees) == 1:
-            return os.path.normpath(relative + os.sep + target)
-        else:
-            return os.path.normpath(conf.name + os.sep + relative + os.sep + target)
 
     def generate_action(self, target, sources, command):
         """ 
