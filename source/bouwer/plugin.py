@@ -53,7 +53,8 @@ class Plugin:
     # @return Config instance
     #
     def get_item(self, name):
-        return self.conf.active_tree.subitems.get(name)
+        # TODO: hmmm fix this better
+        return self.conf.active_tree.get(name)
 
     ##
     # Generate an action

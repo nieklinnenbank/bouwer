@@ -231,6 +231,9 @@ class BuilderManager(bouwer.util.Singleton):
             sys.exit(1)
 
         # Keep track of the Bouwfile being parsed
+        # Update the active directory for Config evaluation
+        self.conf.active_dir = os.path.dirname(os.path.abspath(filename))
+        self.log.debug("conf.active_dir = " + self.conf.active_dir)
         self.active_bouwfile = filename
 
         # Set globals

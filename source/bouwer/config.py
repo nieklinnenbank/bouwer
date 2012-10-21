@@ -15,6 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+Bouwer configuration layer implementation
+"""
+
 import os
 import sys
 import logging
@@ -49,8 +53,8 @@ class Config(object):
         for dep in self.keywords.get('depends', []):
 
             # Is the dependency an item?
-            if dep in tree.subitems:
-                if not tree.subitems[dep].satisfied(tree):
+            if tree.get(dep) is not None:
+                if not tree.get(dep).satisfied(tree):
                     return False
                     
             # It's a tree
@@ -59,7 +63,7 @@ class Config(object):
 
         # If we are in a list, then we must be selected to satisfy.
         if self.keywords.get('in_list', False):
-            lst = tree.subitems[self.keywords.get('in_list')]
+            lst = tree.get(self.keywords.get('in_list'))
             return lst.value(tree) == self.name
 
         # TODO: hack
@@ -80,6 +84,13 @@ class Config(object):
         """
         self._value = value
 
+    def inherit_keywords(self, other):
+        # TODO: temporary routine to copy keywords from other item
+        # this should be replaced by keyword indirection/evaluation
+        for key in other.keywords:
+            if key not in self.keywords:
+                self.keywords[key] = other.keywords[key]
+
     def add_dependency(self, item_name):
         """
         Introduce a new dependency on `item_name`
@@ -94,7 +105,9 @@ class Config(object):
         """
         Return JSON serializable representation of the item
         """
+        raise Exception('reimplement this')
         # TODO: can we improve this?
+        """
         bouwconf_map = {}
 
         for path in self.bouwconfigs:
@@ -108,6 +121,7 @@ class Config(object):
                     value = str(self._value),
                     keywords = self.keywords,
                     bouwconfigs = bouwconf_map)
+        """
 
     def __str__(self):
         return str(self.value())
@@ -204,33 +218,46 @@ class ConfigTree(ConfigBool):
         """
         super(ConfigTree, self).__init__(name, value, **keywords)
         self.subitems    = {}
-        self.bouwconfigs = {}
 
     def add(self, item):
         """
         Introduce a new :class:`.Config` item to the tree
         """
-        if item.name in self.subitems:
-            raise Exception('item ' + item.name + ' already exists in tree ' + self.name)
+        
+        #if item.name in self.subitems:
+        #    raise Exception('item ' + item.name + ' already exists in tree ' + self.name)
 
         # TODO: support overrides here, by appending to an overrides dict
         #       in case the item already exists
+        # TODO: but syncrhonize() didn't run yet...
+        # TODO: perhaps just put them in the same field and let getattr figure it out
 
         # Insert item to the tree
-        self.subitems[item.name] = item
- 
-        # Let all childs depend on the item
-        for child in item.keywords.get('childs', []):
-            # TODO: validate that the child is there!
-            self.subitems[child].add_dependency(item.name)
+        if item.name not in self.subitems:
+            self.subitems[item.name] = {}
 
         # Lookup Bouwconfig path
-        path = os.path.abspath(inspect.getfile(inspect.currentframe().f_back.f_back))
-        if not path in self.bouwconfigs:
-            self.bouwconfigs[path] = []
+        # TODO: replace this with Configuration.Instance().active_file
+        # TODO: make sure this only contains the 'projectwide path' and not absolute OS path
+        # path = os.path.abspath(inspect.getfile(inspect.currentframe().f_back.f_back.f_back))
+        path = Configuration.Instance().active_dir
+        self.subitems[item.name][path] = item
+ 
+        # Let all childs depend on the item
+        for child_name in item.keywords.get('childs', []):
+            # TODO: validate that the child is there!
 
-        # Insert item to the bouwconfig mapping
-        self.bouwconfigs[path].append(item)
+            for path, child in self.subitems[child_name].items():
+                child.add_dependency(item.name)
+
+    def get(self, item_name):
+        """
+        Retrieve item in this tree with the given `item_name`
+        """
+        try:
+            return getattr(self, item_name)
+        except AttributeError:
+            return None
 
     def value(self, tree = None):
         """
@@ -247,15 +274,16 @@ class ConfigTree(ConfigBool):
         try:
             return self.__dict__[name]
         except KeyError:
-            #
-            # To support per-directory overrides, we need to know the "current" Bouwfile here,
-            # and pick the override, where applicable
-            #
+            cfiles = self.__dict__['subitems'][name]
+            active_dir = Configuration.Instance().active_dir
 
-            # TODO: let Configuration contain:
-            # - active tree
-            # - active directory for overrides
-            return self.subitems[name]
+            # Exact match?
+            if active_dir in cfiles:
+                return cfiles[active_dir]
+
+            # TODO: return the *best* matching
+            for path, item in cfiles.items():
+                return item
 
 class ConfigParser:
     """
@@ -266,6 +294,7 @@ class ConfigParser:
         """
         Constructor
         """
+        # TODO: make these private
         self.conf  = conf
         self.log   = logging.getLogger(__name__)
         self.globs = { 'ConfigBool'   : self._parse_bool,
@@ -324,8 +353,8 @@ class ConfigParser:
 
         # Add dependency to us for all list options
         for opt in keywords['options']:
-            dest_tree.subitems[opt].add_dependency(name)
-            dest_tree.subitems[opt].keywords['in_list'] = name
+            dest_tree.get(opt).add_dependency(name)
+            dest_tree.get(opt).keywords['in_list'] = name
 
         self.conf.insert(ConfigList(name,
                                    *self._get_value(**keywords),
@@ -355,9 +384,18 @@ class Configuration(bouwer.util.Singleton):
         self.args   = cli.args
         self.trees  = {}
         self.parser = ConfigParser(self)
-        
-        # The active tree is used for evaluation in Config, if needed.
+
+        # Find the path to the Bouwer predefined configuration files
+        curr_file = inspect.getfile(inspect.currentframe())
+        curr_dir  = os.path.dirname(os.path.abspath(curr_file))
+        base_path = os.path.dirname(os.path.abspath(curr_dir + '..' + os.sep + '..' + os.sep))
+        self.base_conf = base_path + os.sep + 'config'
+
+        # The active tree, directory and config file are
+        # used for evaluation in the Config class, if needed.
         self.active_tree = None
+        self.active_dir  = None
+        self.active_file = None
 
         # Attempt to load saved config, otherwise reset to predefined.
         if not self.load():
@@ -411,14 +449,8 @@ class Configuration(bouwer.util.Singleton):
         # Insert the default tree.
         self.insert(ConfigTree('DEFAULT'))
 
-        # Find the path to the Bouwer predefined configuration files
-        curr_file = inspect.getfile(inspect.currentframe())
-        curr_dir  = os.path.dirname(os.path.abspath(curr_file))
-        base_path = os.path.dirname(os.path.abspath(curr_dir + '..' + os.sep + '..' + os.sep))
-        conf_path = base_path + os.sep + 'config'
-
         # Parse all pre-defined configurations from Bouwer
-        self._scan_dir(conf_path)
+        self._scan_dir(self.base_conf)
 
         # Parse all user defined configurations
         self._scan_dir(os.getcwd())
@@ -454,42 +486,46 @@ class Configuration(bouwer.util.Singleton):
         # the default tree, unless they are overwriten.
         for tree_name, tree in self.trees.items():
             if tree_name is def_tree.name:
+
+                # TODO: temporary let overrides inherit from the original
+                # TODO: this should be replaced by the keywords indirection stuff
+                for item_name, paths in def_tree.subitems.items():
+                    for path, item in paths.items():
+                        if path is not self.base_conf and self.base_conf in paths:
+                            item.inherit_keywords(paths[self.base_conf])
                 continue
 
-            # Inherit every default item per bouwconfig
-            for path in def_tree.bouwconfigs:
-                for item in def_tree.bouwconfigs[path]:
-
-                    # Create path in custom tree, if needed.
-                    if path not in tree.bouwconfigs:
-                        tree.bouwconfigs[path] = []
+            # Inherit every default item
+            for item_name, paths in def_tree.subitems.items():
+                for path_name, item in paths.items():
 
                     # Is the item overwritten?
                     if item.name in tree.subitems:
-                        # Inherit keywords from the default item, if not overwritten
-                        custom_item = tree.subitems[item.name]
 
-                        for key in item.keywords:
-                            if key not in custom_item.keywords:
-                                custom_item.keywords[key] = item.keywords[key]
+                        # Inherit keywords from the default item, if not overwritten
+                        custom_item_confs = tree.subitems[item.name]
+
+                        # For every instance, inherit the keywords
+                        for custom_item_cfile, custom_item in custom_item_confs.items():
+                            custom_item.inherit_keywords(item)
 
                         # TODO: make sure to remove orphan childs, when a list is overwritten!
                         pass
 
                     # Inherit the item
                     else:
-                        tree.bouwconfigs[path].append(item)
-                        tree.subitems[item.name] = item
+                        tree.subitems[item.name] = { path_name: item }
 
         # Validate & enforce dependencies in all trees.
         for tree_name, tree in self.trees.items():
-            for item_name, item in tree.subitems.items():
-                for dep in item.keywords.get('depends', []):
+            for item_name, paths in tree.subitems.items():
+                for path_name, item in paths.items():
+                    for dep in item.keywords.get('depends', []):
 
-                    # Is it an unknown dependency?
-                    if dep not in tree.subitems and \
-                       dep not in self.trees:
-                        raise Exception('Unknown dependency item ' + dep + ' in ' + item_name)
+                        # Is it an unknown dependency?
+                        if dep not in tree.subitems and \
+                           dep not in self.trees:
+                            raise Exception('Unknown dependency item ' + dep + ' in ' + item_name)
 
                     # TODO: add circular dependency check
 
@@ -505,9 +541,11 @@ class Configuration(bouwer.util.Singleton):
         self.log.debug('')
 
         # TODO: this dumping could be improved...
+        # TODO: perhaps put the dump method in ConfigTree itself?
         if isinstance(item, ConfigTree):
-            for child_item_name, child_item in item.subitems.items():
-                self._dump_item(child_item, tree, parent + item.name + '.')
+            for child_item_name, paths in item.subitems.items():
+                for path, child_item in paths.items():
+                    self._dump_item(child_item, tree, parent + item.name + '.')
 
     def _scan_dir(self, dirname):
         """
@@ -519,7 +557,9 @@ class Configuration(bouwer.util.Singleton):
         for filename in os.listdir(dirname):
             # TODO: replace 'Bouwconfig' literal with a constant, e.g. BOUWCONF or something or CONFFILE
             if filename.endswith('Bouwconfig'):
-                self.parser.parse(dirname + os.sep + filename)
+                self.active_file = dirname + os.sep + filename
+                self.active_dir  = dirname
+                self.parser.parse(self.active_file)
                 found = True
 
         # Only scan subdirectories if at least one Bouwconfig found.
