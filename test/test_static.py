@@ -35,7 +35,8 @@ class StaticTester(common.BouwerTester):
         """
         Run the pep8 code style checker on the bouwer code
         """
-        pass
+        self.assertEqual(os.system('pep8 --repeat ' + ' '.join(self._get_srclist())), 0,
+                        'PEP8 must be successful')
 
     def test_pyflakes(self):
         """

@@ -16,8 +16,29 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import os
+import sys
+import inspect
 import unittest
 
-suite = unittest.TestLoader().discover('.', '*Test*.py')
+if len(sys.argv) > 1:
+    match = sys.argv[1]
+else:
+    match = 'test_*.py'
+
+# Find our own location
+curfile = os.path.abspath(inspect.getfile(inspect.currentframe()))
+curdir  = os.path.normpath(os.path.dirname(curfile))
+
+# Determine paths
+rootdir = os.path.normpath(curdir + os.sep + '..')
+srcdir  = os.path.normpath(rootdir + os.sep + 'source')
+
+# We need this to import bouwer and test code
+sys.path.insert(0, curdir)
+sys.path.insert(1, srcdir)
+
+# Startup the unit tests
+suite = unittest.TestLoader().discover('.', match)
 unittest.TextTestRunner(verbosity=2).run(suite)
 
