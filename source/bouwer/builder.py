@@ -186,7 +186,8 @@ class BuilderManager(bouwer.util.Singleton):
         self.log.debug("executing `" + tree.name + ':' + target + "'")
         self.conf.active_tree = tree
         self.actions = actions
-        self._scan_dir(os.getcwd(), target, tree, actions)
+        self._scan_dir('.', target, tree, actions)
+        #(os.getcwd(), target, tree, actions)
 
     def _scan_dir(self, dirname, target, tree, actions):
         """ 
@@ -232,8 +233,10 @@ class BuilderManager(bouwer.util.Singleton):
 
         # Keep track of the Bouwfile being parsed
         # Update the active directory for Config evaluation
-        self.conf.active_dir = os.path.dirname(os.path.abspath(filename))
+        self.conf.active_dir = os.path.dirname(filename)
         self.log.debug("conf.active_dir = " + self.conf.active_dir)
+
+        # TODO: remove this???
         self.active_bouwfile = filename
 
         # Set globals

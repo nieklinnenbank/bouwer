@@ -223,23 +223,13 @@ class ConfigTree(ConfigBool):
         """
         Introduce a new :class:`.Config` item to the tree
         """
-        
-        #if item.name in self.subitems:
-        #    raise Exception('item ' + item.name + ' already exists in tree ' + self.name)
 
-        # TODO: support overrides here, by appending to an overrides dict
-        #       in case the item already exists
-        # TODO: but syncrhonize() didn't run yet...
-        # TODO: perhaps just put them in the same field and let getattr figure it out
-
-        # Insert item to the tree
+        # Every item in the tree contains a dict with
+        # paths for which it is active or overriden
         if item.name not in self.subitems:
             self.subitems[item.name] = {}
 
-        # Lookup Bouwconfig path
-        # TODO: replace this with Configuration.Instance().active_file
         # TODO: make sure this only contains the 'projectwide path' and not absolute OS path
-        # path = os.path.abspath(inspect.getfile(inspect.currentframe().f_back.f_back.f_back))
         path = Configuration.Instance().active_dir
         self.subitems[item.name][path] = item
  
@@ -275,15 +265,24 @@ class ConfigTree(ConfigBool):
             return self.__dict__[name]
         except KeyError:
             cfiles = self.__dict__['subitems'][name]
-            active_dir = Configuration.Instance().active_dir
+            conf = Configuration.Instance()
+            path = conf.active_dir
 
-            # Exact match?
-            if active_dir in cfiles:
-                return cfiles[active_dir]
+            # Make a loop which 'climbs' the basename()/basedir() of the path, until a match is found,
+            # if nothing found, return the base_conf as a last attempt, otherwise the item doesnt exist
 
-            # TODO: return the *best* matching
-            for path, item in cfiles.items():
-                return item
+            # Look for override?
+            while path is not '':
+                if path in cfiles:
+                    return cfiles[path]
+                else:
+                    path = os.path.dirname(path)
+
+            # If not overriden, return the default
+            if conf.base_conf in cfiles:
+                return cfiles[conf.base_conf]
+            else:
+                raise AttributeError('no such attribute' + str(name))
 
 class ConfigParser:
     """
@@ -391,11 +390,10 @@ class Configuration(bouwer.util.Singleton):
         base_path = os.path.dirname(os.path.abspath(curr_dir + '..' + os.sep + '..' + os.sep))
         self.base_conf = base_path + os.sep + 'config'
 
-        # The active tree, directory and config file are
-        # used for evaluation in the Config class, if needed.
+        # The active tree and directory are used for
+        # evaluation in the Config class, if needed.
         self.active_tree = None
         self.active_dir  = None
-        self.active_file = None
 
         # Attempt to load saved config, otherwise reset to predefined.
         if not self.load():
@@ -453,7 +451,7 @@ class Configuration(bouwer.util.Singleton):
         self._scan_dir(self.base_conf)
 
         # Parse all user defined configurations
-        self._scan_dir(os.getcwd())
+        self._scan_dir('.') #os.getcwd())
 
         # Synchronize configuration trees
         self._synchronize()
@@ -557,9 +555,8 @@ class Configuration(bouwer.util.Singleton):
         for filename in os.listdir(dirname):
             # TODO: replace 'Bouwconfig' literal with a constant, e.g. BOUWCONF or something or CONFFILE
             if filename.endswith('Bouwconfig'):
-                self.active_file = dirname + os.sep + filename
-                self.active_dir  = dirname
-                self.parser.parse(self.active_file)
+                self.active_dir = dirname
+                self.parser.parse(dirname + os.sep + filename)
                 found = True
 
         # Only scan subdirectories if at least one Bouwconfig found.

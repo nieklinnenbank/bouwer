@@ -22,6 +22,7 @@ class DummySingleton1(bouwer.util.Singleton):
     """ First Dummy Singleton class """
 
     def __init__(self, arg1, arg2):
+        """ Constructor """
         self.arg1 = arg1
         self.arg2 = arg2
 
@@ -29,6 +30,7 @@ class DummySingleton2(bouwer.util.Singleton):
     """ Second Dummy Singleton class """
 
     def __init__(self, arg1, arg2, arg3):
+        """ Constructor """
         self.arg1 = arg1
         self.arg2 = arg2
         self.arg3 = arg3
