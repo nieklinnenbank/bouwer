@@ -21,7 +21,7 @@ import os.path
 import inspect
 import unittest
 
-class CliTester(common.BouwerTester):
+class CommandLineTester(common.BouwerTester):
     """
     Tests for the Bouwer command line interface
     """

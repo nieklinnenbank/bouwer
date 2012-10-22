@@ -46,8 +46,8 @@ class Singleton(object):
             
             # Overwrite callbacks to raise exception later
             init = cls.__class_obj__.__init__
+            cls.__orig_init__ = init
             cls.__init__ = cls._raise_direct
-            cls.__new__ = cls._raise_direct
 
             # Invoke constructor
             init(*args, **kwargs)
