@@ -46,11 +46,20 @@ class Singleton(object):
             
             # Overwrite callbacks to raise exception later
             init = cls.__class_obj__.__init__
-            cls.__orig_init__ = init
+            cls.__orig_init__ = cls.__init__
             cls.__init__ = cls._raise_direct
 
             # Invoke constructor
             init(*args, **kwargs)
         
         return cls.__class_obj__
+
+    @classmethod
+    def Destroy(cls):
+        """
+        Remove a :class:`.Singleton` instance
+        """
+        if '__class_obj__' in cls.__dict__:
+            del cls.__class_obj__
+            cls.__init__ = cls.__orig_init__
 

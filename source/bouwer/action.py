@@ -38,7 +38,7 @@ class Worker(multiprocessing.Process):
         """
         Constructor
         """
-        super().__init__()
+        super(Worker, self).__init__()
         self._actions = actions
         self._work    = work
         self._events  = events

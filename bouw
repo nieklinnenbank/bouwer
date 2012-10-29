@@ -20,11 +20,6 @@ import os
 import sys
 import inspect
 
-# Check for at least python version 3.0
-if sys.version_info.major < 3:
-    print(sys.argv[0] + ': python >= 3.x is required')
-    sys.exit(1)
-
 # Retrieve the path to the currently executed file
 cur_file = os.path.abspath(inspect.getfile(inspect.currentframe()))
 

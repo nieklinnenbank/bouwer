@@ -24,11 +24,16 @@ class Command(Plugin):
     Run a shell command
     """
 
-    def execute_any(self, cmd, item = False):
-        """ Run a shell command """
+    def execute_config_params(self, item, command):
+        """
+        Runs a command only if item is True
+        """
+        if item.value():
+            os.system(command)
 
-        if (type(item) is Config and item.value) or item is False:
-            os.system(cmd)
+    def execute_any(self, command):
+        """ Run a shell command """
+        os.system(command)
 
         # self.build.generate_action(...)
         # os.system(cmd)

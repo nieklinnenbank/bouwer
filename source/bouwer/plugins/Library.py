@@ -34,6 +34,8 @@ class Library(Plugin):
         target = item.keywords.get('library', item.name.lower())
 
         # Look for optional sources in our child config items
+        # TODO: this is an ugly hack. Configuration layer should not be
+        # aware of source/target files
         for child_name in item.keywords.get('childs', []):
             child = self.get_item(child_name)
 
@@ -47,28 +49,22 @@ class Library(Plugin):
         Build a library using a `target` name and list of `sources`
         """
 
-        #libname = self.build.translate_target(libname, self.conf.active_tree)
         cc = self.get_item('CC')
         compiler = self.get_item(cc.value())
+        libname = str(target.relative)
         target.append('.a')
 
+        # Generate actions to build the library objects
         objects = []
-
-        # TODO: ask the build manager for the path to our invocation.
-        # then, if a BUILDROOT is set, we should put the object there.
-        # otherwise, put the object in this directory.
-        # optionally, if a BUILDPATH is set, put the object in this directory,
-        # plus the BUILDPATH appended to it (e.g. bld directory @ ASML)
-        # TODO: provide a generic mechanism for this!
         for src in sources:
             objects.append(self.Object(src))
 
         # TODO: replace this with action() instead?
-
-        # TODO: why not do self.target( ... ) self.source( ... )
-
+        # Generate action for linking the library
         self.action(target, objects,
                     compiler.keywords.get('ar') + ' ' +
                     compiler.keywords.get('arflags') + ' ' + str(target) + ' ' +
                     (' '.join([str(o) for o in objects])))
 
+        # Publish the library to the build manager, e.g. for UseLibrary()
+        self.build.put('library:' + self.conf.active_tree.name + ':' + libname, (target, self.conf.active_dir))

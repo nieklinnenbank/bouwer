@@ -15,7 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-def build(conf):
-    """ Build the hello world program """
-    Program(conf.HELLO2, 'hello2.c')
+ConfigBool('MYPROG',
+    title   = 'The myprog example consumer program for libdummy',
+    help    = 'This program demonstrates how to use libraries',
+    depends = [ 'LIBDUMMY' ]
+)
 

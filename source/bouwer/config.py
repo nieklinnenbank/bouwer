@@ -51,16 +51,9 @@ class Config(object):
 
         # See if our dependencies are met.
         for dep in self.keywords.get('depends', []):
-
-            # Is the dependency an item?
-            if tree.get(dep) is not None:
-                if not tree.get(dep).satisfied(tree):
-                    return False
-                    
-            # It's a tree
-            elif dep is not tree.name or not tree.value:
+            if tree.get(dep) is not None and not tree.get(dep).satisfied(tree):
                 return False
-
+            
         # If we are in a list, then we must be selected to satisfy.
         if self.keywords.get('in_list', False):
             lst = tree.get(self.keywords.get('in_list'))
@@ -249,6 +242,17 @@ class ConfigTree(ConfigBool):
         except AttributeError:
             return None
 
+    def satisfied(self, tree = None):
+        """
+        See if we are satisfied with all our dependencies in `tree`
+
+        If no `tree` is specified, the currently active tree will be searched
+        """
+        if tree is None:
+            tree = Configuration.Instance().active_tree
+
+        return tree is self
+
     def value(self, tree = None):
         """
         Retrieve value of the tree. Either `True` or `False`.
@@ -261,16 +265,16 @@ class ConfigTree(ConfigBool):
         """
         if name == self.name:
             return self
-        try:
+        elif name in self.__dict__:
             return self.__dict__[name]
-        except KeyError:
-            cfiles = self.__dict__['subitems'][name]
-            conf = Configuration.Instance()
-            path = conf.active_dir
+        
+        conf = Configuration.Instance()
+        path = conf.active_dir
 
+        if name in self.__dict__['subitems']:
+            cfiles = self.__dict__['subitems'][name] 
             # Make a loop which 'climbs' the basename()/basedir() of the path, until a match is found,
             # if nothing found, return the base_conf as a last attempt, otherwise the item doesnt exist
-
             # Look for override?
             while path is not '':
                 if path in cfiles:
@@ -278,11 +282,14 @@ class ConfigTree(ConfigBool):
                 else:
                     path = os.path.dirname(path)
 
+            # TODO: BUG, for example LIBC doesn't work anymore!!! it's created in the user proj...
             # If not overriden, return the default
             if conf.base_conf in cfiles:
                 return cfiles[conf.base_conf]
-            else:
-                raise AttributeError('no such attribute' + str(name))
+        elif name in conf.trees:
+            return conf.trees[name]
+        else:
+            raise AttributeError('no such attribute' + str(name))
 
 class ConfigParser:
     """

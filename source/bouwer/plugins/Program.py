@@ -31,7 +31,8 @@ class Program(Plugin):
         Build a program given a :class:`.Config` `item` and `sources` list.
         """
         # TODO: also support the program = keyword, like library =
-        self.execute_target(TargetPath(item.name.lower()), sources)
+        if item.value():
+            self.execute_target(TargetPath(item.name.lower()), sources)
 
     def execute_target(self, target, sources):
         """
@@ -39,7 +40,15 @@ class Program(Plugin):
         """
 
         # Make a list of objects on which we depend
+        # TODO: problem: what if there is never any UseLibrary which publishes this???
+        try:
+            extra = self.build.get('sources')
+        except KeyError:
+            extra = []
         objects = []
+
+        # TODO: make the actions a TRANSACTION, so that they will be forgotten
+        # if this builder was delayed...
 
         # Traverse all source files given
         for src in sources:
@@ -47,11 +56,17 @@ class Program(Plugin):
 
         # Retrieve compiler chain
         chain = self.get_item('CC')
-        cc    = self.get_item(chain.value())                
+        cc    = self.get_item(chain.value())
+
+        # Add linker paths
+        ldpath = ''
+        for path in cc.keywords.get('ldpath'):
+            ldpath += cc.keywords.get('ldflag') + path + ' '
 
         # Link the program
         self.action(target,
-                    objects,
-                    cc.keywords.get('ld') + ' ' + str(target) + ' ' + \
-                    cc.keywords.get('ldflags') + ' ' + (' '.join([str(o) for o in objects])))
+                    objects + extra, 
+                    cc.keywords.get('ld') + ' ' + str(target) + ' ' +
+                    (' '.join([str(o) for o in objects])) + ' ' + ldpath +
+                    cc.keywords.get('ldflags'))
 

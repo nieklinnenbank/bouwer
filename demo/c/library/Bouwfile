@@ -15,10 +15,4 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-def build(conf):
-    """
-    Build the dummy library
-    """
-    ConfigHeader('config.h')
-    Library(conf.LIBDUMMY, [ 'lookup.c' ])
 

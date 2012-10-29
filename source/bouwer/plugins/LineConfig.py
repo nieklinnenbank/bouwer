@@ -58,7 +58,7 @@ class LineConfig(Plugin):
 
         # Ask to save the modified configuration.
         print()
-        print('Save Configuration? (y/n) [n] ', end = '')
+        sys.stdout.write('Save Configuration? (y/n) [n] ')
         sys.stdout.flush()
 
         try:
@@ -182,7 +182,7 @@ class LineConfig(Plugin):
         if key in ['title', 'help', 'default', 'childs', 'depends', 'in_list', 'tree']:
             return True
     
-        print('  [key]   ' + key + ' [' + str(item.keywords[key]) + '] ', end = '')
+        sys.stdout.write('  [key]   ' + key + ' [' + str(item.keywords[key]) + '] ')
         sys.stdout.flush()
         line = self._read_input()
         return True
@@ -210,7 +210,7 @@ class LineConfig(Plugin):
                 n += 1
 
             if input:
-                print('\t(1-' + str(n - 1) + '/?) ', end = '')
+                sys.stdout.write('\t(1-' + str(n - 1) + '/?) ')
             sys.stdout.flush()
 
         else:
@@ -233,5 +233,6 @@ class LineConfig(Plugin):
             if input:
                 prompt += ' [' + str(item.value(tree)) + '] '
 
-            print(prompt, end = '')
+            sys.stdout.write(prompt)
             sys.stdout.flush()
+

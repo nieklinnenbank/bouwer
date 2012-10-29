@@ -58,9 +58,9 @@ class SourcePath(Path):
         """
         Constructor
         """
-        super().__init__(path)
-        caller   = os.path.abspath(self.build.active_bouwfile)
-        location = os.path.relpath(os.path.dirname(caller))
+        super(SourcePath, self).__init__(path)
+        #caller   = os.path.abspath(self.build.active_bouwfile)
+        location = os.path.relpath(self.conf.active_dir) #os.path.dirname(caller))
         self.absolute = os.path.normpath(location + os.sep + path)
 
 class TargetPath(Path):
@@ -72,11 +72,11 @@ class TargetPath(Path):
         """
         Constructor
         """
-        super().__init__(path)
+        super(TargetPath, self).__init__(path)
         # TODO: support the BUILDROOT, BUILDPATH configuration items
         # TODO: use Configuration.Instance().active_dir instead
-        caller   = os.path.abspath(self.build.active_bouwfile)
-        location = os.path.relpath(os.path.dirname(caller))
+        #caller   = os.path.abspath(self.build.active_bouwfile)
+        location = os.path.relpath( self.conf.active_dir ) #os.path.dirname(caller))
 
         # If only the default tree is active, don't prefix with tree name.
         if len(self.conf.trees) == 1:
@@ -103,9 +103,10 @@ class BuilderInvoker:
         out = []
         for src in input_list:
 
-            bouwfile = self.manager.active_bouwfile
-            caller   = os.path.abspath(bouwfile)
-            relative = os.path.relpath(os.path.dirname(caller))
+            #bouwfile = self.manager.active_bouwfile
+            #caller   = os.path.abspath(bouwfile)
+            #relative = os.path.relpath(os.path.dirname(caller))
+            relative = self.manager.conf.active_dir
 
             # TODO: hmm. a lot of convertions here. needed?
             for src_file in glob.glob(relative + os.sep + src):
@@ -120,8 +121,13 @@ class BuilderInvoker:
 
         # if called with (target:str, source:str), convert to (target:str, [source:str]) automatically
         if isinstance(arguments[0], bouwer.config.Config):
-            return self.builder.execute_config(arguments[0],
-                                               self._source_path_list(arguments[1]))
+
+            # TODO: bug! how do we know the arguments list is a *FILES* list?
+            if hasattr(self.builder, 'execute_config'):
+                return self.builder.execute_config(arguments[0],
+                                                   self._source_path_list(arguments[1]))
+            else:
+                return self.builder.execute_config_params(*arguments)
 
         elif type(arguments[0]) is str:
             if len(arguments) == 1 and hasattr(self.builder, 'execute_source'):
@@ -139,25 +145,79 @@ class BuilderInvoker:
 
         return self.builder.execute_any(*arguments, **keywords)
 
-class BuilderManager(bouwer.util.Singleton):
-    """ 
-    Manages access to the builder layer
+class BuilderInstance:
+    def __init__(self, name, invoker, conf, active_dir, *arguments, **keywords):
+        self.name = name
+        self.invoker = invoker
+        self.conf = conf
+        self.active_dir = active_dir
+        self.arguments = arguments
+        self.keywords = keywords
+        self.run = False
+
+    def call(self):
+        #print('invoking ', self.name, self.arguments, self.keywords, 'in', self.active_dir)
+        self.conf.active_dir = self.active_dir
+        self.invoker.invoke(*self.arguments, **self.keywords)
+        self.run = True
+
+class BuilderMesh:
+
+    def __init__(self, manager):
+        self.manager = manager
+        self.conf = self.manager.conf
+        self.invokers = {}
+        self.mesh = []
+
+    def introduce(self, name, builder):
+        self.invokers[name] = BuilderInvoker(self.manager, builder)
+
+    def insert(self, name, *arguments, **keywords):
+        self.mesh.append(BuilderInstance(name, self.invokers[name], self.conf, self.conf.active_dir, *arguments, **keywords))
+
+    # TODO: maybe let it run the *Bouwfile* sequence instead, since before Library()
+    # there may be something which must run before in a rare case
+    # TODO: the dependency is really between Bouwfiles here...?
+
+    # TODO: inefficient!!! N*N complexity :-(
+    def _run_deps(self, builder):
+        if hasattr(builder, 'execute_before'):
+            for dep in builder.execute_before():
+                for instance in self.mesh:
+                    if not instance.run and instance.name == dep:
+                        instance.call()
+
+    # TODO: be careful with performance penalties here!
+    def execute(self):
+        for instance in self.mesh:
+            if not instance.run:
+                self._run_deps(instance.invoker.builder)
+                instance.call()
+
+class MeshGenerator:
+    def __init__(self, manager, mesh, name, plugin):
+        self.manager = manager
+        self.mesh = mesh
+        self.name = name
+        self.plugin = plugin
+
+    def insert(self, *arguments, **keywords):
+        self.mesh.insert(self.name, *arguments, **keywords)
+
+class BuilderParser:
+    """
+    Parses Bouwfiles for executing builders
     """
 
-    def __init__(self, conf = None, plugins = None):
-        """ 
-        Class constructor
-
-        :Input:
-            - ``conf`` (:class:`.Configuration`)   -- Current configuration
-            - ``plugins`` (:class:`.PluginLoader`) -- Access to loaded plugins 
-
+    def __init__(self, manager, plugins):
         """
-        self.conf     = conf
-        self.args     = conf.args
-        self.log      = logging.getLogger(__name__)
-        self.invokers = {}
-
+        Constructor
+        """
+        self.manager   = manager
+        self.mesh = BuilderMesh(manager)
+        self.builders = {}
+        self.log = logging.getLogger(__name__)
+ 
         # Detects all plugins with an execute() builder function
         for plugin_name, plugin in plugins.plugins.items():
             if hasattr(plugin, 'execute_target') or \
@@ -165,59 +225,31 @@ class BuilderManager(bouwer.util.Singleton):
                hasattr(plugin, 'execute_source') or \
                hasattr(plugin, 'execute_any'):
                 
-                self.invokers[plugin_name] = BuilderInvoker(self, plugin).invoke
-                plugin.build = self
+                self.builders[plugin_name] = MeshGenerator(self.manager, self.mesh, plugin_name, plugin).insert
+                self.mesh.introduce(plugin_name, plugin)
+                plugin.build = self.manager # TODO: fix this better??? Use BuildManager.Instance()?
 
-    def execute_target(self, target, tree, actions):
-        """ 
-        Generate actions associated with the given target.
-
-        Input:
-            - ``target`` (:py:obj:`str`)  -- Name of the target to execute
-            - ``tree`` (:class:`.Config`) -- Current configuration tree
-
-        Output:
-            - ``actions`` (:class:`.ActionTree`) -- Destination action tree
-
-        Example:
-            >>> manager.execute_target('build', conftree, actiontree)
-
-        """
-        self.log.debug("executing `" + tree.name + ':' + target + "'")
-        self.conf.active_tree = tree
-        self.actions = actions
-        self._scan_dir('.', target, tree, actions)
-        #(os.getcwd(), target, tree, actions)
-
-    def _scan_dir(self, dirname, target, tree, actions):
+    def parse(self, dirname, target):
         """ 
         Scan a directory for Bouwfiles
-
-        Input:
-            - ``dirname`` (:py:obj:`str`) -- Path to directory to scan
-            - ``target`` (:py:obj:`str`)  -- Target name
-            - ``tree`` (:class:`.Config`) -- Current configuration tree
-
-        Output:
-            - ``actions`` (:class:`.ActionTree`) -- Destination action tree
-
         """
         found = False
 
         # Look for all Bouwfiles.
         for filename in os.listdir(dirname):
             if filename.endswith('Bouwfile'):
-                self._parse(dirname + os.sep + filename, target, tree, actions)
+                self._parse_bouwfile(dirname + os.sep + filename, target)
                 found = True
 
         # Only scan subdirectories if at least one Bouwfile found.
         if found:
             for filename in os.listdir(dirname):
                 if os.path.isdir(dirname + os.sep + filename):
-                    self._scan_dir(dirname + os.sep + filename,
-                                   target, tree, actions)
+                    self.parse(dirname + os.sep + filename, target)
 
-    def _parse(self, filename, target, tree, actions):
+        return self.mesh
+
+    def _parse_bouwfile(self, filename, target):
         """ 
         Parse a Bouwfile
         """
@@ -233,21 +265,67 @@ class BuilderManager(bouwer.util.Singleton):
 
         # Keep track of the Bouwfile being parsed
         # Update the active directory for Config evaluation
-        self.conf.active_dir = os.path.dirname(filename)
-        self.log.debug("conf.active_dir = " + self.conf.active_dir)
-
-        # TODO: remove this???
-        self.active_bouwfile = filename
+        self.manager.conf.active_dir = os.path.dirname(filename)
 
         # Set globals
-        globs = copy.copy(self.invokers)
+        globs = copy.copy(self.builders)
 
         # Parse the given file
         exec(compile(open(filename).read(), filename, 'exec'), globs)
 
         # Execute the target routine, if defined in this Bouwfile.
         if target in globs:
-            globs[target](tree)
+            globs[target](self.manager.conf.active_tree)
+
+class BuilderManager(bouwer.util.Singleton):
+    """ 
+    Manages access to the builder layer
+    """
+
+    def __init__(self, conf, plugins):
+        """ 
+        Constructor
+        """
+        self.conf      = conf
+        self.args      = conf.args
+        self.log       = logging.getLogger(__name__)
+        self.datastore = {}
+        self.parser    = BuilderParser(self, plugins)
+
+        # def inspect_target() ???
+
+    def execute_target(self, target, tree, actions):
+        """ 
+        Generate actions associated with the given target.
+
+        >>> manager.execute_target('build', conftree, actiontree)
+        """
+        self.log.debug("executing `" + tree.name + ':' + target + "'")
+        self.conf.active_tree = tree
+        self.actions = actions
+        mesh = self.parser.parse('.', target)
+        #mesh.inspect()
+        mesh.execute()
+        #self._scan_dir('.', target, tree, actions)
+
+        # perhaps we should return ActionTree's instead?
+
+    def put(self, key, value):
+        """
+        Publish a `key` and `value` pair for sharing with other builders
+
+        The datastore mechanism in the :class:`.BuildManager` allows
+        a builder plugin to share information with other builder plugins.
+        For instance, the :class:`.UseLibrary` plugin requires information
+        about the path of libraries from the :class:`.Library` builder.
+        """
+        self.datastore[key] = value
+
+    def get(self, key):
+        """
+        Retrieve the value of `key` published by another builder
+        """
+        return self.datastore[key]
 
     def generate_action(self, target, sources, command):
         """ 
@@ -272,5 +350,4 @@ class BuilderManager(bouwer.util.Singleton):
             os.makedirs(dirname)
 
         self.actions.submit(target.absolute, src_list, command)
-
 

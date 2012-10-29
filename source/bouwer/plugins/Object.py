@@ -52,11 +52,16 @@ class Object(Plugin):
             # Translate source and target paths relative from project-root
             outfile = TargetPath(splitfile[0] + '.o')
 
+            # Add C preprocessor paths
+            incflags = ''
+            for path in cc.keywords.get('incpath'):
+                incflags += cc.keywords.get('incflag') + path + ' '
+
             # Register compile action
             self.action(outfile, [ source ],
                         cc.keywords.get('cc') + ' ' +
                         str(outfile) + ' ' +
-                        cc.keywords.get('ccflags') + ' ' +
+                        cc.keywords.get('ccflags') + ' ' + incflags +
                         str(source))
             return outfile
 

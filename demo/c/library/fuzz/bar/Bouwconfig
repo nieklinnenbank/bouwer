@@ -15,7 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-def build(conf):
-    """ Build the hello world program """
-    Program(conf.HELLO2, 'hello2.c')
+ConfigBool('LIBFUZZ',
+    title   = 'The fuzzy library',
+    help    = 'This library is very fuzzy',
+)
 

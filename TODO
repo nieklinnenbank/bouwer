@@ -1,5 +1,29 @@
+- TODO: what if the developer wishes to override CC generic configuration?
+  e.g. set the include path to './myincludes' for *ALL* compilers?
+
+  --> he must add it to CC somehow...
+    --> perhaps we can let the Object() use CC's keywords too!
+
 - let the build manager translate paths instead of the builders!
     - make it so, that the builder's execute_*() automatically receive the translated paths always
+
+- implement lazy plugin loading
+  --> only load plugin builders, when they are called, such that not ALL plugins
+      are loaded at startup, when they aren't needed!
+
+- let BuildManager function as a datastore. Builders can share information via this datastore.
+
+    --> delaying is not desirable, because nested builders is tricky to build,
+        and what if a certain builder variable is sometimes there, and sometimes not, e.g.
+        the 'sources' variables from UseLibrary() -> Program, to share the list of target libraries.
+
+    --> also, it's not possible to depend on return values in nested builders that way...
+
+    If a certain data item isn't available yet (due to builder dependencies), the builder execution is
+    delayed until the data becomes available (via a UnknownDataException or something)
+
+    - with delaying builders, be careful with nested builders! E.g. builders that invoke each other, like Program -> Object
+        - in fact, only Program should be added to the delay list, Object not! Otherwise, we might end up with mulitple Objects ...
 
 - implement implicit C header dependency scanner please!
     --> watch out for performance here!

@@ -17,42 +17,69 @@
 
 import os
 import os.path
+from bouwer.plugin import Plugin
+from bouwer.config import ConfigBool
+from bouwer.builder import TargetPath
 
-##
-# Build and link against a library
-#
-class UseLibrary:
+class UseLibrary(Plugin):
+    """
+    Build and link against a library
+    """
 
-    ##
-    # Build and link against a library
-    #
-    # @param libraries List of library names
-    #
+    def execute_before(self):
+        """
+        List of builders which must be executed first
+        """
+        return [ 'Library' ]
+
+    def execute_config_params(self, item, libsrc):
+        if item.value():
+            self.execute_any(libsrc)
+
     def execute_any(self, libraries):
+        """
+        Build against a :py:`list` of `libraries`
 
-        # TODO: find the target library in the ActionTree
-        # for each library, make sure it gets the right -L <path> and -l<name>
-        # as a temporary per-directory override.
-        # do the -L via search in the ActionTree.
-        # we need to have the builder priority/ordering working for this...
-        # also make sure to add libinc <path>, for includes
-        pass
+        The library target for linking will be discovered by
+        searching the generated :class:`.Action` objects in
+        the actions layer.
+        """
 
-        #for lib in libraries:
-        # Find the correct include parameter for ccflags
-        #inc_param = self.env['incflags'].replace('%INCLUDE%', 'library' + os.sep + lib)
-            
-        #print('fixing library ' + lib[3:])
-        #lib_param = self.env['libflags'].replace('%LIBRARY%', lib)
-        #lib_param = lib_param.replace('%LIBNAME%', lib[3:])
+        # TODO: this should become a *TEMPORARY* per-directory override instead
+        chain = self.get_item('CC')
+        cc    = self.get_item(chain.value())
 
-        # TODO: this is ugly, find some clearer way to extend the Config object
+        # TODO: find the correct libary path using the actions layer!!!
+        # TODO: only do it like this if static linking!!!
+        # TODO: use keyword indirection instead of copying the original keywords?!
+        tmp = ConfigBool(cc.name, **cc.keywords)
+        slist = []
 
-        # Append library include paths to the C compiler flags
-        #self.env.config.set(self.env['id'], 'ccflags',
-        #    self.env['ccflags'] + ' ' + inc_param)
+        # Loop all given libraries
+        for lib in libraries:
 
-        # Append library linker flags
-        #self.env.config.set(self.env['id'], 'ldflags',
-        #    self.env['ldflags'] + ' ' + lib_param)
+            target, path = self.build.get('library:' + self.conf.active_tree.name + ':' + lib)
+            slist.append(target)
+
+            if lib[:3] == 'lib':
+                libname = lib[3:]
+            else:
+                libname = lib
+            tmp.keywords['ldpath'].append(os.path.dirname(target.absolute))
+            tmp.keywords['incpath'].append(path)
+            tmp.keywords['ldflags'] += ' -l' + libname + ' '
+
+        self.build.put('sources', slist)
+        self.conf.active_tree.add(tmp)
+
+        """
+        With this Library() instance, we can append e.g. libinc = 'include' or libinc='.'
+        to automatically append an -I path for each Library():
+
+           -I ./lib/fuzzors/libfuzz1 or -I ./lib/fuzzors/libfuzz1/include
+
+        If all headers are in a central location and not per-library, the user can simply put it in the incpath=['include']:
+
+           -I ./include
+        """
 

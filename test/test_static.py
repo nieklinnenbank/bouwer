@@ -16,7 +16,6 @@
 #
 
 import os
-import pylint.lint
 import sys
 import glob
 import common
@@ -63,6 +62,12 @@ class StaticTester(common.BouwerTester):
         """
         Run pylint on the bouwer code
         """
+
+        try:
+            import pylint.lint
+        except ImportError:
+            self.skipTest('PyLint not installed')
+
         for filename in os.listdir(self.srcdir):
             try:
                 pylint.lint.Run(['--reports=n', '--output-format=parseable',

@@ -16,6 +16,16 @@
 #
 
 def build(conf):
-    """ Build the hello world program """
-    Program(conf.HELLO2, 'hello2.c')
+    """
+    Build the myprog consumer program
+    """
+    #UseLibrary(conf.LIBDUMMY, 'libdummy')
+    UseLibrary(['libdummy', 'libfuzz'])
+    #UseLibrary(conf.LIBFUZZ, 'libfuzz')
+
+    # it's also possible to specify the paths manually, a-la scons/make
+    # Note that this will NOT take the BUILDROOT or BUILDPATH into account, if set
+    Program(conf.MYPROG, [ 'main.c' ])
+    #        incpath = 'libdummy',
+    #        libpath = 'libdummy')
 

@@ -71,8 +71,8 @@ class Plugin:
     
         if name in self.__dict__:
             return self.__dict__[name]
-        elif name in self.__dict__['build'].invokers:
-            return self.__dict__['build'].invokers[name]
+        elif name in self.__dict__['build'].parser.mesh.invokers:
+            return self.__dict__['build'].parser.mesh.invokers[name].invoke
         else:
             raise AttributeError(name)
 

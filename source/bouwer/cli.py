@@ -18,22 +18,22 @@
 import os
 import os.path
 import argparse
-import configparser
 import multiprocessing
 
-# TODO: extend somekind of argparse class here
+try:
+    from configparser import ConfigParser
+except ImportError:
+    from ConfigParser import ConfigParser
 
-##
-# Represents the command line interface
-#
 class CommandLine:
+    """
+    Represents the command line interface to bouwer
+    
+    TODO: extend somekind of argparse class here
+    """
 
-    ##
-    # Constructor
-    #
     def __init__(self):
-
-        # Build parser
+        """ Constructor """
         self.parser = argparse.ArgumentParser(description='Bouwer build automation tool.',
                                      epilog='Copyright (c) 2012 Niek Linnenbank.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help = False)
@@ -57,12 +57,10 @@ class CommandLine:
         if self.args.verbose:
             self.args.log_level = 'DEBUG'
 
-    ##
-    # Interpret all command line arguments
-    #
     def parse(self):
-
-        # Parse the arguments
+        """
+        Interpret all command line arguments
+        """
         self.parser = argparse.ArgumentParser(parents = [self.parser],
                                      description='Bouwer build automation tool.',
                                      epilog='Copyright (c) 2012 Niek Linnenbank.',
@@ -70,13 +68,13 @@ class CommandLine:
         self.args = self.parser.parse_args()
         return self.args
 
-    ##
-    # Read file(s) containing user-defined cli argument defaults.
-    #
     def _read_rc(self):
+        """
+        Read file(s) containing user defined command line argument defaults
+        """
 
         # Read any existing RC files
-        rc = configparser.ConfigParser()
+        rc = ConfigParser()
         rc.read([ os.path.expanduser('~' + os.sep + '.bouwrc'), '.bouwrc'])
 
         # Set argument defaults
@@ -108,3 +106,4 @@ class CommandLine:
 
         # Set defaults
         self.parser.set_defaults(**user_args)
+

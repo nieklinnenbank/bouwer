@@ -40,17 +40,8 @@ class SingletonTester(common.BouwerTester):
 
     def setUp(self):
         """ Runs before each testcase """
-        try:
-            del DummySingleton1.__class_obj__
-            DummySingleton1.__init__ = DummySingleton1.__orig_init__
-        except:
-            pass
-
-        try:
-            del DummySingleton2.__class_obj__
-            DummySingleton2.__init__ = DummySingleton2.__orig_init__
-        except:
-            pass
+        DummySingleton1.Destroy()
+        DummySingleton2.Destroy()
 
     def test_single(self):
         """ Verify that Singleton has one instance maximum """
@@ -82,4 +73,17 @@ class SingletonTester(common.BouwerTester):
         dummy1 = DummySingleton1.Instance("a", "b")
 
         self.assertRaises(Exception, DummySingleton1.Instance, "a", "b")
+
+    def test_reset(self):
+        """ Verify that Destroy() completely destroys the Singleton instance """
+        dummy1 = DummySingleton1.Instance("a", "b")
+        DummySingleton1.Destroy()
+        dummy2 = DummySingleton1.Instance("a", "b")
+        dummy3 = DummySingleton1.Instance()
+
+        self.assertNotEqual(dummy1, dummy2)
+        self.assertEqual(dummy2, dummy3)
+        self.assertEqual(id(dummy2), id(dummy3))
+        self.assertEqual(id(dummy2.__orig_init__), id(dummy3.__orig_init__))
+        self.assertEqual(id(dummy2.__orig_init__), id(dummy1.__orig_init__))
 
