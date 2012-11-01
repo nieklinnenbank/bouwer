@@ -37,7 +37,7 @@ class CommandLine:
         self.parser = argparse.ArgumentParser(description='Bouwer build automation tool.',
                                      epilog='Copyright (c) 2012 Niek Linnenbank.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help = False)
-        self.parser.add_argument('--version', action='version', version='0.0.1')
+        self.parser.add_argument('--version', action='version', version='0.1.0')
         self.parser.add_argument('-l', '--log', help='Send logging output to the given file', type=str, default=None)
         self.parser.add_argument('-L', '--log-level', help='Set the logging level', type=str, default='WARNING', choices = [ 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL' ])
         self.parser.add_argument('-v', '--verbose', help='alias for -L DEBUG', action='store_true', default=False)

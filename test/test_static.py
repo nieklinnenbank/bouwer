@@ -26,38 +26,39 @@ class StaticTester(common.BouwerTester):
     Runs static code analyzer tools on Bouwer source code
     """
 
-    @unittest.skip('temporary disabled until code fixed')
-    def setUp(self):
-        pass
-
     def _get_srclist(self):
-        srclist  = glob.glob(self.srcdir + os.sep + 'bouwer' + os.sep + '*.py')
-        srclist += glob.glob(self.srcdir + os.sep + 'bouwer' + os.sep + 'plugins' + os.sep + '*.py')
-        return srclist
+        """ Get a list of bouwer source files """
+        return [ self.srcdir + os.sep + 'bouwer' + os.sep + 'config.py' ]
 
+        #srclist  = glob.glob(self.srcdir + os.sep + 'bouwer' + os.sep + '*.py')
+        #srclist += glob.glob(self.srcdir + os.sep + 'bouwer' + os.sep + 'plugins' + os.sep + '*.py')
+        #return srclist
+
+    @unittest.skip('temporary disabled until code fixed')
     def test_pep8(self):
         """
         Run the pep8 code style checker on the bouwer code
         """
         self.assertEqual(os.system('pep8 --repeat ' + ' '.join(self._get_srclist())), 0,
                         'PEP8 must be successful')
-
+   
     def test_pyflakes(self):
-        """
-        Run pyflakes on the bouwer code
-        """
+        """ Run pyflakes on the bouwer code """
         self.assertEqual(os.system('pyflakes ' + ' '.join(self._get_srclist())), 0,
                         'PyFlakes must be successful')
 
     def test_pychecker(self):
-        """
-        Run pychecker on the bouwer code
-        """
+        """ Run pychecker on the bouwer code """
         srclist = self._get_srclist()
+
         pypath = 'PYTHONPATH=' + os.environ.get('PYTHONPATH', '') + self.srcdir
-        result = os.system(pypath + ' pychecker --limit=1000 ' + ' '.join(srclist))
+        pyargs = '--limit=1000 --no-argsused --moduledoc --classdoc --funcdoc ' + \
+                 '--changetypes --constant1 --callattr --initattr --no-isliteral -Q '
+
+        result = os.system(pypath + ' pychecker ' + pyargs + ' '.join(srclist))
         self.assertEqual(result, 0, 'PyChecker must be successful')
 
+    @unittest.skip('temporary disabled until code fixed') 
     def test_pylint(self):
         """
         Run pylint on the bouwer code

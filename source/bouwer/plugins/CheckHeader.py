@@ -23,6 +23,9 @@ import os.path
 #
 class CheckHeader:
 
+
+    
+
     ##
     # Decide if we "agree" with the given configuration.
     #

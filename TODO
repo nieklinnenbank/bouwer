@@ -1,5 +1,32 @@
+- Let each builder define which input / output configuration variables it requires,
+  such that Bouwer can define the *ORDER* in which they must run:
+
+    - Program <-- CC and Check* item input. Must run after all Check* are done
+    - CheckCC <-- writes to CC
+    - CheckHeader <-- writes to HAS_HEADER_NAME, but takes CC as input
+    - CheckLibrary <-- writes to HAS_LIBRARY_NAME, but takes CC as input
+
+  Possible:
+
+    - Library <-- writes to LIBRARIES (string?), takes CC as input
+                    (perhaps a ConfigTemp item type, or a ConfigString with temporary = True or other keyword to indicate its not permanent)
+    - UseLibraries <-- writes to CC locally, takes as input LIBRARIES
+    - Program <-- takes a input CC 
+
+  But what about builders which generate actions with a dependency on some other builder's actions, which are NOT generated yet (due to config in/out deps)?
+
+    - Iso <-- has maybe MKISO as input, but *not* the CC this must run after all things are compiled
+    - Archive
+
+        --> these should be put in a separate target instead? def iso: ... Iso('foo.iso', '.')
+
+    ==> when unknown dependency, the execution should be postponed as late as possible, such 
+        that the builder has a chance to generate & execute. If the unknown dependency never comes, its an error!
+
 - TODO: what if the developer wishes to override CC generic configuration?
   e.g. set the include path to './myincludes' for *ALL* compilers?
+
+    --> make a generic ConfigString for this, e.g. ConfigString('INCLUDES', default = '')
 
   --> he must add it to CC somehow...
     --> perhaps we can let the Object() use CC's keywords too!

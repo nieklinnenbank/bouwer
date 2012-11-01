@@ -25,7 +25,7 @@ class Singleton(object):
     """
 
     @classmethod
-    def _raise_direct(self, *args, **kwargs):
+    def _raise_direct(cls, *args, **kwargs):
         """
         Called when a :class:`.Singleton` is not accessed using `Instance`
         """

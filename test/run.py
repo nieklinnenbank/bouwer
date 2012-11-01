@@ -21,6 +21,13 @@ import sys
 import inspect
 import unittest
 
+class MyTestResult(unittest.TextTestResult):
+    def getDescription(self, test):
+        if test.shortDescription():
+            return test.shortDescription()
+        else:
+            return str(test)
+
 if len(sys.argv) > 1:
     match = sys.argv[1]
 else:
@@ -39,6 +46,9 @@ sys.path.insert(0, curdir)
 sys.path.insert(1, srcdir)
 
 # Startup the unit tests
-suite = unittest.TestLoader().discover('.', match)
-unittest.TextTestRunner(verbosity=2).run(suite)
+suite  = unittest.TestLoader().discover('.', match)
+runner = unittest.TextTestRunner(verbosity=2)
+runner.resultclass = MyTestResult
+runner.run(suite)
+
 

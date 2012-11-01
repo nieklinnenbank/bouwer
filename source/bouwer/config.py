@@ -78,8 +78,8 @@ class Config(object):
         self._value = value
 
     def inherit_keywords(self, other):
-        # TODO: temporary routine to copy keywords from other item
-        # this should be replaced by keyword indirection/evaluation
+        """ temporary routine to copy keywords from other item """
+        # TODO: this should be replaced by keyword indirection/evaluation
         for key in other.keywords:
             if key not in self.keywords:
                 self.keywords[key] = other.keywords[key]
@@ -117,9 +117,11 @@ class Config(object):
         """
 
     def __str__(self):
+        """ String representation """
         return str(self.value())
 
     def __repr__(self):
+        """ Interactive representation """
         return self.name
 
 class ConfigBool(Config):
@@ -192,12 +194,21 @@ class ConfigList(Config):
             super(ConfigList, self).update(value)
 
 class ConfigInt:
+    """
+    Integer configuration item
+    """
     pass
 
 class ConfigFloat:
+    """
+    Floating point number configuration item
+    """
     pass
 
 class ConfigTri:
+    """
+    Tristate configuration item
+    """
     pass
 
 class ConfigTree(ConfigBool):
@@ -309,6 +320,7 @@ class ConfigParser:
                        'ConfigTree'   : self._parse_tree }
 
     def _get_value(self, **keywords):
+        """ Retrieve default value """
         if 'default' in keywords:
             return ( (keywords['default']), )
         else:
