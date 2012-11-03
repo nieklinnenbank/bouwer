@@ -109,32 +109,5 @@ class HelloTester(DemoClass):
 
     def _foo_test_hello(self):
         """ Verify correct compilation of Hello World """
+        pass
 
-        """
-        os.chdir(self.demodir + os.sep + 'c' + os.sep + 'hello')
-
-        # Create command line interface object
-        cli = bouwer.cli.CommandLine()
-
-        # (Re)load configuration
-        # TODO: verify the correct configuration is parsed
-        conf = bouwer.config.Configuration.Instance(cli)
-
-        # Load all plugins
-        plugins = bouwer.plugin.PluginLoader(conf)
-        conf.args = cli.parse()
-
-        # Initialize the builder manager
-        build = bouwer.builder.BuilderManager.Instance(conf, plugins)
-
-        # Initialize action tree
-        actions = bouwer.action.ActionManager(conf.args, plugins)
-
-        # Use the default tree
-        build.execute_target('build', conf.trees.get('DEFAULT'), actions)
-
-        # Execute the actions 
-        actions.run()
-
-        # TODO: verify the compilation was correct
-        """

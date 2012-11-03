@@ -18,6 +18,7 @@
 import os
 import os.path
 import glob
+import compiler
 from bouwer.plugin import *
 from bouwer.builder import *
 
@@ -39,24 +40,19 @@ class Program(Plugin):
         Build an program given its `target` name and `sources` list
         """
 
-        # Make a list of objects on which we depend
-        # TODO: problem: what if there is never any UseLibrary which publishes this???
+        # Retrieve compiler chain
+        chain = self.get_item('CC')
+        cc    = self.get_item(chain.value())
+        objects = []
+
         try:
             extra = self.build.get('sources')
         except KeyError:
             extra = []
-        objects = []
-
-        # TODO: make the actions a TRANSACTION, so that they will be forgotten
-        # if this builder was delayed...
 
         # Traverse all source files given
-        for src in sources:
-            objects.append(self.Object(src))
-
-        # Retrieve compiler chain
-        chain = self.get_item('CC')
-        cc    = self.get_item(chain.value())
+        for source in sources:
+            objects.append(compiler.c_object(source))
 
         # Add linker paths
         ldpath = ''

@@ -15,6 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+Bouwer action layer
+"""
+
 import multiprocessing
 import os
 import os.path

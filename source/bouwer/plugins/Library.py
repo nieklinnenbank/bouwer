@@ -17,6 +17,7 @@
 
 import os
 import os.path
+import compiler
 from bouwer.plugin import *
 from bouwer.config import *
 from bouwer.builder import *
@@ -49,21 +50,20 @@ class Library(Plugin):
         Build a library using a `target` name and list of `sources`
         """
 
-        cc = self.get_item('CC')
-        compiler = self.get_item(cc.value())
+        chain = self.get_item('CC')
+        cc = self.get_item(chain.value())
         libname = str(target.relative)
         target.append('.a')
 
         # Generate actions to build the library objects
         objects = []
         for src in sources:
-            objects.append(self.Object(src))
+            objects.append(compiler.c_object(src))
 
-        # TODO: replace this with action() instead?
         # Generate action for linking the library
         self.action(target, objects,
-                    compiler.keywords.get('ar') + ' ' +
-                    compiler.keywords.get('arflags') + ' ' + str(target) + ' ' +
+                    cc.keywords.get('ar') + ' ' +
+                    cc.keywords.get('arflags') + ' ' + str(target) + ' ' +
                     (' '.join([str(o) for o in objects])))
 
         # Publish the library to the build manager, e.g. for UseLibrary()

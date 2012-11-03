@@ -15,6 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+Plugin extensions support
+"""
+
 import sys
 import os
 import os.path
