@@ -20,6 +20,7 @@ import sys
 import glob
 import common
 import unittest
+import subprocess
 
 class StaticTester(common.BouwerTester):
     """
@@ -34,21 +35,41 @@ class StaticTester(common.BouwerTester):
         #srclist += glob.glob(self.srcdir + os.sep + 'bouwer' + os.sep + 'plugins' + os.sep + '*.py')
         #return srclist
 
+    def _program_exists(self, args):
+        try:
+            # pipe output to /dev/null for silence
+            #null = open("/dev/null", "w")
+            #subprocess.Popen(progname, stdout=null, stderr=null)
+            #null.close()
+
+            null = open(os.devnull, "w")
+            p = subprocess.Popen(args, stdout = null, stderr = null)
+            null.close()
+
+        except OSError:
+            self.skipTest(args[0] + ' not installed')
+
     @unittest.skip('temporary disabled until code fixed')
     def test_pep8(self):
         """
         Run the pep8 code style checker on the bouwer code
         """
+        self._program_exists(['pep8'])
         self.assertEqual(os.system('pep8 --repeat ' + ' '.join(self._get_srclist())), 0,
                         'PEP8 must be successful')
    
     def test_pyflakes(self):
         """ Run pyflakes on the bouwer code """
+       
+        self._program_exists(['pyflakes', '/asdfasfasfasfasf'])
         self.assertEqual(os.system('pyflakes ' + ' '.join(self._get_srclist())), 0,
                         'PyFlakes must be successful')
 
     def test_pychecker(self):
         """ Run pychecker on the bouwer code """
+
+        self._program_exists(['pychecker'])
+
         srclist = self._get_srclist()
 
         pypath = 'PYTHONPATH=' + os.environ.get('PYTHONPATH', '') + self.srcdir
