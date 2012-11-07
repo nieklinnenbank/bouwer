@@ -27,6 +27,10 @@ class Program(Plugin):
     Build an executable program
     """
 
+    def config_input(self):
+        """ Configuration input items """
+        return [ 'CC', 'LINK_LIBRARIES' ]
+
     def execute_config(self, item, sources):
         """
         Build a program given a :class:`.Config` `item` and `sources` list.
@@ -41,8 +45,8 @@ class Program(Plugin):
         """
 
         # Retrieve compiler chain
-        chain = self.get_item('CC')
-        cc    = self.get_item(chain.value())
+        chain = self.conf.get('CC')
+        cc    = self.conf.get(chain.value())
         objects = []
 
         try:
@@ -60,9 +64,9 @@ class Program(Plugin):
             ldpath += cc.keywords.get('ldflag') + path + ' '
 
         # Link the program
-        self.action(target,
-                    objects + extra, 
-                    cc.keywords.get('ld') + ' ' + str(target) + ' ' +
-                    (' '.join([str(o) for o in objects])) + ' ' + ldpath +
-                    cc.keywords.get('ldflags'))
+        self.build.action(target,
+                          objects + extra, 
+                          cc.keywords.get('ld') + ' ' + str(target) + ' ' +
+                         (' '.join([str(o) for o in objects])) + ' ' + ldpath +
+                          cc.keywords.get('ldflags'))
 

@@ -27,8 +27,8 @@ class PrettyOutput(Plugin):
     ##
     # Initialize plugin
     #
-    def initialize(self, conf):
-        conf.cli.parser.add_argument('--pretty',
+    def initialize(self):
+        self.conf.cli.parser.add_argument('--pretty',
             dest    = 'output_plugin',
             action  = 'store_const',
             const   = self,

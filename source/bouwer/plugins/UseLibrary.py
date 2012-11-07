@@ -26,6 +26,14 @@ class UseLibrary(Plugin):
     Build and link against a library
     """
 
+    def config_input(self):
+        """ Configuration input items """
+        return [ 'CC', 'LIBRARIES' ]
+
+    def config_output(self):
+        """ Configuration output items """
+        return [ 'LINK_LIBRARIES' ]
+
     def execute_before(self):
         """
         List of builders which must be executed first
@@ -46,8 +54,8 @@ class UseLibrary(Plugin):
         """
 
         # TODO: this should become a *TEMPORARY* per-directory override instead
-        chain = self.get_item('CC')
-        cc    = self.get_item(chain.value())
+        chain = self.conf.get('CC')
+        cc    = self.conf.get(chain.value())
 
         # TODO: find the correct libary path using the actions layer!!!
         # TODO: only do it like this if static linking!!!

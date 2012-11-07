@@ -45,6 +45,7 @@ class DemoClass(common.BouwerTester):
         # Reset singletons
         bouwer.config.Configuration.Destroy()
         bouwer.builder.BuilderManager.Destroy()
+        bouwer.plugin.PluginManager.Destroy()
 
         # Create command line interface object
         # TODO: ugly hack!
@@ -54,12 +55,12 @@ class DemoClass(common.BouwerTester):
         # (Re)load configuration
         self.conf = bouwer.config.Configuration.Instance(self.cli)
 
-        # Load all plugins
-        self.plugins = bouwer.plugin.PluginLoader(self.conf)
-        self.conf.args = self.cli.parse()
-
         # Initialize the builder manager
-        self.build = bouwer.builder.BuilderManager.Instance(self.conf, self.plugins)
+        self.build = bouwer.builder.BuilderManager.Instance()
+
+        # Load all plugins
+        self.plugins = bouwer.plugin.PluginManager.Instance()
+        self.conf.args = self.cli.parse()
 
         # Initialize action tree
         self.actions = bouwer.action.ActionManager(self.conf.args, self.plugins)

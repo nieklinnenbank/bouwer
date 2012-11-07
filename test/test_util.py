@@ -35,6 +35,10 @@ class DummySingleton2(bouwer.util.Singleton):
         self.arg2 = arg2
         self.arg3 = arg3
 
+class DummySingleton3(bouwer.util.Singleton):
+    def __init__(self):
+        self.arg1 = 123
+
 class SingletonTester(common.BouwerTester):
     """ Tests for the Bouwer command line interface """
 
@@ -58,6 +62,17 @@ class SingletonTester(common.BouwerTester):
         self.assertEquals(id(dummy1), id(dummy3),
                          'Singleton.Instance() must return the same instance')
 
+    def test_single_no_params(self):
+        """ Verify that Singletons with no parameters have one instance """
+        dummy1 = DummySingleton3.Instance()
+        dummy2 = DummySingleton3.Instance()
+        dummy3 = DummySingleton3.Instance()
+
+        self.assertEquals(dummy1, dummy2)
+        self.assertEquals(dummy1, dummy3)
+        self.assertEquals(id(dummy1), id(dummy2))
+        self.assertEquals(id(dummy1), id(dummy3))
+
     def test_unique(self):
         """ Verify that Singleton produces a unique instance per class """
         dummy1 = DummySingleton1.Instance("a", "b")
@@ -71,8 +86,18 @@ class SingletonTester(common.BouwerTester):
     def test_init(self):
         """ Verify that Singletons can only be initialized once """
         dummy1 = DummySingleton1.Instance("a", "b")
+        dummy2 = DummySingleton2.Instance("1", "2", "3")
 
         self.assertRaises(Exception, DummySingleton1.Instance, "a", "b")
+        self.assertRaises(Exception, DummySingleton2.Instance, "4", "5", "6")
+
+    def test_no_construct(self):
+        """ Verify that Singleton constructors cannot be called """
+        dummy1 = DummySingleton1.Instance("a", "b")
+        dummy3 = DummySingleton3.Instance()
+
+        self.assertRaises(Exception, DummySingleton1, "c", "d")
+        self.assertRaises(Exception, DummySingleton3)
 
     def test_reset(self):
         """ Verify that Destroy() completely destroys the Singleton instance """

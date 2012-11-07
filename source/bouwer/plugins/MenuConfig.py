@@ -27,8 +27,8 @@ class MenuConfig(Plugin):
     ##
     # Initialize the plugin. Only called once if exists is True.
     #
-    def initialize(self, conf):
-        conf.cli.parser.add_argument('--menuconfig', dest='config_plugin',
+    def initialize(self):
+        self.conf.cli.parser.add_argument('--menuconfig', dest='config_plugin',
             action='store_const', const=self, default=argparse.SUPPRESS,
             help='Change configuration using ncurses terminal interface')
 

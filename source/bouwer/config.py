@@ -421,6 +421,12 @@ class Configuration(bouwer.util.Singleton):
         # Dump configuration for debugging
         self.dump()
 
+    def get(self, item_name):
+        """
+        Retrieve item named `item_name` from the active tree
+        """
+        return self.active_tree.get(item_name)
+
     def insert(self, item, tree_name = 'DEFAULT'): 
         """
         Introduce a new :class:`.Config` object `item`

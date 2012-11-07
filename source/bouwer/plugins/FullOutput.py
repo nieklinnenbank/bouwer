@@ -27,8 +27,8 @@ class FullOutput(Plugin):
     ##
     # Initialize plugin
     #
-    def initialize(self, conf):
-        conf.cli.parser.add_argument('--full',
+    def initialize(self):
+        self.conf.cli.parser.add_argument('--full',
             dest    = 'output_plugin',
             action  = 'store_const',
             const   = self,

@@ -25,12 +25,9 @@ from bouwer.plugin import *
 #
 class LineConfig(Plugin):
 
-    ##
-    # Initialize plugin
-    #
-    def initialize(self, conf):
-
-        conf.cli.parser.add_argument('--lineconfig',
+    def initialize(self):
+        """ Initialize plugin """
+        self.conf.cli.parser.add_argument('--lineconfig',
             dest    = 'config_plugin',
             action  = 'store_const',
             const   = self,

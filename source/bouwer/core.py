@@ -50,8 +50,11 @@ def execute():
     # (Re)load configuration
     conf = bouwer.config.Configuration.Instance(cli)
 
+    # Initialize the builder manager
+    build = bouwer.builder.BuilderManager.Instance()
+
     # Load all plugins
-    plugins = bouwer.plugin.PluginLoader(conf)
+    plugins = bouwer.plugin.PluginManager.Instance()
 
     # Generate final list of command line arguments
 
@@ -75,9 +78,6 @@ def execute():
 
     if conf_plugin is not None:
         sys.exit(conf_plugin.configure(conf))
-
-    # Initialize the builder manager
-    build = bouwer.builder.BuilderManager.Instance(conf, plugins)
 
     #
     # TODO: the core runs all targets inside a Bouwfile to let them *REGISTER*

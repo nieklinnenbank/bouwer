@@ -42,11 +42,11 @@ def c_object(source):
             incflags += cc.keywords.get('incflag') + path + ' '
 
         # Register compile action
-        build.generate_action(outfile, [ source ],
-                              cc.keywords.get('cc') + ' ' +
-                              str(outfile) + ' ' +
-                              cc.keywords.get('ccflags') + ' ' + incflags +
-                              str(source))
+        build.action(outfile, [ source ],
+                     cc.keywords.get('cc') + ' ' +
+                     str(outfile) + ' ' +
+                     cc.keywords.get('ccflags') + ' ' + incflags +
+                     str(source))
         return outfile
 
     # Unknown filetype

@@ -24,9 +24,9 @@ class QuietOutput(Plugin):
     Outputs nothing unless an error occurs
     """
 
-    def initialize(self, conf):
+    def initialize(self):
         """ Initialize plugin """
-        conf.cli.parser.add_argument('-q', '--quiet',
+        self.conf.cli.parser.add_argument('-q', '--quiet',
             dest    = 'output_plugin',
             action  = 'store_const',
             const   = self,

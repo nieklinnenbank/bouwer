@@ -25,69 +25,43 @@ import os.path
 import inspect
 import logging
 import importlib
+from bouwer.util import Singleton
+from bouwer.config import Configuration
+from bouwer.builder import BuilderManager
 
-##
-# Represents a loadable Bouwer plugin
-#
 class Plugin:
+    """
+    Bouwer plugin class
+    """
 
-    ##
-    # Constructor
-    #
-    def __init__(self, conf):
-        self.conf  = conf
-        self.build = None
+    def __init__(self):
+        """
+        Constructor
+        """
+        self.conf  = Configuration.Instance()
+        self.build = BuilderManager.Instance()
 
-    ##
-    # Initialization routine of the plugin
-    #
-    def initialize(self, conf):
+    def config_input(self):
+        """ Configuration items as input """
+        return []
+
+    def config_output(self):
+        """ Configuration items as output """
+        return []
+
+    def initialize(self):
+        """ Initialize the plugin """
         pass
 
-    ##
-    # Check to see if this module has all external dependencies
-    #
-    def inspect(self):
-        return True
+class PluginManager(Singleton):
+    """
+    Manages loading plugins
+    """
 
-    ##
-    # Retrieve an Config item from the active tree.
-    #
-    # @param name Name of the Config item.
-    # @return Config instance
-    #
-    def get_item(self, name):
-        # TODO: hmmm fix this better
-        return self.conf.active_tree.get(name)
+    def __init__(self):
+        """ Constructor """
 
-    ##
-    # Generate an action
-    #
-
-    # TODO: replace with a glob{} action key instead
-    def action(self, target, command, sources):
-        self.build.generate_action(target, command, sources)
-
-    ##
-    # Implements the self.OtherBuilder() mechanism
-    #
-    def __getattr__(self, name):
-    
-        if name in self.__dict__:
-            return self.__dict__[name]
-        elif name in self.__dict__['build'].parser.mesh.invokers:
-            return self.__dict__['build'].parser.mesh.invokers[name].invoke
-        else:
-            raise AttributeError(name)
-
-##
-# Load all plugins in the given directory
-#
-class PluginLoader:
-
-    def __init__(self, conf):
-
-        self.conf    = conf
+        self.conf    = Configuration.Instance()
         self.log     = logging.getLogger(__name__)
         self.plugins = {}
 
@@ -96,7 +70,7 @@ class PluginLoader:
         plug_path = core_path + os.sep + 'plugins'
 
         self._load_path(plug_path)
-        self._load_path(conf.args.plugin_dir)
+        self._load_path(self.conf.args.plugin_dir)
 
     ##
     # Load all plugins in the given directory
@@ -141,8 +115,8 @@ class PluginLoader:
 
                 # Initialize the plugin, if available
                 if class_ is not None and Plugin in class_.__bases__:
-                    instance = class_(self.conf)
-                    instance.initialize(self.conf)
+                    instance = class_()
+                    instance.initialize()
 
                     # Add plugin to the list
                     self.plugins[name] = instance

@@ -23,6 +23,9 @@ import os.path
 #
 class CheckHeader:
 
+    def config_input(self):
+        return [ 'CC' ]
+
     ##
     # Decide if we "agree" with the given configuration.
     #

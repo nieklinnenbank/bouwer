@@ -25,6 +25,14 @@ from bouwer.builder import *
 class Library(Plugin):
     """ Build a software library """
 
+    def config_input(self):
+        """ Configuration input items """
+        return [ 'CC' ]
+
+    def config_output(self):
+        """ Configuration output items """
+        return [ 'LIBRARIES' ]
+
     def execute_config(self, item, sources):
         """
         Build a library using a :class:`.Config` and list of `sources`
@@ -38,7 +46,7 @@ class Library(Plugin):
         # TODO: this is an ugly hack. Configuration layer should not be
         # aware of source/target files
         for child_name in item.keywords.get('childs', []):
-            child = self.get_item(child_name)
+            child = self.conf.get(child_name)
 
             if isinstance(child, ConfigBool) and child.value() and 'source' in child.keywords:
                 sources.append(SourcePath(child.keywords.get('source')))
@@ -50,8 +58,8 @@ class Library(Plugin):
         Build a library using a `target` name and list of `sources`
         """
 
-        chain = self.get_item('CC')
-        cc = self.get_item(chain.value())
+        chain = self.conf.get('CC')
+        cc = self.conf.get(chain.value())
         libname = str(target.relative)
         target.append('.a')
 
@@ -61,10 +69,10 @@ class Library(Plugin):
             objects.append(compiler.c_object(src))
 
         # Generate action for linking the library
-        self.action(target, objects,
-                    cc.keywords.get('ar') + ' ' +
-                    cc.keywords.get('arflags') + ' ' + str(target) + ' ' +
-                    (' '.join([str(o) for o in objects])))
+        self.build.action(target, objects,
+                          cc.keywords.get('ar') + ' ' +
+                          cc.keywords.get('arflags') + ' ' + str(target) + ' ' +
+                        (' '.join([str(o) for o in objects])))
 
         # Publish the library to the build manager, e.g. for UseLibrary()
         self.build.put('library:' + self.conf.active_tree.name + ':' + libname, (target, self.conf.active_dir))

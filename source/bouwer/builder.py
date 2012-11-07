@@ -27,6 +27,7 @@ import logging
 import glob
 import bouwer.config
 import bouwer.util
+import bouwer.plugin
 
 class Path(object):
     """
@@ -85,6 +86,7 @@ class TargetPath(Path):
             self.absolute = os.path.normpath(self.conf.active_tree.name + \
                                              os.sep + location + os.sep + path)
 
+# TODO: merge this class with BuilderInstance plz
 class BuilderInvoker:
     """
     Responsible for calling the correct execute function of a builder
@@ -146,55 +148,27 @@ class BuilderInvoker:
         return self.builder.execute_any(*arguments, **keywords)
 
 class BuilderInstance:
-    def __init__(self, name, invoker, conf, active_dir, *arguments, **keywords):
-        self.name = name
-        self.invoker = invoker
-        self.conf = conf
+    def __init__(self, manager, builder, active_dir, *arguments, **keywords):
+        self.manager = manager
+        self.builder = builder
         self.active_dir = active_dir
         self.arguments = arguments
         self.keywords = keywords
         self.run = False
 
     def call(self):
-        #print('invoking ', self.name, self.arguments, self.keywords, 'in', self.active_dir)
-        self.conf.active_dir = self.active_dir
-        self.invoker.invoke(*self.arguments, **self.keywords)
+        self.manager.conf.active_dir = self.active_dir
+
+        BuilderInvoker(self.manager, self.builder).invoke(*self.arguments, **self.keywords)
         self.run = True
 
-class BuilderMesh:
+    def __str__(self):
+        return "BuilderInstance: " + str(self.builder) + "," + str(self.arguments) + "," + str(self.keywords)
 
-    def __init__(self, manager):
-        self.manager = manager
-        self.conf = self.manager.conf
-        self.invokers = {}
-        self.mesh = []
+    def __repr__(self):
+        return str(self)
 
-    def introduce(self, name, builder):
-        self.invokers[name] = BuilderInvoker(self.manager, builder)
-
-    def insert(self, name, *arguments, **keywords):
-        self.mesh.append(BuilderInstance(name, self.invokers[name], self.conf, self.conf.active_dir, *arguments, **keywords))
-
-    # TODO: maybe let it run the *Bouwfile* sequence instead, since before Library()
-    # there may be something which must run before in a rare case
-    # TODO: the dependency is really between Bouwfiles here...?
-
-    # TODO: inefficient!!! N*N complexity :-(
-    def _run_deps(self, builder):
-        if hasattr(builder, 'execute_before'):
-            for dep in builder.execute_before():
-                for instance in self.mesh:
-                    if not instance.run and instance.name == dep:
-                        instance.call()
-
-    # TODO: be careful with performance penalties here!
-    def execute(self):
-        for instance in self.mesh:
-            if not instance.run:
-                self._run_deps(instance.invoker.builder)
-                instance.call()
-
-class MeshGenerator:
+class BuilderGenerator:
     def __init__(self, manager, mesh, name, plugin):
         self.manager = manager
         self.mesh = mesh
@@ -202,14 +176,80 @@ class MeshGenerator:
         self.plugin = plugin
 
     def insert(self, *arguments, **keywords):
-        self.mesh.insert(self.name, *arguments, **keywords)
+        self.mesh.insert( BuilderInstance(self.manager, self.plugin, self.manager.conf.active_dir, *arguments, **keywords))
+
+class BuilderMesh:
+    """
+    Holds all calls to builders
+    """
+
+    def __init__(self, manager):
+        """ Constructor """
+        self.manager = manager
+        self.conf = self.manager.conf
+
+        self.instances = []
+        self.outputs   = {}
+
+        self.log = logging.getLogger(__name__)
+
+    # TODO: also take into account, the config items passed to execute()!
+    # they should be marked as a configuration input for the builder!!!
+
+    def insert(self, instance):
+        """ Introduce a new builder instance """
+        self.manager.log.debug("inserting instance: " + str(instance))
+
+        # Add to outputs list
+        for output_item in instance.builder.config_output():
+            if output_item not in self.outputs:
+                self.outputs[output_item] = []
+            self.outputs[output_item].append(instance)
+
+        self.instances.append(instance)
+
+    def _try_execute(self, instance):
+        """
+        Try to execute the given builder instance
+        """
+        if instance.run:
+            return
+
+        # See if all our input configuration items are done
+        for input_item in instance.builder.config_input():
+            if input_item in self.outputs:
+                for output_instance in self.outputs[input_item]:
+                    self._try_execute(output_instance)
+                return
+
+        # If we got here, we may execute!
+        for output_item in instance.builder.config_output():
+            self.outputs[output_item].remove(instance)
+
+            if len(self.outputs[output_item]) == 0:
+                del self.outputs[output_item]
+
+        self.log.debug("executing instance: " + str(instance))
+        instance.call()
+        self.instances.remove(instance) # TODO: performance bottleneck?
+
+    def execute(self):
+
+        while len(self.instances) > 0:
+            inst = self.instances[:]
+
+            for instance in inst:
+                self._try_execute(instance)
+
+            # Now execute all generated actions
+            self.log.debug("executing all actions!")
 
 class BuilderParser:
     """
     Parses Bouwfiles for executing builders
     """
 
-    def __init__(self, manager, plugins):
+    def __init__(self, manager):
         """
         Constructor
         """
@@ -219,15 +259,14 @@ class BuilderParser:
         self.log = logging.getLogger(__name__)
  
         # Detects all plugins with an execute() builder function
-        for plugin_name, plugin in plugins.plugins.items():
+        for plugin_name, plugin in bouwer.plugin.PluginManager.Instance().plugins.items():
             if hasattr(plugin, 'execute_target') or \
                hasattr(plugin, 'execute_config') or \
                hasattr(plugin, 'execute_source') or \
                hasattr(plugin, 'execute_any'):
-                
-                self.builders[plugin_name] = MeshGenerator(self.manager, self.mesh, plugin_name, plugin).insert
-                self.mesh.introduce(plugin_name, plugin)
-                plugin.build = self.manager # TODO: fix this better??? Use BuildManager.Instance()?
+
+                self.log.debug("builder: " + plugin_name)
+                self.builders[plugin_name] = BuilderGenerator(self.manager, self.mesh, plugin_name, plugin).insert
 
     def parse(self, dirname, target):
         """ 
@@ -282,17 +321,15 @@ class BuilderManager(bouwer.util.Singleton):
     Manages access to the builder layer
     """
 
-    def __init__(self, conf, plugins):
+    def __init__(self):
         """ 
         Constructor
         """
-        self.conf      = conf
-        self.args      = conf.args
+        self.conf      = bouwer.config.Configuration.Instance() 
+        self.args      = self.conf.args
         self.log       = logging.getLogger(__name__)
         self.datastore = {}
-        self.parser    = BuilderParser(self, plugins)
-
-        # def inspect_target() ???
+        self.parser    = BuilderParser(self)
 
     def execute_target(self, target, tree, actions):
         """ 
@@ -327,14 +364,13 @@ class BuilderManager(bouwer.util.Singleton):
         """
         return self.datastore[key]
 
-    def generate_action(self, target, sources, command):
+    def action(self, target, sources, command):
         """ 
         Callback from builders to generate an Action
 
         :param str target: Target name of the new action
         :param list sources: List of dependencies
         :param str command: Command to execute
-
         """
 
         # TODO: inefficient!

@@ -24,6 +24,10 @@ class ConfigHeader(Plugin):
     Output a C header file with :class:`.Configuration` encoded as #define's
     """
 
+    def config_input(self):
+        """ We can only write the config header when all items are final """
+        return [] # [ All ]
+
     def inspect(self, conf):
         """ Decide if we agree with the given configuration """
         pass

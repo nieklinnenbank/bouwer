@@ -24,11 +24,11 @@ class ProgressBar(Plugin):
     Output a textual progress bar on the terminal
     """
 
-    def initialize(self, conf):
+    def initialize(self):
         """
         Initialize plugin
         """
-        conf.cli.parser.add_argument('-p', '--progress',
+        self.conf.cli.parser.add_argument('-p', '--progress',
             dest    = 'output_plugin',
             action  = 'store_const',
             const   = self,
