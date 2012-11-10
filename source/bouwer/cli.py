@@ -15,6 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+Bouwer command line interface
+"""
+
 import os
 import os.path
 import argparse

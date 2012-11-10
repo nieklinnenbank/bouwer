@@ -26,6 +26,7 @@ import copy
 import logging
 import glob
 import bouwer.config
+import bouwer.action
 import bouwer.util
 import bouwer.plugin
 
@@ -86,28 +87,34 @@ class TargetPath(Path):
             self.absolute = os.path.normpath(self.conf.active_tree.name + \
                                              os.sep + location + os.sep + path)
 
-# TODO: merge this class with BuilderInstance plz
-class BuilderInvoker:
+class BuilderInstance:
     """
-    Responsible for calling the correct execute function of a builder
+    Represents a builder line in a Bouwfile
     """
 
-    def __init__(self, manager, builder):
+    def __init__(self, manager, builder, active_dir, *arguments, **keywords):
         """ Constructor """
         self.manager = manager
         self.builder = builder
+        self.active_dir = active_dir
+        self.arguments = arguments
+        self.keywords = keywords
+        self.run = False
+
+    def call(self):
+        """ Execute the builder """
+        self.manager.conf.active_dir = self.active_dir
+        self._invoke(*self.arguments, **self.keywords)
+        self.run = True
 
     def _source_path_list(self, input_list):
+        """ Convert input list to a `list` of :class:`.SourcePath` """
 
         if type(input_list) is str:
             input_list = [input_list]
 
         out = []
         for src in input_list:
-
-            #bouwfile = self.manager.active_bouwfile
-            #caller   = os.path.abspath(bouwfile)
-            #relative = os.path.relpath(os.path.dirname(caller))
             relative = self.manager.conf.active_dir
 
             # TODO: hmm. a lot of convertions here. needed?
@@ -116,7 +123,7 @@ class BuilderInvoker:
 
         return out
 
-    def invoke(self, *arguments, **keywords):
+    def _invoke(self, *arguments, **keywords):
         """
         Call the correct execute function of the builder
         """
@@ -147,21 +154,6 @@ class BuilderInvoker:
 
         return self.builder.execute_any(*arguments, **keywords)
 
-class BuilderInstance:
-    def __init__(self, manager, builder, active_dir, *arguments, **keywords):
-        self.manager = manager
-        self.builder = builder
-        self.active_dir = active_dir
-        self.arguments = arguments
-        self.keywords = keywords
-        self.run = False
-
-    def call(self):
-        self.manager.conf.active_dir = self.active_dir
-
-        BuilderInvoker(self.manager, self.builder).invoke(*self.arguments, **self.keywords)
-        self.run = True
-
     def __str__(self):
         return "BuilderInstance: " + str(self.builder) + "," + str(self.arguments) + "," + str(self.keywords)
 
@@ -169,6 +161,10 @@ class BuilderInstance:
         return str(self)
 
 class BuilderGenerator:
+    """
+    Helper class to insert a :class:`.BuilderInstance`
+    """
+
     def __init__(self, manager, mesh, name, plugin):
         self.manager = manager
         self.mesh = mesh
@@ -180,7 +176,7 @@ class BuilderGenerator:
 
 class BuilderMesh:
     """
-    Holds all calls to builders
+    Holds all builder instances
     """
 
     def __init__(self, manager):
@@ -212,8 +208,7 @@ class BuilderMesh:
         """
         Try to execute the given builder instance
         """
-        if instance.run:
-            return
+        if instance.run: return
 
         # See if all our input configuration items are done
         for input_item in instance.builder.config_input():
@@ -234,7 +229,9 @@ class BuilderMesh:
         self.instances.remove(instance) # TODO: performance bottleneck?
 
     def execute(self):
-
+        """
+        Run all builders
+        """
         while len(self.instances) > 0:
             inst = self.instances[:]
 
@@ -331,21 +328,32 @@ class BuilderManager(bouwer.util.Singleton):
         self.datastore = {}
         self.parser    = BuilderParser(self)
 
-    def execute_target(self, target, tree, actions):
+    def execute(self, target, tree):
         """ 
         Generate actions associated with the given target.
 
-        >>> manager.execute_target('build', conftree, actiontree)
+        >>> manager.execute('build', conftree)
         """
         self.log.debug("executing `" + tree.name + ':' + target + "'")
         self.conf.active_tree = tree
-        self.actions = actions
+
+        self.actions = bouwer.action.ActionManager(self.conf.args)
+
         mesh = self.parser.parse('.', target)
         #mesh.inspect()
         mesh.execute()
         #self._scan_dir('.', target, tree, actions)
 
-        # perhaps we should return ActionTree's instead?
+        # Dump generated actions?
+        # TODO: please do this better... ugly :-(
+        if self.conf.args.verbose:
+            self.actions.dump()
+
+        # Run or clean the actions?
+        if self.conf.args.clean:
+            self.actions.clean()
+        else:
+            self.actions.run()
 
     def put(self, key, value):
         """

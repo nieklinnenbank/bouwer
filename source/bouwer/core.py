@@ -79,24 +79,8 @@ def execute():
     if conf_plugin is not None:
         sys.exit(conf_plugin.configure(conf))
 
-    #
-    # TODO: the core runs all targets inside a Bouwfile to let them *REGISTER*
-    # the possible Actions. Then, only the *ENABLED* targets are run in order.
-    # That way, it is possible to derive inter-target dependencies, e.g.:
-    #
-    # def iso:
-    #     Iso('myimage.iso', 'obj_dir')  <- if only iso is given as the target, the build dependencies are also run
-    #
-    # def build:
-    #     Program('foo', 'bar.c')  <- written to obj_dir
-    #     Library('zzz', 'asdf.c') <- written to obj_dir
-    #
-
     # Execute each target in turn.
     for target in conf.args.targets:
-
-        # Initialize action tree
-        actions = bouwer.action.ActionManager(conf.args, plugins)
 
         # TODO: generate an error if no targets are executed.
 
@@ -104,19 +88,9 @@ def execute():
         if len(conf.trees) > 1:
             for tree_name, tree in conf.trees.items():
                 if tree_name is not 'DEFAULT' and tree.value():
-                    build.execute_target(target, tree, actions)
+                    build.execute(target, tree)
 
         # Use the default tree
         else:
-            build.execute_target(target, conf.trees.get('DEFAULT'), actions)
-
-        # Dump the generated actions
-        if conf.args.verbose:
-            actions.dump()
-
-        # Execute the generated actions or perform cleanup
-        if conf.args.clean:
-            actions.clean()
-        else:
-            actions.run()
+            build.execute(target, conf.trees.get('DEFAULT'))
 

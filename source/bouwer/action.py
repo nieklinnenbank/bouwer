@@ -25,6 +25,7 @@ import os.path
 import sys
 import datetime
 import logging
+import bouwer.plugins
 
 class Worker(multiprocessing.Process):
     """
@@ -226,15 +227,15 @@ class ActionManager:
     Manages all :class:`.Action` objects registered for execution.
     """
 
-    def __init__(self, args, plugins):
+    def __init__(self, args):
         """
         Constructor
         """
         self.args = args
-        self.plugins = plugins
+        self.plugins = bouwer.plugin.PluginManager.Instance()
         self.log  = logging.getLogger(__name__)
         # TODO: replace with invoke()
-        self._output_plugin = plugins.output_plugin()
+        self._output_plugin = self.plugins.output_plugin()
         self.reset()
 
     def reset(self):

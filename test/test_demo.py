@@ -22,6 +22,7 @@ import os.path
 import inspect
 import unittest
 import logging
+import subprocess
 
 import bouwer.cli
 import bouwer.plugin
@@ -40,7 +41,8 @@ class DemoClass(common.BouwerTester):
     def setUp(self):
         super(DemoClass, self).setUp()
 
-        os.chdir(self.demodir + os.sep + self.path)
+        self.demopath = self.demodir + os.sep + self.path
+        os.chdir(self.demopath)
 
         # Reset singletons
         bouwer.config.Configuration.Destroy()
@@ -62,11 +64,8 @@ class DemoClass(common.BouwerTester):
         self.plugins = bouwer.plugin.PluginManager.Instance()
         self.conf.args = self.cli.parse()
 
-        # Initialize action tree
-        self.actions = bouwer.action.ActionManager(self.conf.args, self.plugins)
-
         # Use the default tree
-        self.build.execute_target('build', self.conf.trees.get('DEFAULT'), self.actions)
+        self.build.execute('build', self.conf.trees.get('DEFAULT'))
 
 class DemoTester(common.BouwerTester):
     """
@@ -98,7 +97,8 @@ class HelloTester(DemoClass):
 
     def test_hello_config(self):
         """ Verify configuration of Hello World """
-        pass
+        self.assertEqual(self.conf.get('HELLOMSG').value(), "Hello World!")
+        self.assertTrue(self.conf.get('HELLO').value())
 
     def test_hello_actions(self):
         """ Verify actions of Hello World """
@@ -106,9 +106,6 @@ class HelloTester(DemoClass):
 
     def test_hello_compile(self):
         """ Verify compilation of Hello World """
-        self.actions.run()
-
-    def _foo_test_hello(self):
-        """ Verify correct compilation of Hello World """
-        pass
+        output = subprocess.check_output(self.demopath + os.sep + 'hello')
+        self.assertEqual(output, "Hello World!\n")
 
