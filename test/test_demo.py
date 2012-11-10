@@ -106,6 +106,6 @@ class HelloTester(DemoClass):
 
     def test_hello_compile(self):
         """ Verify compilation of Hello World """
-        output = subprocess.check_output(self.demopath + os.sep + 'hello')
+        output = subprocess.check_output(self.demopath + os.sep + 'hello').decode('utf-8')
         self.assertEqual(output, "Hello World!\n")
 
