@@ -230,11 +230,14 @@ class ConfigTree(ConfigBool):
 
         # Every item in the tree contains a dict with
         # paths for which it is active or overriden
+        # TODO: make sure this only contains the 'projectwide path' and not absolute OS path
         if item.name not in self.subitems:
             self.subitems[item.name] = {}
-
-        # TODO: make sure this only contains the 'projectwide path' and not absolute OS path
-        path = Configuration.Instance().active_dir
+            path = Configuration.Instance().base_conf
+        else:
+            path = Configuration.Instance().active_dir
+       
+        # Add to the subitems dict
         self.subitems[item.name][path] = item
  
         # Let all childs depend on the item
@@ -284,23 +287,22 @@ class ConfigTree(ConfigBool):
 
         if name in self.__dict__['subitems']:
             cfiles = self.__dict__['subitems'][name] 
+            
             # Make a loop which 'climbs' the basename()/basedir() of the path, until a match is found,
             # if nothing found, return the base_conf as a last attempt, otherwise the item doesnt exist
-            # Look for override?
             while path is not '':
                 if path in cfiles:
                     return cfiles[path]
                 else:
                     path = os.path.dirname(path)
 
-            # TODO: BUG, for example LIBC doesn't work anymore!!! it's created in the user proj...
             # If not overriden, return the default
             if conf.base_conf in cfiles:
                 return cfiles[conf.base_conf]
         elif name in conf.trees:
             return conf.trees[name]
         else:
-            raise AttributeError('no such attribute' + str(name))
+            raise AttributeError('no such attribute: ' + str(name))
 
 class ConfigParser:
     """

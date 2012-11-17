@@ -67,6 +67,10 @@ class DemoClass(common.BouwerTester):
         # Use the default tree
         self.build.execute('build', self.conf.trees.get('DEFAULT'))
 
+    def _run_prog(self, prog):
+        """ Run the given demo program """
+        return subprocess.check_output(self.demopath + os.sep + prog).decode('utf-8')
+
 class DemoTester(common.BouwerTester):
     """
     Tests running Bouwer on the demo projects
@@ -94,6 +98,7 @@ class DemoTester(common.BouwerTester):
 
 @demo('c/hello')
 class HelloTester(DemoClass):
+    """ Tests for the Hello World demo """
 
     def test_hello_config(self):
         """ Verify configuration of Hello World """
@@ -106,6 +111,25 @@ class HelloTester(DemoClass):
 
     def test_hello_compile(self):
         """ Verify compilation of Hello World """
-        output = subprocess.check_output(self.demopath + os.sep + 'hello').decode('utf-8')
-        self.assertEqual(output, "Hello World!\n")
+        self.assertEqual(self._run_prog('hello'), "Hello World!\n")
+
+@demo('c/library')
+class LibraryTester(DemoClass):
+    """ Tests for the Library builder demo """
+
+    def test_library_config(self):
+        """ Verify configuration of the Library demo """
+        self.assertTrue(self.conf.get('LIBFUZZ').value())
+        self.assertTrue(self.conf.get('LIBDUMMY').value())
+        self.assertTrue(self.conf.get('LIBDUMMY_FOO_FEATURE').value())
+        self.assertTrue(self.conf.get('LIBDUMMY_BAR_FEATURE').value())
+        self.assertTrue(self.conf.get('LIBDUMMY_UTIL_STUFF').value())
+
+    def test_library_actions(self):
+        """ Verify actions of the Library demo """
+        pass
+
+    def test_library_compile(self):
+        """ Verify compilation of the Library demo """
+        self.assertEqual(self._run_prog('myprog' + os.sep + 'myprog'), 'int=0 fuzz=1\n')
 

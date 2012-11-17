@@ -239,6 +239,8 @@ class BuilderMesh:
                 self._try_execute(instance)
 
             # Now execute all generated actions
+            # TODO: execute all actions here, which have
+            # dependencies which can be solved at this point
             self.log.debug("executing all actions!")
 
 class BuilderParser:

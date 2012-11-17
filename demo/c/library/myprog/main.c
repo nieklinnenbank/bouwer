@@ -21,8 +21,7 @@
 
 int main(void)
 {
-    printf("lookup_int(zero) = %d\n", lookup_int(0));
-    printf("fuzz = %d\n", fuzz());
+    printf("int=%d fuzz=%d\n", lookup_int(0), fuzz());
     return 0;
 }
 
