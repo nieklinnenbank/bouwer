@@ -23,7 +23,10 @@ import unittest
 
 class MyTestResult(unittest.TextTestResult):
     def getDescription(self, test):
-        return str(test)
+        if test.shortDescription():
+            return str(test) + ', ' + test.shortDescription()
+        else:
+            return str(test)
 
 # TODO: this only allows me to select a testfile, not a testcase or class
 if len(sys.argv) > 1:
@@ -48,5 +51,4 @@ suite  = unittest.TestLoader().discover('.', match)
 runner = unittest.TextTestRunner(verbosity=2)
 runner.resultclass = MyTestResult
 runner.run(suite)
-
 
