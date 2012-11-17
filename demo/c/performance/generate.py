@@ -64,7 +64,7 @@ def generate_hello_program(count):
         write_hello_func(i)
     write_hello_world(count)
 
-def generate(count = 100):
+def generate(count = 10):
     """ Generate all programs """
     return generate_hello_program(count)
 

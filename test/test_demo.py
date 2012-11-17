@@ -37,8 +37,14 @@ def demo(path):
     return demo_set_path
 
 class DemoClass(common.BouwerTester):
+    """
+    Tester class for Bouwer demo projects
+    """
 
     def setUp(self):
+        """
+        Runs before every test case
+        """
         super(DemoClass, self).setUp()
 
         self.demopath = self.demodir + os.sep + self.path
@@ -132,4 +138,27 @@ class LibraryTester(DemoClass):
     def test_library_compile(self):
         """ Verify compilation of the Library demo """
         self.assertEqual(self._run_prog('myprog' + os.sep + 'myprog'), 'int=0 fuzz=1\n')
+
+@demo('c/override')
+class OverrideTester(DemoClass):
+    """ Tests for the Config override demo """
+
+    def test_override_config(self):
+        """ Verify configuration of override demo """
+        self.assertTrue(self.conf.get('HELLO1').value())
+        self.assertEquals(self.conf.get('HELLOMSG1').value(), 'Hello World 1!')
+
+        self.conf.active_dir = './hello1'
+        self.assertTrue(self.conf.get('GCC'))
+        self.assertEquals(self.conf.get('GCC').keywords['ccflags'], '-c -O3')
+
+        self.conf.active_dir = './hello2'
+        self.assertTrue(self.conf.get('GCC'))
+        self.assertTrue(self.conf.get('HELLO2'))
+        self.assertEquals(self.conf.get('HELLOMSG2').value(), 'Hello World 2!')
+
+    def test_override_compile(self):
+        """ Verify compilation of override demo """
+        self.assertEqual(self._run_prog('hello1/hello1'), "Hello World 1!\n")
+        self.assertEqual(self._run_prog('hello2/hello2'), "Hello World 2!\n")
 
