@@ -49,9 +49,9 @@ class Program(Plugin):
         cc    = self.conf.get(chain.value())
         objects = []
 
-        try:
-            extra = self.build.get('sources')
-        except KeyError:
+        if self.conf.get('SOURCES') is not None:
+            extra = self.conf.get('SOURCES').value()
+        else:
             extra = []
 
         # Traverse all source files given

@@ -1,27 +1,5 @@
-- Let each builder define which input / output configuration variables it requires,
-  such that Bouwer can define the *ORDER* in which they must run:
-
-    - Program <-- CC and Check* item input. Must run after all Check* are done
-    - CheckCC <-- writes to CC
-    - CheckHeader <-- writes to HAS_HEADER_NAME, but takes CC as input
-    - CheckLibrary <-- writes to HAS_LIBRARY_NAME, but takes CC as input
-
-  Possible:
-
-    - Library <-- writes to LIBRARIES (string?), takes CC as input
-                    (perhaps a ConfigTemp item type, or a ConfigString with temporary = True or other keyword to indicate its not permanent)
-    - UseLibraries <-- writes to CC locally, takes as input LIBRARIES
-    - Program <-- takes a input CC 
-
-  But what about builders which generate actions with a dependency on some other builder's actions, which are NOT generated yet (due to config in/out deps)?
-
-    - Iso <-- has maybe MKISO as input, but *not* the CC this must run after all things are compiled
-    - Archive
-
-        --> these should be put in a separate target instead? def iso: ... Iso('foo.iso', '.')
-
-    ==> when unknown dependency, the execution should be postponed as late as possible, such 
-        that the builder has a chance to generate & execute. If the unknown dependency never comes, its an error!
+- when unknown dependency, the builder execution should be postponed as late as possible, such 
+  that the builder has a chance to generate & execute. If the unknown dependency never comes, its an error!
 
 - TODO: what if the developer wishes to override CC generic configuration?
   e.g. set the include path to './myincludes' for *ALL* compilers?
@@ -31,26 +9,10 @@
   --> he must add it to CC somehow...
     --> perhaps we can let the Object() use CC's keywords too!
 
-- let the build manager translate paths instead of the builders!
-    - make it so, that the builder's execute_*() automatically receive the translated paths always
-
 - implement lazy plugin loading
   --> only load plugin builders, when they are called, such that not ALL plugins
       are loaded at startup, when they aren't needed!
-
-- let BuildManager function as a datastore. Builders can share information via this datastore.
-
-    --> delaying is not desirable, because nested builders is tricky to build,
-        and what if a certain builder variable is sometimes there, and sometimes not, e.g.
-        the 'sources' variables from UseLibrary() -> Program, to share the list of target libraries.
-
-    --> also, it's not possible to depend on return values in nested builders that way...
-
-    If a certain data item isn't available yet (due to builder dependencies), the builder execution is
-    delayed until the data becomes available (via a UnknownDataException or something)
-
-    - with delaying builders, be careful with nested builders! E.g. builders that invoke each other, like Program -> Object
-        - in fact, only Program should be added to the delay list, Object not! Otherwise, we might end up with mulitple Objects ...
+  --> how much time do we save?
 
 - implement implicit C header dependency scanner please!
     --> watch out for performance here!
@@ -88,16 +50,12 @@
   )
 
 - UseLibrary should look in the ActionTree to fill in -L <path>
-
     --> if two libraries with the same name, then solve like this:
-
         library/sub/path/libfoo.a
         library/other/path/libfoo.a
-
         UseLibrary(conf.FOO, ['sub/path/libfoo', 'libbar'])
 
     --> add a config option to also add -I or -isystem for libraries, ie:
-
         BoolConfig('GCC',
                     libinc = '.')
 
@@ -109,20 +67,10 @@
 
 - make a builder for sphinx
 
-- implement inspect()
-
-- implement mapping + ordering of builders (for Library->UseLibrary->Program)
-
-- implement per-directory configuration overrides (for kernel linkscript override)
-
-- how to deal with the 'tristate' type from kbuild ...
-    --> TriConfig() type
-
 - implement simple cherrypy frontend
     --> do this with threading
 
 - see if we could support interpolation in keywords, e.g.:
-    
     Config('GCC', 'TARGET',
             ldscript = 'architecture/$ARCH/kernel.ld')
 
@@ -139,7 +87,7 @@
       File "/home/fox/Repositories/Bouwer.git/source/bouwer/config.py", line 159, in __getattr__
           return self.__dict__[name]
 
-- also decide() against the .bouwconf/Configuration!
+- also depend on the .bouwconf/Configuration changes for builders!
     --> we may need to cache all Action command's... i.e. if the command changed, rebuild
     --> but then what about python functions?
     --> or, timestamp each Config object also
@@ -153,20 +101,17 @@
 - test bouwer on all interesting operating systems and compilers and projects
     --> we need integration software, e.g. jenkins-ci.org
 
-- implement checking for a valid CC configuration in inspect() of Object
-    --> do this in a detect() function of the Object() builder plz
-- There can also be a POSTBUILD work queue for post processing
-- i.e. the work queues must have different levels or so
+- implement CheckHeader, CheckLibrary, CheckCompiler
 
 - localizable configuration text/titles?
 - status output modules:
-    - verbose full command output:    gcc -o foo.o foo.c -Wall
-    - fancified short command output: CC  foo.c
-    - progress bar output:            [#######----------------] 33%
-    - quiet output:
-    - logfile output: build.log
+    + verbose full command output:    gcc -o foo.o foo.c -Wall
+    +/- fancified short command output: CC  foo.c
+    + progress bar output:            [#######----------------] 33%
+    + quiet output:
+    + logfile output: build.log
 - configuration frontends:
-    - stdio fgets
+    + stdio fgets
     - curses menuconfig
     - qt4 graphical gui
     - html web based frontend

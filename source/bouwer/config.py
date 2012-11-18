@@ -287,9 +287,8 @@ class ConfigTree(ConfigBool):
 
         if name in self.__dict__['subitems']:
             cfiles = self.__dict__['subitems'][name] 
-            
-            # Make a loop which 'climbs' the basename()/basedir() of the path, until a match is found,
-            # if nothing found, return the base_conf as a last attempt, otherwise the item doesnt exist
+           
+            # See if there is a specific override
             while path is not '':
                 if path in cfiles:
                     return cfiles[path]
@@ -348,18 +347,18 @@ class ConfigParser:
         """
         Handles a `ConfigBool` line
         """
-        self.conf.insert(ConfigBool(name,
-                                   *self._get_value(**keywords),
-                                  **keywords), *opts)
+        self.conf.put(ConfigBool(name,
+                                *self._get_value(**keywords),
+                               **keywords), *opts)
         return name
 
     def _parse_string(self, name, *opts, **keywords):
         """
         Handles a `ConfigString` line
         """
-        self.conf.insert(ConfigString(name,
-                                     *self._get_value(**keywords),
-                                    **keywords), *opts)
+        self.conf.put(ConfigString(name,
+                                  *self._get_value(**keywords),
+                                 **keywords), *opts)
         return name
 
     def _parse_list(self, name, *opts, **keywords):
@@ -376,18 +375,18 @@ class ConfigParser:
             dest_tree.get(opt).add_dependency(name)
             dest_tree.get(opt).keywords['in_list'] = name
 
-        self.conf.insert(ConfigList(name,
-                                   *self._get_value(**keywords),
-                                  **keywords), dest_tree.name)
+        self.conf.put(ConfigList(name,
+                                *self._get_value(**keywords),
+                               **keywords), dest_tree.name)
         return name
 
     def _parse_tree(self, name, *opts, **keywords):
         """
         Handles a `ConfigTree` line
         """
-        self.conf.insert(ConfigTree(name,
-                                   *self._get_value(**keywords),
-                                  **keywords))
+        self.conf.put(ConfigTree(name,
+                                *self._get_value(**keywords),
+                               **keywords))
         return name
 
 class Configuration(bouwer.util.Singleton):
@@ -429,7 +428,7 @@ class Configuration(bouwer.util.Singleton):
         """
         return self.active_tree.get(item_name)
 
-    def insert(self, item, tree_name = 'DEFAULT'): 
+    def put(self, item, tree_name = 'DEFAULT'): 
         """
         Introduce a new :class:`.Config` object `item`
         """
@@ -472,7 +471,7 @@ class Configuration(bouwer.util.Singleton):
         Reset configuration to the initial predefined state using Bouwconfigs
         """
         # Insert the default tree.
-        self.insert(ConfigTree('DEFAULT'))
+        self.put(ConfigTree('DEFAULT'))
 
         # Parse all pre-defined configurations from Bouwer
         self._scan_dir(self.base_conf)

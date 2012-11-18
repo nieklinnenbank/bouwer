@@ -327,7 +327,6 @@ class BuilderManager(bouwer.util.Singleton):
         self.conf      = bouwer.config.Configuration.Instance() 
         self.args      = self.conf.args
         self.log       = logging.getLogger(__name__)
-        self.datastore = {}
         self.parser    = BuilderParser(self)
 
     def execute(self, target, tree):
@@ -356,23 +355,6 @@ class BuilderManager(bouwer.util.Singleton):
             self.actions.clean()
         else:
             self.actions.run()
-
-    def put(self, key, value):
-        """
-        Publish a `key` and `value` pair for sharing with other builders
-
-        The datastore mechanism in the :class:`.BuildManager` allows
-        a builder plugin to share information with other builder plugins.
-        For instance, the :class:`.UseLibrary` plugin requires information
-        about the path of libraries from the :class:`.Library` builder.
-        """
-        self.datastore[key] = value
-
-    def get(self, key):
-        """
-        Retrieve the value of `key` published by another builder
-        """
-        return self.datastore[key]
 
     def action(self, target, sources, command):
         """ 

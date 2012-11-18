@@ -18,7 +18,7 @@
 import os
 import os.path
 from bouwer.plugin import Plugin
-from bouwer.config import ConfigBool
+from bouwer.config import ConfigBool, Config
 from bouwer.builder import TargetPath
 
 class UseLibrary(Plugin):
@@ -63,10 +63,16 @@ class UseLibrary(Plugin):
         tmp = ConfigBool(cc.name, **cc.keywords)
         slist = []
 
+        libs = self.conf.get('LIBRARIES')
+        if libs is None:
+            return
+        
+        libdict = libs.value()
+
         # Loop all given libraries
         for lib in libraries:
 
-            target, path = self.build.get('library:' + self.conf.active_tree.name + ':' + lib)
+            target, path = libdict[lib]
             slist.append(target)
 
             if lib[:3] == 'lib':
@@ -77,9 +83,9 @@ class UseLibrary(Plugin):
             tmp.keywords['incpath'].append(path)
             tmp.keywords['ldflags'] += ' -l' + libname + ' '
 
-        self.build.put('sources', slist)
         self.conf.active_tree.add(tmp)
-
+        self.conf.active_tree.add(Config('SOURCES', slist, temporary = True))
+ 
         """
         With this Library() instance, we can append e.g. libinc = 'include' or libinc='.'
         to automatically append an -I path for each Library():

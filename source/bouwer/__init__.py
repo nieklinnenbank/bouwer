@@ -16,7 +16,7 @@
 #
 
 """
-Bouwer: build automation for humans
+Bouwer top level module
 """
 
 # This file must exist for python to mark this directory as a module

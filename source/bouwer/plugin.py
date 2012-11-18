@@ -49,6 +49,14 @@ class Plugin:
         """ Configuration items as output """
         return []
 
+    # TODO: why not add the prototypes here?
+    # and then call that via BuildInstance?
+    # The default prototypes could just invoke each other..
+    # def execute_config()
+    # def finished(self, action):
+    def completed(self, action):
+        pass
+
     def initialize(self):
         """ Initialize the plugin """
         pass

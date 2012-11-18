@@ -74,5 +74,12 @@ class Library(Plugin):
                           cc.keywords.get('arflags') + ' ' + str(target) + ' ' +
                         (' '.join([str(o) for o in objects])))
 
-        # Publish the library to the build manager, e.g. for UseLibrary()
-        self.build.put('library:' + self.conf.active_tree.name + ':' + libname, (target, self.conf.active_dir))
+        # Publish ourselves to the libraries list
+        if self.conf.active_tree.get('LIBRARIES') is None:
+            # TODO: why do i need to specify active_tree here...
+            self.conf.active_tree.add(Config('LIBRARIES', {}, temporary = True))
+
+        # Add ourselve to the libraries dictionary
+        libdict = self.conf.get('LIBRARIES').value()
+        libdict[libname] = (target, self.conf.active_dir)
+
