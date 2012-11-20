@@ -482,15 +482,6 @@ class Configuration(bouwer.util.Singleton):
         # Synchronize configuration trees
         self._synchronize()
 
-    def write_header(self, filename, tree_name = None):
-        """
-        Output the given configuration tree as a C header file
-
-        The settings will be encoded as #define's
-        """
-        # TODO: put this in the ConfigHeader() builder instead...
-        self.log.debug("writing configuration to header: " + str(filename))
-
     def dump(self):
         """
         Dump the current configuration to the debug log

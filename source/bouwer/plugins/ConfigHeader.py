@@ -34,5 +34,5 @@ class ConfigHeader(Plugin):
 
     def execute_any(self, filename):
         """ Builder implementation for ConfigHeader() """
-        self.conf.write_header(filename)
+        pass
 
