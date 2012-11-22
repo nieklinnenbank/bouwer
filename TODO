@@ -1,3 +1,5 @@
+- package bouwer correctly: http://www.scotttorborg.com/python-packaging/everything.html
+
 - when unknown dependency, the builder execution should be postponed as late as possible, such 
   that the builder has a chance to generate & execute. If the unknown dependency never comes, its an error!
 

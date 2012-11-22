@@ -36,12 +36,8 @@ class StaticTester(common.BouwerTester):
         #return srclist
 
     def _program_exists(self, args):
+        """ Check if the given program exists on the system """
         try:
-            # pipe output to /dev/null for silence
-            #null = open("/dev/null", "w")
-            #subprocess.Popen(progname, stdout=null, stderr=null)
-            #null.close()
-
             null = open(os.devnull, "w")
             p = subprocess.Popen(args, stdout = null, stderr = null)
             null.close()
@@ -97,3 +93,4 @@ class StaticTester(common.BouwerTester):
                                   filename])
             except SystemExit as e:
                 self.assertEqual(e.code, 0, 'PyLint must be successful')
+

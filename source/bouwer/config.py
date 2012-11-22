@@ -16,7 +16,13 @@
 #
 
 """
-Bouwer configuration layer implementation
+Bouwer configuration layer
+
+Configuration allows the user to influence the execution
+of the build automation system. A user can create and modify
+a (set of) configuration(s) using any available configuration frontend.
+For example, the :class:`.LineConfig` plugin allows the user to change
+configuration items via the command line.
 """
 
 import os
@@ -413,7 +419,7 @@ class Configuration(bouwer.util.Singleton):
         # The active tree and directory are used for
         # evaluation in the Config class, if needed.
         self.active_tree = None
-        self.active_dir  = None
+        self.active_dir  = self.base_conf
 
         # Attempt to load saved config, otherwise reset to predefined.
         if not self.load():
@@ -472,6 +478,7 @@ class Configuration(bouwer.util.Singleton):
         """
         # Insert the default tree.
         self.put(ConfigTree('DEFAULT'))
+        self.active_tree = self.trees['DEFAULT']
 
         # Parse all pre-defined configurations from Bouwer
         self._scan_dir(self.base_conf)
