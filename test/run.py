@@ -23,10 +23,7 @@ import unittest
 
 class MyTestResult(unittest.TextTestResult):
     def getDescription(self, test):
-        if test.shortDescription():
-            return str(test) + ', ' + test.shortDescription()
-        else:
-            return str(test)
+        return str(test)
 
 # TODO: this only allows me to select a testfile, not a testcase or class
 if len(sys.argv) > 1:

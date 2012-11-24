@@ -23,9 +23,9 @@ import common
 import bouwer.cli
 from bouwer.config import *
 
-class ConfigurationTester(common.BouwerTester):
+class ConfigTester(common.BouwerTester):
     """
-    Tests for the :class:`.Configuration` class.
+    Tester class for the configuration layer
     """
 
     def setUp(self):
@@ -42,6 +42,11 @@ class ConfigurationTester(common.BouwerTester):
     def tearDown(self):
         """ Runs after each test case """
         Configuration.Destroy()
+
+class ConfigurationTester(ConfigTester):
+    """
+    Tests for the :class:`.Configuration` class.
+    """
 
     def test_get(self):
         """ Retrieve a configuration item """
@@ -102,10 +107,6 @@ class ConfigurationTester(common.BouwerTester):
         """ Override a configuration item in a specific tree and directory """
         pass
 
-    def test_put_tree(self):
-        """ Introduce new configuration trees """
-        pass
-
     def test_load(self):
         pass
 
@@ -114,4 +115,53 @@ class ConfigurationTester(common.BouwerTester):
 
     def test_reset(self):
         pass
+
+class ConfigTreeTester(ConfigTester):
+    """
+    Tests for the :class:`.ConfigTree` configuration item
+    """
+
+    def test_inherit(self):
+        """ ConfigTree's should inherit items from the default tree """
+
+        tree1 = ConfigTree('TREE1', True)
+        tree2 = ConfigTree('TREE2', True)
+
+        self.conf.put(tree1)
+        self.conf.put(tree2)
+
+        self.assertIsNone(self.conf.get('NON_EXISTING_ITEM'))
+        self.assertIsInstance(self.conf.get('GCC'), ConfigBool)
+        self.assertEqual(self.conf.get('GCC').name, 'GCC')
+
+        self.assertIsNone(self.conf.get('NON_EXISTING_ITEM'))
+        self.assertIsInstance(self.conf.get('GCC'), ConfigBool)
+        self.assertEqual(self.conf.get('GCC').name, 'GCC')
+
+    def test_value(self):
+        """ Retrieve ConfigTree value """
+        
+        tree1 = ConfigTree('TREE1', True)
+        tree2 = ConfigTree('TREE2', True)
+        tree3 = ConfigTree('TREE3', False)
+
+        self.conf.put(tree1)
+        self.conf.put(tree2)
+        self.conf.put(tree3)
+
+        # See that the ConfigTree values are correct when
+        # the default tree is active.
+        self.conf.active_tree = self.conf.trees['DEFAULT']
+        self.assertTrue(self.conf.get('DEFAULT'))
+        self.assertFalse(self.conf.get('TREE1'))
+        self.assertFalse(self.conf.get('TREE2'))
+        self.assertFalse(self.conf.get('TREE3'))
+
+        # Verify that the ConfigTree values are correct
+        # when a custom configuration tree is active
+        self.conf.active_tree = self.conf.trees('TREE1')
+        self.assertTrue(self.conf.get('TREE1'))
+        self.assertFalse(self.conf.get('DEFAULT'))
+        self.assertFalse(self.conf.get('TREE2'))
+        self.assertFalse(self.conf.get('TREE3'))
 
