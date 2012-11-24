@@ -277,7 +277,10 @@ class ConfigTree(ConfigBool):
         """
         Retrieve value of the tree. Either `True` or `False`.
         """
-        return super(ConfigTree, self).value(self)
+        if tree is None:
+            tree = Configuration.Instance().active_tree
+
+        return tree.name == self.name and super(ConfigTree, self).value(self)
 
     def __getattr__(self, name):
         """

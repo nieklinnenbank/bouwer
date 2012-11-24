@@ -335,9 +335,12 @@ class BuilderManager(bouwer.util.Singleton):
 
         >>> manager.execute('build', conftree)
         """
-        self.log.debug("executing `" + tree.name + ':' + target + "'")
-        self.conf.active_tree = tree
 
+        self.conf.active_tree = tree
+        if not tree.value():
+            return
+
+        self.log.debug("executing `" + tree.name + ':' + target + "'")
         self.actions = bouwer.action.ActionManager(self.conf.args)
 
         mesh = self.parser.parse('.', target)

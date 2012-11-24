@@ -152,16 +152,16 @@ class ConfigTreeTester(ConfigTester):
         # See that the ConfigTree values are correct when
         # the default tree is active.
         self.conf.active_tree = self.conf.trees['DEFAULT']
-        self.assertTrue(self.conf.get('DEFAULT'))
-        self.assertFalse(self.conf.get('TREE1'))
-        self.assertFalse(self.conf.get('TREE2'))
-        self.assertFalse(self.conf.get('TREE3'))
+        self.assertTrue(self.conf.get('DEFAULT').value())
+        self.assertFalse(self.conf.get('TREE1').value())
+        self.assertFalse(self.conf.get('TREE2').value())
+        self.assertFalse(self.conf.get('TREE3').value())
 
         # Verify that the ConfigTree values are correct
         # when a custom configuration tree is active
-        self.conf.active_tree = self.conf.trees('TREE1')
-        self.assertTrue(self.conf.get('TREE1'))
-        self.assertFalse(self.conf.get('DEFAULT'))
-        self.assertFalse(self.conf.get('TREE2'))
-        self.assertFalse(self.conf.get('TREE3'))
+        self.conf.active_tree = self.conf.trees['TREE1']
+        self.assertTrue(self.conf.get('TREE1').value())
+        self.assertFalse(self.conf.get('DEFAULT').value())
+        self.assertFalse(self.conf.get('TREE2').value())
+        self.assertFalse(self.conf.get('TREE3').value())
 

@@ -285,7 +285,10 @@ class ActionManager:
 
         for action_name, action in self.pending.items():
             self.log.debug("removing " + str(action.target))
-            os.remove(action.target)
+            try:
+                os.remove(action.target)
+            except OSError:
+                pass
 
     def _event(self, ev):
         """

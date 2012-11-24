@@ -70,7 +70,12 @@ class DemoClass(common.BouwerTester):
         self.plugins = bouwer.plugin.PluginManager.Instance()
         self.conf.args = self.cli.parse()
 
-        # Use the default tree
+        # Clean first
+        self.cli.args.clean = True
+        self.build.execute('build', self.conf.trees.get('DEFAULT'))
+
+        # Execute with the default tree
+        self.cli.args.clean = False
         self.build.execute('build', self.conf.trees.get('DEFAULT'))
 
     def _run_prog(self, prog):
