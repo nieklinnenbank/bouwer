@@ -60,13 +60,13 @@ class Program(Plugin):
 
         # Add linker paths
         ldpath = ''
-        for path in cc.keywords.get('ldpath'):
-            ldpath += cc.keywords.get('ldflag') + path + ' '
+        for path in cc['ldpath']:
+            ldpath += cc['ldflag'] + path + ' '
 
         # Link the program
         self.build.action(target,
                           objects + extra, 
-                          cc.keywords.get('ld') + ' ' + str(target) + ' ' +
+                          cc['ld'] + ' ' + str(target) + ' ' +
                          (' '.join([str(o) for o in objects])) + ' ' + ldpath +
-                          cc.keywords.get('ldflags'))
+                          cc['ldflags'])
 

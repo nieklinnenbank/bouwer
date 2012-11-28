@@ -41,10 +41,41 @@ class Config(object):
         """
         Constructor
         """
-        self.name        = name
-        self._value      = value
-        self.keywords    = keywords
+        self.name     = name
+        self._value   = value
+        self._keywords = keywords
         self.update(value)
+
+    def get_key(self, key, default = None):
+        """ Wrapper for the :obj:`dict.get` function """
+        return self._keywords.get(key, default)
+
+    def keys(self):
+        """ Retrieve a list of keyword keys """
+        return self._keywords.keys()
+
+    def __getitem__(self, key):
+        """
+        Implements the conf_item['keyword'] mechanism.
+        """
+        try:
+            return self._keywords[key]
+        except KeyError:
+
+            # TODO: there should be a clean way to ask for the item, which is directly
+            #  "above" us in the override path
+            # TODO: hack! we always take the base_conf as active dir...
+
+            conf = Configuration.Instance()
+            saved_dir = conf.active_dir
+            conf.active_dir = conf.base_conf
+            def_item = conf.trees['DEFAULT'].get(self.name)
+            conf.active_dir = saved_dir
+
+            if def_item is not None and def_item is not self:
+                return def_item[key]
+            else:
+                raise KeyError('no such key: ' + str(key))
 
     def satisfied(self, tree = None):
         """
@@ -56,13 +87,13 @@ class Config(object):
             tree = Configuration.Instance().active_tree
 
         # See if our dependencies are met.
-        for dep in self.keywords.get('depends', []):
+        for dep in self.get_key('depends', []):
             if tree.get(dep) is not None and not tree.get(dep).satisfied(tree):
                 return False
             
         # If we are in a list, then we must be selected to satisfy.
-        if self.keywords.get('in_list', False):
-            lst = tree.get(self.keywords.get('in_list'))
+        if self.get_key('in_list', False):
+            lst = tree.get(self.get_key('in_list'))
             return lst.value(tree) == self.name
 
         # TODO: hack
@@ -83,22 +114,15 @@ class Config(object):
         """
         self._value = value
 
-    def inherit_keywords(self, other):
-        """ temporary routine to copy keywords from other item """
-        # TODO: this should be replaced by keyword indirection/evaluation
-        for key in other.keywords:
-            if key not in self.keywords:
-                self.keywords[key] = other.keywords[key]
-
     def add_dependency(self, item_name):
         """
         Introduce a new dependency on `item_name`
         """
-        if 'depends' not in self.keywords:
-            self.keywords['depends'] = []
+        if 'depends' not in self._keywords:
+            self._keywords['depends'] = []
 
-        if item_name not in self.keywords['depends']:
-            self.keywords['depends'].append(item_name)
+        if item_name not in self._keywords['depends']:
+            self._keywords['depends'].append(item_name)
 
     def serialize(self):
         """
@@ -194,7 +218,7 @@ class ConfigList(Config):
         """
         Update the selected item in this list
         """
-        if value not in self.keywords.get('options'):
+        if value not in self.get_key('options'):
             raise Exception("item " + str(value) + " not in list " + self.name)
         else:
             super(ConfigList, self).update(value)
@@ -247,7 +271,7 @@ class ConfigTree(ConfigBool):
         self.subitems[item.name][path] = item
  
         # Let all childs depend on the item
-        for child_name in item.keywords.get('childs', []):
+        for child_name in item.get_key('childs', []):
             # TODO: validate that the child is there!
 
             for path, child in self.subitems[child_name].items():
@@ -292,7 +316,7 @@ class ConfigTree(ConfigBool):
             return self.__dict__[name]
         
         conf = Configuration.Instance()
-        path = conf.active_dir
+        path = conf.active_dir # TODO: but what about this one ...
 
         if name in self.__dict__['subitems']:
             cfiles = self.__dict__['subitems'][name] 
@@ -309,6 +333,8 @@ class ConfigTree(ConfigBool):
                 return cfiles[conf.base_conf]
         elif name in conf.trees:
             return conf.trees[name]
+        elif name in conf.trees['DEFAULT'].subitems:
+            return conf.trees['DEFAULT'].get(name)
         else:
             raise AttributeError('no such attribute: ' + str(name))
 
@@ -382,7 +408,7 @@ class ConfigParser:
         # Add dependency to us for all list options
         for opt in keywords['options']:
             dest_tree.get(opt).add_dependency(name)
-            dest_tree.get(opt).keywords['in_list'] = name
+            dest_tree.get(opt)._keywords['in_list'] = name
 
         self.conf.put(ConfigList(name,
                                 *self._get_value(**keywords),
@@ -428,6 +454,9 @@ class Configuration(bouwer.util.Singleton):
         if not self.load():
             self.reset()
 
+        # Validate tree
+        self._validate()
+
         # Dump configuration for debugging
         self.dump()
 
@@ -463,7 +492,7 @@ class Configuration(bouwer.util.Singleton):
             self._save_item(tree, fp)
         
             for item_name, item in tree.subitems.items():
-                if tree_name is 'DEFAULT' or 'tree' in item.keywords:
+                if tree_name is 'DEFAULT' or 'tree' in item._keywords:
                     self._save_item(item, fp)
 
         fp.close()
@@ -490,7 +519,7 @@ class Configuration(bouwer.util.Singleton):
         self._scan_dir('.') #os.getcwd())
 
         # Synchronize configuration trees
-        self._synchronize()
+        #self._synchronize()
 
     def dump(self):
         """
@@ -499,53 +528,14 @@ class Configuration(bouwer.util.Singleton):
         for tree_name, tree in self.trees.items():
             self._dump_item(tree, tree)
 
-    def _synchronize(self):
+    def _validate(self):
         """
-        Make sure all configuration trees contain at least the default items
+        Validate & enforce dependencies in all trees.
         """
-
-        # TODO: replace this with a constant, e.g. Configuration.DEFAULT or ConfigTree.DEFAULT or self.DEFAULT
-        def_tree = self.trees.get('DEFAULT')
-
-        # Make sure user-defined trees inherit all items from
-        # the default tree, unless they are overwriten.
-        for tree_name, tree in self.trees.items():
-            if tree_name is def_tree.name:
-
-                # TODO: temporary let overrides inherit from the original
-                # TODO: this should be replaced by the keywords indirection stuff
-                for item_name, paths in def_tree.subitems.items():
-                    for path, item in paths.items():
-                        if path is not self.base_conf and self.base_conf in paths:
-                            item.inherit_keywords(paths[self.base_conf])
-                continue
-
-            # Inherit every default item
-            for item_name, paths in def_tree.subitems.items():
-                for path_name, item in paths.items():
-
-                    # Is the item overwritten?
-                    if item.name in tree.subitems:
-
-                        # Inherit keywords from the default item, if not overwritten
-                        custom_item_confs = tree.subitems[item.name]
-
-                        # For every instance, inherit the keywords
-                        for custom_item_cfile, custom_item in custom_item_confs.items():
-                            custom_item.inherit_keywords(item)
-
-                        # TODO: make sure to remove orphan childs, when a list is overwritten!
-                        pass
-
-                    # Inherit the item
-                    else:
-                        tree.subitems[item.name] = { path_name: item }
-
-        # Validate & enforce dependencies in all trees.
         for tree_name, tree in self.trees.items():
             for item_name, paths in tree.subitems.items():
                 for path_name, item in paths.items():
-                    for dep in item.keywords.get('depends', []):
+                    for dep in item.get_key('depends', []):
 
                         # Is it an unknown dependency?
                         if dep not in tree.subitems and \
@@ -561,8 +551,8 @@ class Configuration(bouwer.util.Singleton):
 
         self.log.debug(parent + item.name + ':' + str(item.__class__) + ' = ' + str(item.value(tree)))
                 
-        for key in item.keywords:
-            self.log.debug('\t' + key + ' => ' + str(item.keywords[key]))
+        for key in item._keywords:
+            self.log.debug('\t' + key + ' => ' + str(item._keywords[key]))
         self.log.debug('')
 
         # TODO: this dumping could be improved...

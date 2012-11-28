@@ -60,7 +60,7 @@ class UseLibrary(Plugin):
         # TODO: find the correct libary path using the actions layer!!!
         # TODO: only do it like this if static linking!!!
         # TODO: use keyword indirection instead of copying the original keywords?!
-        tmp = ConfigBool(cc.name, **cc.keywords)
+        tmp = ConfigBool(cc.name, **cc._keywords)
         slist = []
 
         libs = self.conf.get('LIBRARIES')
@@ -79,9 +79,9 @@ class UseLibrary(Plugin):
                 libname = lib[3:]
             else:
                 libname = lib
-            tmp.keywords['ldpath'].append(os.path.dirname(target.absolute))
-            tmp.keywords['incpath'].append(path)
-            tmp.keywords['ldflags'] += ' -l' + libname + ' '
+            tmp['ldpath'].append(os.path.dirname(target.absolute))
+            tmp['incpath'].append(path)
+            tmp._keywords['ldflags'] += ' -l' + libname + ' '
 
         self.conf.active_tree.add(tmp)
         self.conf.active_tree.add(Config('SOURCES', slist, temporary = True))

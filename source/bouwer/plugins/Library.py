@@ -40,16 +40,16 @@ class Library(Plugin):
         if not item.value():
             return
 
-        target = item.keywords.get('library', item.name.lower())
+        target = item.get_key('library', item.name.lower())
 
         # Look for optional sources in our child config items
         # TODO: this is an ugly hack. Configuration layer should not be
         # aware of source/target files
-        for child_name in item.keywords.get('childs', []):
+        for child_name in item.get_key('childs', []):
             child = self.conf.get(child_name)
 
-            if isinstance(child, ConfigBool) and child.value() and 'source' in child.keywords:
-                sources.append(SourcePath(child.keywords.get('source')))
+            if isinstance(child, ConfigBool) and child.value() and 'source' in child.keys():
+                sources.append(SourcePath(child.get_key('source')))
 
         self.execute_target(TargetPath(target), sources)
 
@@ -70,8 +70,8 @@ class Library(Plugin):
 
         # Generate action for linking the library
         self.build.action(target, objects,
-                          cc.keywords.get('ar') + ' ' +
-                          cc.keywords.get('arflags') + ' ' + str(target) + ' ' +
+                          cc['ar'] + ' ' +
+                          cc['arflags'] + ' ' + str(target) + ' ' +
                         (' '.join([str(o) for o in objects])))
 
         # Publish ourselves to the libraries list

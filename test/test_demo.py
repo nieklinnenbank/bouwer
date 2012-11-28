@@ -82,10 +82,16 @@ class DemoClass(common.BouwerTester):
         """ Run the given demo program """
         return subprocess.check_output(self.demopath + os.sep + prog).decode('utf-8')
 
+# TODO: these tests do not catch the problem when the targets are already there
+# from a previous run, but due to a change, are not compiled anymore. Then the run_prog()
+# tests succeed.. Please verify.
+
 class DemoTester(common.BouwerTester):
     """
     Tests running Bouwer on the demo projects
     """
+
+    # TODO: this test is obsolete. A part of it might go in the test_cli.py.
 
     def test_build(self):
         """ Try to invoke the build target of each demo """
@@ -155,7 +161,7 @@ class OverrideTester(DemoClass):
 
         self.conf.active_dir = './hello1'
         self.assertTrue(self.conf.get('GCC'))
-        self.assertEquals(self.conf.get('GCC').keywords['ccflags'], '-c -O3')
+        self.assertEquals(self.conf.get('GCC').get_key('ccflags'), '-c -O3')
 
         self.conf.active_dir = './hello2'
         self.assertTrue(self.conf.get('GCC'))

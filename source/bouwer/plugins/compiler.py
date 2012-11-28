@@ -38,14 +38,14 @@ def c_object(source):
 
         # Add C preprocessor paths
         incflags = ''
-        for path in cc.keywords.get('incpath'):
-            incflags += cc.keywords.get('incflag') + path + ' '
+        for path in cc['incpath']:
+            incflags += cc['incflag'] + path + ' '
 
         # Register compile action
         build.action(outfile, [ source ],
-                     cc.keywords.get('cc') + ' ' +
+                     cc['cc'] + ' ' +
                      str(outfile) + ' ' +
-                     cc.keywords.get('ccflags') + ' ' + incflags +
+                     cc['ccflags'] + ' ' + incflags +
                      str(source))
         return outfile
 

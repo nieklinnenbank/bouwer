@@ -1,5 +1,8 @@
 - package bouwer correctly: http://www.scotttorborg.com/python-packaging/everything.html
 
+- builder mesh is hiding the error in the python back trace... we should fix this. put the
+  original Bouwfile in the backtrace!
+
 - when unknown dependency, the builder execution should be postponed as late as possible, such 
   that the builder has a chance to generate & execute. If the unknown dependency never comes, its an error!
 
