@@ -21,6 +21,9 @@ from bouwer.plugin import *
 from bouwer.builder import *
 from bouwer.config import *
 
+""" Global list of objects compiled """
+c_object_list = []
+
 def c_object(source):
     """
     Compile a C source file into an object file
@@ -38,8 +41,10 @@ def c_object(source):
 
         # Add C preprocessor paths
         incflags = ''
-        for path in cc['incpath']:
-            incflags += cc['incflag'] + path + ' '
+
+        for path in cc['incpath'].split(':'):
+            if len(path) > 0:
+                incflags += cc['incflag'] + path + ' '
 
         # Register compile action
         build.action(outfile, [ source ],
@@ -47,6 +52,9 @@ def c_object(source):
                      str(outfile) + ' ' +
                      cc['ccflags'] + ' ' + incflags +
                      str(source))
+
+        c_object_list.append(outfile)
+
         return outfile
 
     # Unknown filetype

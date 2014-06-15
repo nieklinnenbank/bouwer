@@ -79,8 +79,9 @@ class UseLibrary(Plugin):
                 libname = lib[3:]
             else:
                 libname = lib
-            tmp['ldpath'].append(os.path.dirname(target.absolute))
-            tmp['incpath'].append(path)
+
+            tmp._keywords['ldpath']  += ':' + os.path.dirname(target.absolute)
+            tmp._keywords['incpath'] += ':' + path
             tmp._keywords['ldflags'] += ' -l' + libname + ' '
 
         self.conf.active_tree.add(tmp)

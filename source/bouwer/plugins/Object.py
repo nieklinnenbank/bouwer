@@ -29,3 +29,13 @@ class Object(Plugin):
         """
         compiler.c_object(source)
 
+        # TODO: add to a temporary list of objects.
+        # that will be 'absorbed' by Program() and Library()
+
+    def execute_config(self, item, sources):
+        """
+        Build executable objects if configurion item `item` is True
+        """
+        if item.value():
+            for source in sources:
+                self.execute_source(source)

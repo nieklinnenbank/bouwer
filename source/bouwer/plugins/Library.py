@@ -41,16 +41,6 @@ class Library(Plugin):
             return
 
         target = item.get_key('library', item.name.lower())
-
-        # Look for optional sources in our child config items
-        # TODO: this is an ugly hack. Configuration layer should not be
-        # aware of source/target files
-        for child_name in item.get_key('childs', []):
-            child = self.conf.get(child_name)
-
-            if isinstance(child, ConfigBool) and child.value() and 'source' in child.keys():
-                sources.append(SourcePath(child.get_key('source')))
-
         self.execute_target(TargetPath(target), sources)
 
     def execute_target(self, target, sources):
@@ -64,15 +54,17 @@ class Library(Plugin):
         target.append('.a')
 
         # Generate actions to build the library objects
-        objects = []
         for src in sources:
-            objects.append(compiler.c_object(src))
+            compiler.c_object(src)
 
         # Generate action for linking the library
-        self.build.action(target, objects,
+        self.build.action(target, compiler.c_object_list,
                           cc['ar'] + ' ' +
                           cc['arflags'] + ' ' + str(target) + ' ' +
-                        (' '.join([str(o) for o in objects])))
+                        (' '.join([str(o) for o in compiler.c_object_list])))
+
+        # Clear C object list
+        compiler.c_object_list = []
 
         # Publish ourselves to the libraries list
         if self.conf.active_tree.get('LIBRARIES') is None:

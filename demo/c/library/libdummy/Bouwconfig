@@ -15,29 +15,30 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ConfigBool('LIBDUMMY',
-    title   = 'The dummy library',
-    childs  = [
+config LIBDUMMY
+    bool "The dummy library"
+    help
+      This is the dummy library help text
 
-    ConfigBool('LIBDUMMY_FOO_FEATURE',
-            title = "Enable the dummy Foo feature",
-            help  = "This option enables is all about Foo."
-                    "It is a feature which is very Fooish."
-                    "Choose Yes if you like Fooing."),
+config LIBDUMMY_FOO
+    bool "Enable the dummy foo feature"
+    depends on LIBDUMMY
+    help
+      This option enables all about Foo
+      It is a feature which is very Fooish
+      Choose Yes if you like Fooing
 
-    ConfigBool('LIBDUMMY_BAR_FEATURE',
-            title   = 'Enable the dummy Bar feature',
-            help    = "This option enables is all about Bar."
-                      "It is a feature which is very Barish."
-                      "Choose Yes if you like Barring.",
-            default =  True),
+config LIBDUMMY_BAR
+    bool "Enable the dummy bar feature"
+    depends on LIBDUMMY
+    default y
+    help
+      This option enables all about Bar
+      It is a feature which is very Barish
+      Choose Yes if you like Barring
 
-    ConfigBool('LIBDUMMY_UTIL_STUFF',
-            title   = 'Enable the dummy util stuffs',
-            help    = 'Do you want some utils?'
-                      'Choose this option if so.',
-            source  = 'util.c',
-            depends = [ 'LIBDUMMY_FOO_FEATURE' ] )
-    ]
-)
-
+config LIBDUMMY_UTIL
+    bool "Enable the dummy util stuffs"
+    depends on LIBDUMMY_FOO
+    help
+      This option enables all about util stuffs.

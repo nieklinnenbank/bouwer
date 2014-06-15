@@ -15,17 +15,22 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ConfigBool('HELLO1',
-    title = 'Hello World 1 Program',
-    help  = 'This program outputs a message to standard output')
 
-ConfigString('HELLOMSG1',
-    title   = 'Hello World 1 Message',
-    help    = 'Message for the Hello World Program',
-    default = 'Hello World 1!',
-    depends = [ 'HELLO1' ])
 
-ConfigBool('GCC',
-    ccflags = '-c -O3'
-)
+config HELLO1
+    bool "Hello World 1 Program"
+    help
+      This program outputs a message to standard output
+
+config HELLOMSG1
+    string "Hello World 1 Message"
+    default "Hello World 1!"
+    depends on HELLO1
+    help
+      Message for the Hello World Program
+
+config GCC
+    bool
+    keywords
+      ccflags = -c -O3
 

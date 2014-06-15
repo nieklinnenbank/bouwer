@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ConfigBool('LIBFUZZ',
-    title   = 'The fuzzy library',
-    help    = 'This library is very fuzzy',
-)
+config LIBFUZZ
+    bool "The fuzzy library"
+    help
+      This library is very fuzzy
 

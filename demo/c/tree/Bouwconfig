@@ -15,23 +15,27 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ConfigTree('DEBUG',
-    title = 'Build in debug mode',
-    help  = 'Build configuration for debugging.',
-)
+configtree DEBUG
+    bool "Build in debug mode"
+    help
+      Build configuration for debugging
 
-ConfigBool('GCC', 'DEBUG',
-    ccflags = '-g3 -Wall -Werror -Wextra -O0 -c',
-    ldflags = '-g3 -Wall -Werror -Wextra -O0',
-)
+configtree RELEASE
+    bool "Build for releasing"
+    help
+      Build configuration for releasing
 
-ConfigTree('RELEASE',
-    title = 'Build for releasing',
-    help  = 'Build configuration for releasing',
-)
+override GCC
+    tree DEBUG
+    bool
+    keywords
+      ccflags = -g3 -Wall -Werror -Wextra -O0 -c
+      ldflags = -g3 -Wall -Werror -Wextra -O0
 
-ConfigBool('GCC', 'RELEASE',
-    ccflags = '-O3 -c',
-    ldflags = '-O3',
-)
+override GCC
+    tree RELEASE
+    bool
+    keywords
+      ccflags = -O3 -c
+      ldflags = -O3
 

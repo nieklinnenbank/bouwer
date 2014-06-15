@@ -60,8 +60,9 @@ class Program(Plugin):
 
         # Add linker paths
         ldpath = ''
-        for path in cc['ldpath']:
-            ldpath += cc['ldflag'] + path + ' '
+        for path in cc['ldpath'].split(':'):
+            if len(path) > 0:
+                ldpath += cc['ldflag'] + path + ' '
 
         # Link the program
         self.build.action(target,

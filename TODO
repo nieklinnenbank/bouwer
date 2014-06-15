@@ -6,13 +6,63 @@
 - when unknown dependency, the builder execution should be postponed as late as possible, such 
   that the builder has a chance to generate & execute. If the unknown dependency never comes, its an error!
 
+- TODO: what if the developer wants to have obj-y like conditional compilation, like kbuild/linux?
+
+  Bouwconfig:
+
+  config LIBMYTEST
+    bool My test library
+    depends on TARGET
+    help
+      This is a test library
+
+  config MYTEST_FEATURE1
+    depends on LIBMYTEST
+    help
+      A nice feature1
+
+  config MYTEST_FEATURE2
+    depends on LIBMYTEST
+    help
+      Nice feature number 2
+
+  Bouwfile:
+
+    def build(conf):
+        """
+        Build my test library
+        """
+
+        Object(conf.MYTEST_FEATURE1, 'feature1.c')
+        Object(conf.MYTEST_FEATURE2, 'feature2.c')
+
+        # This builder automaticall takes whatever Object()'s have
+        # been added in this directory and puts it in his own list..
+        # After Library() has been called, it clears the list of objects.
+        # and then a new library/program can be constructed.
+        Library(conf.LIBMYTEST, [ 'core.c', 'util.c' ])
+
+
+- perhaps we can also support default build target:
+
+    Bouwfile:
+
+        Program('hello')
+
+  Bouwer should then add these builders to the default build target
+
+- Support generating a dynamic list of build targets for output in -h, and also include the python """ comments """ in the output!        
+
+
 - TODO: what if the developer wishes to override CC generic configuration?
   e.g. set the include path to './myincludes' for *ALL* compilers?
 
-    --> make a generic ConfigString for this, e.g. ConfigString('INCLUDES', default = '')
+  --> just add it to the incpath keyword in CC:
 
-  --> he must add it to CC somehow...
-    --> perhaps we can let the Object() use CC's keywords too!
+  config CC
+    keywords
+      incpath = includes tests/includes libs/includes whatever/includes
+
 
 - implement lazy plugin loading
   --> only load plugin builders, when they are called, such that not ALL plugins
@@ -27,32 +77,25 @@
   For this, we need indirection support for keywords in Config's. E.g.:
 
   # This appends the gcc cflags and linker flags for this override
-  ConfigBool('GCC',
-              _cflags  = '-Wall -Werror',
-              _ldflags = '-static'
-  )
+  config GCC
+        keywords
+            cflags  += -Wall -Werror
+            ldflags += -static
   
   # Sometimes the user may want to mark certain keywords as unmodifyable from the configuration plugins.
   # for example, the user should never need to change the include path:
-  ConfigBool('GCC',
-              _cflags   = '-Wall -Werror',
-              _ldflags  = '-static',
-              __incpath = 'includes'
-  )
+  config GCC
+        keywords read
+            incpath = 'includes'
 
-  # To make a whole configuration item unmodifyable, simply mark it's title read-only:
-  ConfigBool('FREEBSD',
-              __title = 'FreeBSD operating system',
-              help = 'This item is True when FreeBSD is detected',
-              foo  = True,
-              bar  = 123,
-  )
 
-  # To have both append and read-only, just put three _'s:
-  ConfigBool('GCC',
-              ___cflags = '-Wall',
-              help = 'These GCC flags are appended and cannot be changed'
-  )
+  # To make a whole configuration item unmodifyable, simply mark it read-only:
+  config FREEBSD
+        bool FreeBSD OS
+        readonly
+        help
+          This item is True when FreeBSD is detected with CheckOS()
+
 
 - UseLibrary should look in the ActionTree to fill in -L <path>
     --> if two libraries with the same name, then solve like this:
@@ -107,6 +150,7 @@
     --> we need integration software, e.g. jenkins-ci.org
 
 - implement CheckHeader, CheckLibrary, CheckCompiler
+    --> should go in parallel
 
 - localizable configuration text/titles?
 - status output modules:

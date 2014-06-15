@@ -15,43 +15,51 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ConfigList('CC',
-    title   = 'C compiler toolchain',
-    help    = 'Choose a C compiler toolchain for compiling C programs and libraries',
-    default = 'GCC',
-    options = [
+choice CC
+    bool "C compiler toolchain"
+    default GCC
+    help
+      Choose a C compiler toolchain for compiling C programs and libraries
 
-    ConfigBool('GCC',
-        title   = 'GNU C Compiler',
-        help    = 'See the GNU C compiler homepage at http://gcc.gnu.org',
-        cc      = 'gcc -o',
-        asm     = 'gcc -o',
-        ld      = 'gcc -o',
-        ar      = 'ar',
-        ccflags = '-Wall -Wextra -c',
-        ldflags = '-Wall -Wextra',
-        ldpath  = [],
-        ldflag  = '-L',
-        libs    = [],
-        libflag = '-l',
-        incflag = '-I',
-        incpath = [],
-        arflags = 'crs'),
+config GCC
+    bool "GNU C Compiler"
+    default y
+    keywords
+      cc      = gcc -o
+      asm     = gcc -o
+      ld      = gcc -o
+      ar      = ar
+      ccflags = -Wall -Wextra -c
+      ldflags = -Wall -Wextra
+      ldpath  = 
+      ldflag  = -L
+      libs    =
+      libflag = -l
+      incflag = -I
+      incpath =
+      arflags = crs
+    help
+      See the GNU C compiler homepage at http://gcc.gnu.org
 
-    ConfigBool('CLANG',
-        title   = 'LLVM Clang',
-        help    = 'See the Clang compiler homepage at http://llvm.org',
-        cc      = 'clang',
-        asm     = 'llvm-as',
-        ld      = 'llvm-ld',
-        ccflags = '-Wall -Wextra'),
+config CLANG
+    bool "LLVM Clang"
+    keywords
+      cc      = clang
+      asm     = llvm-as
+      ld      = llvm-ld
+      ccflags = -Wall -Wextra
+    help
+      See the Clang compiler homepage at http://llvm.org
 
-    ConfigBool('MSVC10',
-        title   = 'Microsoft Visual Studio 10',
-        help    = 'See microsoft homepage at http://www.microsoft.com',
-        cc      = 'csc.exe',
-        asm     = 'asm.exe',
-        ld      = 'link.exe',
-        ccflags = '\err:full \extra:all')
-    ]
-)
+config MSVC10
+    bool "Microsoft Visual Studio 10"
+    keywords
+      cc      = csc.exe
+      asm     = asm.exe
+      ld      = link.exe
+      ccflags = \err:full \extra:all
+    help
+      See microsoft homepage at http://www.microsoft.com
+
+endchoice
+

@@ -15,9 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ConfigBool('MYPROG',
-    title   = 'The myprog example consumer program for libdummy',
-    help    = 'This program demonstrates how to use libraries',
-    depends = [ 'LIBDUMMY' ]
-)
+config MYPROG
+    bool "The myprog example consumer program for libdummy"
+    depends on LIBDUMMY
+    help
+      This program demonstrates how to use libraries
 

@@ -29,7 +29,9 @@ import os
 import sys
 import logging
 import inspect
+import shlex
 import json
+from StringIO import StringIO
 import bouwer.util
 
 class Config(object):
@@ -214,14 +216,16 @@ class ConfigList(Config):
             value = keywords['options'][0]
         super(ConfigList, self).__init__(name, value, **keywords)
 
-    def update(self, value):
-        """
-        Update the selected item in this list
-        """
-        if value not in self.get_key('options'):
-            raise Exception("item " + str(value) + " not in list " + self.name)
-        else:
-            super(ConfigList, self).update(value)
+    # TODO: refix this
+    #def update(self, value):
+    #    """
+    #    Update the selected item in this list
+    #    """
+    #
+    #    if value not in self.get_key('options'):
+    #        raise Exception("item " + str(value) + " not in list " + self.name)
+    #    else:
+    #        super(ConfigList, self).update(value)
 
 class ConfigInt:
     """
@@ -338,29 +342,41 @@ class ConfigTree(ConfigBool):
         else:
             raise AttributeError('no such attribute: ' + str(name))
 
-class ConfigParser:
+class BouwConfigParser:
     """
     Parser for Bouwconfig files
     """
+
+    CONFIG_MODE  = 1
+    CHOICE_MODE  = 2
+    KEYWORD_MODE = 3
+    HELP_MODE    = 4
+    TREE_MODE    = 5
 
     def __init__(self, conf):
         """
         Constructor
         """
         # TODO: make these private
-        self.conf  = conf
-        self.log   = logging.getLogger(__name__)
-        self.globs = { 'ConfigBool'   : self._parse_bool,
-                       'ConfigString' : self._parse_string,
-                       'ConfigList'   : self._parse_list,
-                       'ConfigTree'   : self._parse_tree }
-
-    def _get_value(self, **keywords):
-        """ Retrieve default value """
-        if 'default' in keywords:
-            return ( (keywords['default']), )
-        else:
-            return ()
+        self.conf       = conf
+        self.log        = logging.getLogger(__name__)
+        self.helpindent = None
+        self.name       = None
+        self.item       = None
+        self.mode       = self.CONFIG_MODE
+        self.syntax = { 'config'     : self._parse_config,
+                        'choice'     : self._parse_choice,
+                        'tree'       : self._parse_tree,
+                        'configtree' : self._parse_configtree,
+                        'keywords'   : self._parse_keywords,
+                        'help'       : self._parse_help,
+                        'default'    : self._parse_default,
+                        'string'     : self._parse_string,
+                        'tristate'   : self._parse_tristate,
+                        'bool'       : self._parse_bool,
+                        'override'   : self._parse_config, # TMP!!!
+                        'endchoice'  : self._parse_endchoice,
+                        'depends'    : self._parse_depends }
 
     def parse(self, filename):
         """
@@ -368,61 +384,108 @@ class ConfigParser:
         """
         self.log.debug('reading `' + filename + '\'')
 
-        # Config file must be readable
-        try:
-            os.stat(filename)
-        except OSError as e:
-            self.log.critical("could not read config file '" + filename + "': " + str(e))
-            sys.exit(1)
+        self.name = None
+        self.item = None
 
-        # Parse the given file
-        exec(compile(open(filename).read(), filename, 'exec'), self.globs)
+        for line in open(filename).readlines():
+            if self.mode == self.KEYWORD_MODE:
+                if line.find('=') == -1:
+                    self.mode = self.CONFIG_MODE
+                else:
+                    parsed = line.partition('=')
+                    key    = parsed[0].strip()
+                    value  = parsed[2].strip()
+                    self.item._keywords[key] = value
+                    continue
 
-    def _parse_bool(self, name, *opts, **keywords):
-        """
-        Handles a `ConfigBool` line
-        """
-        self.conf.put(ConfigBool(name,
-                                *self._get_value(**keywords),
-                               **keywords), *opts)
-        return name
+            if self.mode == self.HELP_MODE:
+                if self.helpindent is None:
+                    self.helpindent = self._get_indent(line)
 
-    def _parse_string(self, name, *opts, **keywords):
-        """
-        Handles a `ConfigString` line
-        """
-        self.conf.put(ConfigString(name,
-                                  *self._get_value(**keywords),
-                                 **keywords), *opts)
-        return name
+                if line.find(self.helpindent) == -1:
+                    self.mode = self.HELP_MODE
+                    self.helpindex = None
+                else:
+                    helpstr = line[ len(self.helpindent) : ]
+                    continue
+            
+            self.parsed = shlex.split(line, True)
+            if len(self.parsed) == 0:
+                continue
+            else:
+                self.syntax[self.parsed[0]](line)
 
-    def _parse_list(self, name, *opts, **keywords):
-        """
-        Handles a `ConfigList` line
-        """
-        if len(opts) > 1:
-            dest_tree = Configuration.Instance().trees[opts]
+    def _get_indent(self, line):
+        index = 0
+        for char in line:
+            if char in (' ', '\t'):
+                index += 1
+            else:
+                break
+        return line[:index]
+
+    def _parse_depends(self, line):
+
+        if 'depends' not in self.item._keywords:
+            self.item._keywords['depends'] = []
+        
+        self.item._keywords['depends'].append(self.parsed[2])
+
+    def _parse_keywords(self, line):
+        self.mode = self.KEYWORD_MODE
+
+    def _parse_config(self, line):
+        self.name = self.parsed[1]
+        self.tree = 'DEFAULT'
+        self.mode = self.CONFIG_MODE
+
+    def _parse_choice(self, line):
+        self.name = self.parsed[1]
+        self.tree = 'DEFAULT'
+        self.mode = self.CHOICE_MODE
+        # TODO: add it to the correct tree please
+        # TODO: Add dependency to us for all list options
+        #for opt in keywords['options']:
+        #    dest_tree.get(opt).add_dependency(name)
+        #    dest_tree.get(opt)._keywords['in_list'] = name
+        #            
+        # item = ConfigList(name)
+        # self.conf.put(name)
+
+    def _parse_endchoice(self, line):
+        pass
+
+    def _parse_tree(self, line):
+        self.tree = self.parsed[1]
+
+    def _parse_configtree(self, line):
+        self.name = self.parsed[1]
+        self.tree = 'DEFAULT'
+        self.item = ConfigTree(self.name)
+        self.conf.put(self.item, self.tree)
+
+    def _parse_default(self, line):
+        self.item._value = self.parsed[1]
+
+    def _parse_string(self, line):
+        self.item = ConfigString(self.name, '')
+        self.conf.put(self.item, self.tree)
+
+    def _parse_tristate(self, line):
+        pass
+
+    def _parse_override(self, line):
+        pass
+
+    def _parse_bool(self, line):
+        if self.mode == self.CHOICE_MODE:
+            self.item = ConfigList(self.name, '')
         else:
-            dest_tree = Configuration.Instance().trees['DEFAULT']
+            self.item = ConfigBool(self.name)
+        self.conf.put(self.item, self.tree)
 
-        # Add dependency to us for all list options
-        for opt in keywords['options']:
-            dest_tree.get(opt).add_dependency(name)
-            dest_tree.get(opt)._keywords['in_list'] = name
-
-        self.conf.put(ConfigList(name,
-                                *self._get_value(**keywords),
-                               **keywords), dest_tree.name)
-        return name
-
-    def _parse_tree(self, name, *opts, **keywords):
-        """
-        Handles a `ConfigTree` line
-        """
-        self.conf.put(ConfigTree(name,
-                                *self._get_value(**keywords),
-                               **keywords))
-        return name
+    def _parse_help(self, line):
+        self.mode = self.HELP_MODE
 
 class Configuration(bouwer.util.Singleton):
     """
@@ -437,7 +500,7 @@ class Configuration(bouwer.util.Singleton):
         self.log    = logging.getLogger(__name__)
         self.args   = cli.args
         self.trees  = {}
-        self.parser = ConfigParser(self)
+        self.parser = BouwConfigParser(self)
 
         # Find the path to the Bouwer predefined configuration files
         curr_file = inspect.getfile(inspect.currentframe())
@@ -455,7 +518,7 @@ class Configuration(bouwer.util.Singleton):
             self.reset()
 
         # Validate tree
-        self._validate()
+        # self._validate()
 
         # Dump configuration for debugging
         self.dump()
@@ -517,9 +580,6 @@ class Configuration(bouwer.util.Singleton):
 
         # Parse all user defined configurations
         self._scan_dir('.') #os.getcwd())
-
-        # Synchronize configuration trees
-        #self._synchronize()
 
     def dump(self):
         """

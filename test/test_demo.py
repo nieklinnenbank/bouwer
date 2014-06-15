@@ -31,6 +31,10 @@ import bouwer.builder
 import bouwer.action
 
 def demo(path):
+    """
+    This class annotation sets the `path` member in the class.
+    """
+
     def demo_set_path(cls):
         cls.path = path
         return cls
@@ -138,9 +142,9 @@ class LibraryTester(DemoClass):
         """ Verify configuration of the Library demo """
         self.assertTrue(self.conf.get('LIBFUZZ').value())
         self.assertTrue(self.conf.get('LIBDUMMY').value())
-        self.assertTrue(self.conf.get('LIBDUMMY_FOO_FEATURE').value())
-        self.assertTrue(self.conf.get('LIBDUMMY_BAR_FEATURE').value())
-        self.assertTrue(self.conf.get('LIBDUMMY_UTIL_STUFF').value())
+        self.assertTrue(self.conf.get('LIBDUMMY_FOO').value())
+        self.assertTrue(self.conf.get('LIBDUMMY_BAR').value())
+        self.assertTrue(self.conf.get('LIBDUMMY_UTIL').value())
 
     def test_library_actions(self):
         """ Verify actions of the Library demo """

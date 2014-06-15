@@ -50,6 +50,9 @@ def execute():
     # (Re)load configuration
     conf = bouwer.config.Configuration.Instance(cli)
 
+    # TODO: remove when config is fixed
+    # return
+
     # Initialize the builder manager
     build = bouwer.builder.BuilderManager.Instance()
 

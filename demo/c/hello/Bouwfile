@@ -17,4 +17,4 @@
 
 def build(conf):
     """ Build the hello world program """
-    Program(conf.HELLO, ['hello.c'])
+    Program(conf.HELLO, 'hello.c')
