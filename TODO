@@ -53,6 +53,8 @@
 
 - Support generating a dynamic list of build targets for output in -h, and also include the python """ comments """ in the output!        
 
+- make oldconfig -> first load the "new" default configuration, and
+  then for each "old" config item, set the value in the current config.
 
 - TODO: what if the developer wishes to override CC generic configuration?
   e.g. set the include path to './myincludes' for *ALL* compilers?

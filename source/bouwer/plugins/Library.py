@@ -69,7 +69,8 @@ class Library(Plugin):
         # Publish ourselves to the libraries list
         if self.conf.active_tree.get('LIBRARIES') is None:
             # TODO: why do i need to specify active_tree here...
-            self.conf.active_tree.add(Config('LIBRARIES', {}, temporary = True))
+            self.conf.active_tree.add(Config('LIBRARIES', {}, temporary = True),
+                                      Configuration.Instance().base_conf) # TODO: path is an ugly hack...
 
         # Add ourselve to the libraries dictionary
         libdict = self.conf.get('LIBRARIES').value()

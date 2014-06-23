@@ -64,6 +64,8 @@ class Program(Plugin):
             if len(path) > 0:
                 ldpath += cc['ldflag'] + path + ' '
 
+        # TODO: use the compiler.c_object_list 
+
         # Link the program
         self.build.action(target,
                           objects + extra, 

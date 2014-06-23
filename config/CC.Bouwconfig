@@ -39,6 +39,7 @@ config GCC
       incpath =
       arflags = crs
     help
+      Standard C compiler on most Linux/BSD systems
       See the GNU C compiler homepage at http://gcc.gnu.org
 
 config CLANG

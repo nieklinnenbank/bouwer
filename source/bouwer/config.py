@@ -31,6 +31,7 @@ import logging
 import inspect
 import shlex
 import json
+import collections
 from StringIO import StringIO
 import bouwer.util
 
@@ -130,7 +131,8 @@ class Config(object):
         """
         Return JSON serializable representation of the item
         """
-        raise Exception('reimplement this')
+        pass
+        #raise Exception('reimplement this')
         # TODO: can we improve this?
         """
         bouwconf_map = {}
@@ -212,8 +214,9 @@ class ConfigList(Config):
         """
         Constructor
         """
-        if value is None:
-            value = keywords['options'][0]
+        if 'options' not in keywords:
+            keywords['options'] = []
+
         super(ConfigList, self).__init__(name, value, **keywords)
 
     # TODO: refix this
@@ -257,7 +260,7 @@ class ConfigTree(ConfigBool):
         super(ConfigTree, self).__init__(name, value, **keywords)
         self.subitems    = {}
 
-    def add(self, item):
+    def add(self, item, path = None):
         """
         Introduce a new :class:`.Config` item to the tree
         """
@@ -267,19 +270,18 @@ class ConfigTree(ConfigBool):
         # TODO: make sure this only contains the 'projectwide path' and not absolute OS path
         if item.name not in self.subitems:
             self.subitems[item.name] = {}
-            path = Configuration.Instance().base_conf
-        else:
-            path = Configuration.Instance().active_dir
        
         # Add to the subitems dict
+        if path is None:
+            path = Configuration.Instance().active_dir
         self.subitems[item.name][path] = item
  
         # Let all childs depend on the item
-        for child_name in item.get_key('childs', []):
-            # TODO: validate that the child is there!
-
-            for path, child in self.subitems[child_name].items():
-                child.add_dependency(item.name)
+        #for child_name in item.get_key('childs', []):
+        #    # TODO: validate that the child is there!
+        #
+        #    for path, child in self.subitems[child_name].items():
+        #        child.add_dependency(item.name)
 
     def get(self, item_name):
         """
@@ -324,17 +326,17 @@ class ConfigTree(ConfigBool):
 
         if name in self.__dict__['subitems']:
             cfiles = self.__dict__['subitems'][name] 
-           
+        
             # See if there is a specific override
-            while path is not '':
+            while path and path != '/':
                 if path in cfiles:
                     return cfiles[path]
                 else:
                     path = os.path.dirname(path)
 
-            # If not overriden, return the default
-            if conf.base_conf in cfiles:
-                return cfiles[conf.base_conf]
+            # If not specifically overriden, just return the first found
+            return cfiles.itervalues().next()
+
         elif name in conf.trees:
             return conf.trees[name]
         elif name in conf.trees['DEFAULT'].subitems:
@@ -378,6 +380,7 @@ class BouwConfigParser:
                         'endchoice'  : self._parse_endchoice,
                         'depends'    : self._parse_depends }
 
+    # TODO: rewrite this. Its too complicated.
     def parse(self, filename):
         """
         Parse a Bouwconfig file
@@ -386,6 +389,7 @@ class BouwConfigParser:
 
         self.name = None
         self.item = None
+        self.choice = None
 
         for line in open(filename).readlines():
             if self.mode == self.KEYWORD_MODE:
@@ -407,6 +411,7 @@ class BouwConfigParser:
                     self.helpindex = None
                 else:
                     helpstr = line[ len(self.helpindent) : ]
+                    self.item._keywords['help'] += helpstr
                     continue
             
             self.parsed = shlex.split(line, True)
@@ -443,17 +448,10 @@ class BouwConfigParser:
         self.name = self.parsed[1]
         self.tree = 'DEFAULT'
         self.mode = self.CHOICE_MODE
-        # TODO: add it to the correct tree please
-        # TODO: Add dependency to us for all list options
-        #for opt in keywords['options']:
-        #    dest_tree.get(opt).add_dependency(name)
-        #    dest_tree.get(opt)._keywords['in_list'] = name
-        #            
-        # item = ConfigList(name)
-        # self.conf.put(name)
 
     def _parse_endchoice(self, line):
-        pass
+        self.mode = self.CONFIG_MODE
+        self.choice = None
 
     def _parse_tree(self, line):
         self.tree = self.parsed[1]
@@ -479,12 +477,19 @@ class BouwConfigParser:
 
     def _parse_bool(self, line):
         if self.mode == self.CHOICE_MODE:
-            self.item = ConfigList(self.name, '')
+            self.item   = ConfigList(self.name, '')
+            self.choice = self.item
         else:
             self.item = ConfigBool(self.name)
+
+            if self.choice is not None:
+                self.item._keywords['in_list'] = self.choice.name
+                self.choice._keywords['options'].append(self.item.name)
+
         self.conf.put(self.item, self.tree)
 
     def _parse_help(self, line):
+        self.item._keywords['help'] = ''
         self.mode = self.HELP_MODE
 
 class Configuration(bouwer.util.Singleton):
@@ -501,6 +506,10 @@ class Configuration(bouwer.util.Singleton):
         self.args   = cli.args
         self.trees  = {}
         self.parser = BouwConfigParser(self)
+
+        # Dict which contains paths of all discovered Bouwconfigs as key,
+        # and as value a list of Config objects that were found there.
+        self.bouwconf_map = collections.OrderedDict()
 
         # Find the path to the Bouwer predefined configuration files
         curr_file = inspect.getfile(inspect.currentframe())
@@ -538,6 +547,12 @@ class Configuration(bouwer.util.Singleton):
         else:
             self.trees[tree_name].add(item)
 
+            # Add item to the Bouwconfig mapping
+            if not self.active_dir in self.bouwconf_map:
+                self.bouwconf_map[self.active_dir] = []
+
+            self.bouwconf_map[self.active_dir].append(item)
+
     def load(self, filename = '.bouwconf'):
         """
         Load a saved configuration from the given `filename`
@@ -564,8 +579,9 @@ class Configuration(bouwer.util.Singleton):
         """
         Save a single configuration item
         """
-        json.dump(item.serialize(), fp, sort_keys=True, indent=4)
-        fp.write(os.linesep)
+        pass
+        #json.dump(item.serialize(), fp, sort_keys=True, indent=4)
+        #fp.write(os.linesep)
 
     def reset(self):
         """
@@ -612,7 +628,7 @@ class Configuration(bouwer.util.Singleton):
         self.log.debug(parent + item.name + ':' + str(item.__class__) + ' = ' + str(item.value(tree)))
                 
         for key in item._keywords:
-            self.log.debug('\t' + key + ' => ' + str(item._keywords[key]))
+            self.log.debug('\t' + key + ' => ' + str(item._keywords[key]).replace('\n', '.'))
         self.log.debug('')
 
         # TODO: this dumping could be improved...

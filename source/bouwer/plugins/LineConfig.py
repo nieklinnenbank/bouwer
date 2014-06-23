@@ -19,14 +19,17 @@ import os
 import sys
 import argparse
 from bouwer.plugin import *
+from bouwer.config import *
 
-##
-# Configure using standard I/O
-#
 class LineConfig(Plugin):
+    """
+    Configure using standard input
+    """
 
     def initialize(self):
-        """ Initialize plugin """
+        """
+        Initialize plugin
+        """
         self.conf.cli.parser.add_argument('--lineconfig',
             dest    = 'config_plugin',
             action  = 'store_const',
@@ -34,24 +37,20 @@ class LineConfig(Plugin):
             default = argparse.SUPPRESS,
             help    = 'Change configuration using standard I/O interface')
 
-    ##
-    # Main configuration routine
-    #
     def configure(self, conf):
+        """
+        Main configuration routine
+        """
 
-        self.item_count = 0
-        self.item_total = len(conf.trees)
-        self.done       = []
+        self.done = []
 
+        # Loop all bouwconfig in order
         for tree_name, tree in conf.trees.items():
-            self.item_total += len(tree.subitems)
-
-        for tree_name, tree in conf.trees.items():
-            for path in sorted(tree.bouwconfigs):
+            for bouwconf in conf.bouwconf_map:
                 self.print_path = False
 
-                for item in tree.bouwconfigs[path]:
-                    self._change_item(conf, tree, path, item)
+                for item in conf.bouwconf_map[bouwconf]:
+                    self._change_item(conf, tree, bouwconf, item)
 
         # Ask to save the modified configuration.
         print()
@@ -69,15 +68,16 @@ class LineConfig(Plugin):
             return 1
         return 0
 
-    ##
-    # Attempt to change a configuration item
-    #
     def _change_item(self, conf, tree, path, item):
-    
+        """
+        Attempt to change a configuration item
+        """
+
         # First ask for our dependencies, if needed
-        for dep in item.keywords.get('depends', []):
+        for dep in item._keywords.get('depends', []):
             if dep in tree.subitems:
-                self._change_item(conf, tree, path, tree.subitems[dep])
+                for dep_path in tree.subitems[dep]:
+                    self._change_item(conf, tree, dep_path, tree.subitems[dep][dep_path])
 
         # If this item is not satisfied in this tree, skip it
         if not item.satisfied(tree):
@@ -89,7 +89,7 @@ class LineConfig(Plugin):
 
         # Ask the user for the item value, if not only selectable list item.
         # TODO: broken!!! GCC isn't asked anymore for TARGET and HOST...
-        if item.keywords.get('in_list', None) is None:
+        if item._keywords.get('in_list', None) is None:
             while self._try_change_item(conf, tree, path, item) is not True:
                 pass
 
@@ -100,7 +100,7 @@ class LineConfig(Plugin):
             print()
         
         # Ask the user for the item keywords.
-        for key in item.keywords:
+        for key in item._keywords:
             while self._try_change_keyword(conf, tree, item, key) is not True:
                 pass
         
@@ -108,8 +108,8 @@ class LineConfig(Plugin):
         self.done.append(item)
 
         # For a list, also mark all options done
-        if item.type == list:
-            for opt in item.keywords.get('default', []):
+        if type(item) == ConfigList:
+            for opt in item._keywords.get('options', []):
                 self.done.append(tree.subitems[opt])
 
     def _read_input(self):
@@ -138,29 +138,29 @@ class LineConfig(Plugin):
 
         # Question mark means print the help
         if line == '?':
-            print(item.keywords.get('help', 'No help available'))
+            print(item._keywords.get('help', 'No help available'))
             return False
 
         # Change a boolean
-        if item.type == bool:
+        if type(item) is ConfigBool:
             if line == 'Y' or line == 'y': item.update(True)
             if line == 'N' or line == 'n': item.update(False)
             if line == 'k': pass
             if line == '?': pass
 
         # Change a string
-        if item.type == str: item.update(line)
+        if type(item) is ConfigString: item.update(line)
 
         # Change an integer
-        if item.type == int: item.update(int(line))
+        if type(item) is ConfigInt: item.update(int(line))
         
         # Change a float
-        if item.type == float: item.update(float(line))
+        if type(item) is ConfigFloat: item.update(float(line))
 
         # Change a list
-        if item.type == list:
+        if type(item) is ConfigList:
             try:
-                item.update(item.keywords['default'][int(line) - 1])
+                item.update(item._keywords['options'][int(line) - 1])
                 
                 # TODO: ask for the selected item's keywords too
                 
@@ -176,34 +176,37 @@ class LineConfig(Plugin):
     def _try_change_keyword(self, conf, tree, item, key):
     
         # Ignore special keywords
-        if key in ['title', 'help', 'default', 'childs', 'depends', 'in_list', 'tree']:
+        if key in ['title', 'help', 'options', 'depends', 'in_list', 'tree']:
             return True
     
-        sys.stdout.write('  [key]   ' + key + ' [' + str(item.keywords[key]) + '] ')
+        sys.stdout.write('  [key]   ' + key + ' [' + str(item._keywords[key]) + '] ')
         sys.stdout.flush()
         line = self._read_input()
+        if line:
+            item._keywords[key] = line
+
         return True
 
-    ##
-    # Print the input prompt for changing the given item.
-    #
     def _print_prompt(self, tree, path, item, input = True):
+        """ 
+        Print the input prompt for changing the given item.
+        """
 
         # Do we first need to print the Bouwconfig path?
         if not self.print_path:
-            print()
-            print(tree.name + ' : ' + str(os.path.dirname(os.path.relpath(path))))
+            print
+            print(tree.name + ' : ' + path)
             self.print_path = True
 
-        title = item.keywords.get('title', item.name)
+        title = item._keywords.get('title', item.name)
 
-        if item.type == list:
+        if type(item) is ConfigList:
             print('[list]  ' + title +' [' + str(item.value(tree)) + '] ')
 
             n = 1
-            for item_name in item.keywords['default']:
-                subitem = tree.subitems[item_name]
-                print('\t(' + str(n) + ') : ' + subitem.keywords.get('title', subitem.name))
+            for item_name in item._keywords['options']:
+                subitem = tree.get(item_name)
+                print('\t(' + str(n) + ') : ' + subitem._keywords.get('title', subitem.name))
                 n += 1
 
             if input:
@@ -211,19 +214,19 @@ class LineConfig(Plugin):
             sys.stdout.flush()
 
         else:
-            if item.type == bool:
+            if type(item) is ConfigBool:
                 prompt = '[bool]  ' + title
                 if input: prompt += ' (Y/y/N/n/?) '
 
-            if item.type == str:
+            if type(item) is ConfigString:
                 prompt = '[str]   ' + title
                 if input: prompt += ' (str/?) '
 
-            if item.type == int:
+            if type(item) is ConfigInt:
                 prompt = '[int]   ' + title
                 if input: prompt += ' (int/?) '
                 
-            if item.type == float:
+            if type(item) is ConfigFloat:
                 prompt = '[float] ' + title
                 if input: prompt += ' (float/?) '
 
