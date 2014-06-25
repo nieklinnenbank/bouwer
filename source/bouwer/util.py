@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import json
+
 """
 Bouwer generic utilities
 """
@@ -62,4 +64,15 @@ class Singleton(object):
         if '__class_obj__' in cls.__dict__:
             del cls.__class_obj__
             cls.__init__ = cls.__orig_init__
+
+class DictEncoder(json.JSONEncoder):
+    """
+    Basic encoder which uses an object's internal dict
+    """
+
+    def default(self, obj):
+        """
+        Encode object as JSON
+        """
+        return obj.__dict__
 

@@ -127,29 +127,15 @@ class Config(object):
         if item_name not in self._keywords['depends']:
             self._keywords['depends'].append(item_name)
 
-    def serialize(self):
+    def serialize(self, tree):
         """
-        Return JSON serializable representation of the item
+        Return serializable representation of the item
         """
-        pass
-        #raise Exception('reimplement this')
-        # TODO: can we improve this?
-        """
-        bouwconf_map = {}
-
-        for path in self.bouwconfigs:
-            bouwconf_map[path] = []
-        
-            for item in self.bouwconfigs[path]:
-                bouwconf_map[path].append(item.name)
-    
         return dict(name = self.name,
-                    type = str(self.type),
-                    value = str(self._value),
-                    keywords = self.keywords,
-                    bouwconfigs = bouwconf_map)
-        """
-
+                    type = self.__class__.__name__,
+                    value = self.value(tree),
+                    keywords = self._keywords)
+        
     def __str__(self):
         """ String representation """
         return str(self.value())
@@ -169,7 +155,7 @@ class ConfigBool(Config):
         """
         Constructor
         """
-        super(ConfigBool, self).__init__(name, value, **keywords)
+        super(ConfigBool, self).__init__(name, bool(value), **keywords)
 
     def value(self, tree = None):
         """
@@ -557,7 +543,38 @@ class Configuration(bouwer.util.Singleton):
         """
         Load a saved configuration from the given `filename`
         """
-        return False
+        if not os.path.isfile(filename):
+            return False
+
+        try:
+            contents = open(filename).read()
+        except IOError as e:
+            self.log.critical("failed to read configuration file `" +
+                               str(filename) + "':" + str(e))
+            sys.exit(1)
+
+        # TODO: this function sets all strings to unicode instead of str()
+        conf_dict = json.loads(contents, object_pairs_hook = collections.OrderedDict)
+
+        # Add all items to the configuration
+        for json_name, json_paths in conf_dict.iteritems():
+            for json_item in json_paths:
+                conf_class = getattr(bouwer.config, json_item['type'])
+                conf_item  = conf_class(json_item['name'],
+                                        json_item['value'],
+                                      **json_item['keywords'])
+                
+                # set active_dir to path
+                if 'path' in json_item:
+                    self.active_dir = json_item['path']
+
+                if type(conf_item) is ConfigTree:
+                    self.put(conf_item)
+                    self.active_tree = conf_item
+                else:
+                    self.put(conf_item, json_item['tree'])
+
+        return True
 
     def save(self, filename = '.bouwconf'):
         """
@@ -565,23 +582,28 @@ class Configuration(bouwer.util.Singleton):
         """
         fp = open(filename, 'w')
 
+        # Ordered dict makes sure items added stay in order,
+        # i.e. ConfigTree's will appear first in the JSON file
+        conf_dict = collections.OrderedDict()
+
         # Save only default tree items and overwrites        
-        for tree_name, tree in self.trees.items():
-            self._save_item(tree, fp)
+        for tree in self.trees.values():
+            conf_dict[tree.name] = [ tree.serialize(tree) ]
         
-            for item_name, item in tree.subitems.items():
-                if tree_name is 'DEFAULT' or 'tree' in item._keywords:
-                    self._save_item(item, fp)
+            for subitem_entry in tree.subitems.values():
+                for path, subitem in subitem_entry.iteritems():
 
+                    if subitem.name not in conf_dict:
+                        conf_dict[subitem.name] = []
+
+                    item_dict = subitem.serialize(tree)
+                    item_dict['tree'] = tree.name
+                    item_dict['path'] = path
+                    conf_dict[subitem.name].append(item_dict)
+
+        fp.write(json.dumps(conf_dict, ensure_ascii=True, indent=4, separators=(',', ': ')))
+        fp.write(os.linesep)
         fp.close()
-
-    def _save_item(self, item, fp):
-        """
-        Save a single configuration item
-        """
-        pass
-        #json.dump(item.serialize(), fp, sort_keys=True, indent=4)
-        #fp.write(os.linesep)
 
     def reset(self):
         """
@@ -634,6 +656,7 @@ class Configuration(bouwer.util.Singleton):
         # TODO: this dumping could be improved...
         # TODO: perhaps put the dump method in ConfigTree itself?
         if isinstance(item, ConfigTree):
+
             for child_item_name, paths in item.subitems.items():
                 for path, child_item in paths.items():
                     self._dump_item(child_item, tree, parent + item.name + '.')

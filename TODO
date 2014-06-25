@@ -1,47 +1,36 @@
-- package bouwer correctly: http://www.scotttorborg.com/python-packaging/everything.html
+[FOR RELEASE]
+(*) load & save configuration
 
-- builder mesh is hiding the error in the python back trace... we should fix this. put the
-  original Bouwfile in the backtrace!
+(*) ConfigHeader() support
+
+(*) see if we could support interpolation in keywords, e.g.:
+        Config('GCC', 'TARGET',
+                ldscript = 'architecture/$ARCH/kernel.ld')
+
+(*) builder mesh is hiding the error in the python back trace... we should fix this. put the
+    original Bouwfile in the backtrace!
+
+(*) fix error messages in plugin errors, especially on unknown attributes:
+    Traceback (most recent call last):
+      File "/home/fox/Repositories/Bouwer.git/source/bouwer/config.py", line 159, in __getattr__
+          return self.__dict__[name]
+
+(*) implement implicit C header dependency scanner please!
+    --> watch out for performance here!
+    --> maybe caching?
+
+(*) unittester is OK
+
+[features]
+- make a RequireVersion() builder or similar, to check for bouw version
 
 - when unknown dependency, the builder execution should be postponed as late as possible, such 
   that the builder has a chance to generate & execute. If the unknown dependency never comes, its an error!
 
-- TODO: what if the developer wants to have obj-y like conditional compilation, like kbuild/linux?
-
-  Bouwconfig:
-
-  config LIBMYTEST
-    bool My test library
-    depends on TARGET
-    help
-      This is a test library
-
-  config MYTEST_FEATURE1
-    depends on LIBMYTEST
-    help
-      A nice feature1
-
-  config MYTEST_FEATURE2
-    depends on LIBMYTEST
-    help
-      Nice feature number 2
-
-  Bouwfile:
-
-    def build(conf):
-        """
-        Build my test library
-        """
-
-        Object(conf.MYTEST_FEATURE1, 'feature1.c')
-        Object(conf.MYTEST_FEATURE2, 'feature2.c')
-
-        # This builder automaticall takes whatever Object()'s have
-        # been added in this directory and puts it in his own list..
-        # After Library() has been called, it clears the list of objects.
-        # and then a new library/program can be constructed.
-        Library(conf.LIBMYTEST, [ 'core.c', 'util.c' ])
-
+- also depend on the .bouwconf/Configuration changes for builders!
+    --> we may need to cache all Action command's... i.e. if the command changed, rebuild
+    --> but then what about python functions?
+    --> or, timestamp each Config object also
 
 - perhaps we can also support default build target:
 
@@ -52,6 +41,9 @@
   Bouwer should then add these builders to the default build target
 
 - Support generating a dynamic list of build targets for output in -h, and also include the python """ comments """ in the output!        
+
+- Lint() builder from FreeNOS, which has predefined config, which is default false. FreeNOS enables it.
+  --> this way a project can very fast enable full checks.
 
 - make oldconfig -> first load the "new" default configuration, and
   then for each "old" config item, set the value in the current config.
@@ -65,41 +57,21 @@
     keywords
       incpath = includes tests/includes libs/includes whatever/includes
 
+  In GCC/CLANG/..., its possible to do even incpath += myinc blabla/foo/bar/zzz
 
 - implement lazy plugin loading
   --> only load plugin builders, when they are called, such that not ALL plugins
       are loaded at startup, when they aren't needed!
   --> how much time do we save?
 
-- implement implicit C header dependency scanner please!
-    --> watch out for performance here!
-    --> maybe caching?
-
-- when overriding, the user may want to only append config keys, or make them unmodifyable.
-  For this, we need indirection support for keywords in Config's. E.g.:
-
-  # This appends the gcc cflags and linker flags for this override
-  config GCC
-        keywords
-            cflags  += -Wall -Werror
-            ldflags += -static
-  
-  # Sometimes the user may want to mark certain keywords as unmodifyable from the configuration plugins.
-  # for example, the user should never need to change the include path:
-  config GCC
-        keywords read
-            incpath = 'includes'
-
-
-  # To make a whole configuration item unmodifyable, simply mark it read-only:
+- To make a whole configuration item unmodifyable, simply mark it read-only:
   config FREEBSD
         bool FreeBSD OS
         readonly
         help
           This item is True when FreeBSD is detected with CheckOS()
 
-
-- UseLibrary should look in the ActionTree to fill in -L <path>
+? UseLibrary should look in the ActionTree to fill in -L <path>
     --> if two libraries with the same name, then solve like this:
         library/sub/path/libfoo.a
         library/other/path/libfoo.a
@@ -117,45 +89,18 @@
 
 - make a builder for sphinx
 
-- implement simple cherrypy frontend
+- implement simple cherrypy http frontend, e.g. for config and building
     --> do this with threading
 
-- see if we could support interpolation in keywords, e.g.:
-    Config('GCC', 'TARGET',
-            ldscript = 'architecture/$ARCH/kernel.ld')
+- implement daemon mode --> watch a directory and build on change
 
-- implement daemon mode
-
-- implement a --pretend mode, which doesn't really execute commands
+- implement a --pretend mode, which doesn't really execute commands, but prints Actions
 
 - implement on-the-fly action generation from Workers, to support source generators
 
-- support python 2.6.1 for MacOSX?
-
-- fix error messages in plugins, especially on unknown attributes:
-    Traceback (most recent call last):
-      File "/home/fox/Repositories/Bouwer.git/source/bouwer/config.py", line 159, in __getattr__
-          return self.__dict__[name]
-
-- also depend on the .bouwconf/Configuration changes for builders!
-    --> we may need to cache all Action command's... i.e. if the command changed, rebuild
-    --> but then what about python functions?
-    --> or, timestamp each Config object also
-
-- implement plugin.invoke('output', ...)
-
-- test bouwer on existing projects
-    - replace its build system completely with bouwer, e.g. apache or gcc or whatever
-    - final test is the linux kernel
-
-- test bouwer on all interesting operating systems and compilers and projects
-    --> we need integration software, e.g. jenkins-ci.org
-
-- implement CheckHeader, CheckLibrary, CheckCompiler
-    --> should go in parallel
-
 - localizable configuration text/titles?
-- status output modules:
+
+ status output modules:
     + verbose full command output:    gcc -o foo.o foo.c -Wall
     +/- fancified short command output: CC  foo.c
     + progress bar output:            [#######----------------] 33%
@@ -168,11 +113,36 @@
     - html web based frontend
 - http frontend for build output too.
     - e.g. an http daemon mode plugin, which has a config + output plugin
+
+- implement CheckHeader, CheckLibrary, CheckCompiler
+    --> should go in parallel
+
 - IDE integration, e.g. eclipse
-- builders
-- pre/post builder hook
+
+- builders pre/post builder hook
     - e.g. static code checks for C programs, which must happen on every invocation of e.g. the Object() builder
     - check must also happen on header files plz!
-- configuration items
-    +/- json persistency
+- implement plugin.invoke('output', ...)
+
+[compatibility]
+
+- require python 2.7, make explicit check in bouw.py
+
+- support python 2.6.1 for MacOSX?
+
+- package bouwer correctly: http://www.scotttorborg.com/python-packaging/everything.html
+
+- .tar.gz/.md5/.sha256 release
+
+- Windows + MSI installer?
+
+[quality]
+- unit tester for all source files
+- static source checkers
+- test bouwer on existing projects
+    - replace its build system completely with bouwer, e.g. apache or gcc or whatever
+    - final test is the linux kernel
+
+- test bouwer on all interesting operating systems and compilers and projects
+    --> we need integration software, e.g. jenkins-ci.org
 

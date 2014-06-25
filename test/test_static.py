@@ -94,3 +94,9 @@ class StaticTester(common.BouwerTester):
             except SystemExit as e:
                 self.assertEqual(e.code, 0, 'PyLint must be successful')
 
+    def test_todos(self):
+        """
+        Search for TODO entries in bouwer code
+        """
+        raise Exception('implement')
+

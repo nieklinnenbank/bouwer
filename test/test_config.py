@@ -105,14 +105,12 @@ class ConfigurationTester(ConfigTester):
 
     def test_put_override_tree(self):
         """ Override a configuration item in a specific tree and directory """
-        pass
+        raise Exception('implement')
 
     def test_load(self):
-        pass
-
+        raise Exception("implement")
     def test_save(self):
-        pass
-
+        raise Exception("implement")
     def test_reset(self):
         pass
 
