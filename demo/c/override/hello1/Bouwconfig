@@ -32,5 +32,7 @@ config HELLOMSG1
 config GCC
     bool
     keywords
-      ccflags = -c -O3
+      ccflags = -c -O3 -DBLAAT="${HELLOMSG1}" -DCOMPILER=${CC} -DFOO=1
+
+
 

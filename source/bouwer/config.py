@@ -62,7 +62,7 @@ class Config(object):
         Implements the conf_item['keyword'] mechanism.
         """
         try:
-            return self._keywords[key]
+            return self._interpolate(self._keywords[key])
         except KeyError:
 
             # TODO: there should be a clean way to ask for the item, which is directly
@@ -76,9 +76,41 @@ class Config(object):
             conf.active_dir = saved_dir
 
             if def_item is not None and def_item is not self:
-                return def_item[key]
+                return self._interpolate(def_item[key])
             else:
                 raise KeyError('no such key: ' + str(key))
+
+    def _interpolate(self, text):
+        """
+        Substitute ${ITEMNAME} with the value of a Configuration item.
+        """
+        offset = 0
+        output = ""
+        saved_idx = 0
+
+        while True:
+            # Start of the item name
+            idx_start = text.find('${', saved_idx)
+            if idx_start == -1:
+                break
+
+            # End of the item name
+            idx_end = text.find('}', idx_start)
+            if idx_end == -1:
+                break
+
+            # Get item
+            length = idx_end - idx_start
+            item = Configuration.Instance().get(text[idx_start+2 : idx_start+length])
+            
+            # Append to the output
+            output += text[ saved_idx : saved_idx + (idx_start-saved_idx) ]
+            output += str(item.value())
+            saved_idx = idx_end + 1
+
+        # Append the last part
+        output += text[ saved_idx : ]
+        return output
 
     def satisfied(self, tree = None):
         """

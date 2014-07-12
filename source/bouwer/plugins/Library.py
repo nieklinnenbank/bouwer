@@ -57,9 +57,6 @@ class Library(Plugin):
         for src in sources:
             compiler.c_object(src)
 
-        import pdb
-        pdb.set_trace()
-
         # Generate action for linking the library
         self.build.action(target, compiler.c_object_list,
                           cc['ar'] + ' ' +

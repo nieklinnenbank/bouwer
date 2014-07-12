@@ -9,18 +9,13 @@
   23     Object(conf.LIBDUMMY_UTIL, 'util.c')
    24     Library(conf.LIBDUMMY, [ 'lookup.c' ])
 
-
-==> CheckFlags or CheckHeader can update a ConfigItem with confitem=conf tag
-
 ==> CheckFlags?? Check for a C compiler flag like autoconf, and remove it if not?
     ==> Extend the CheckCompiler?
 
+==> improve the output of bouwer, especially debug when running actions etc...
+
 (*) Support fully overrides in a configtree.
     - Support to override a ConfigList, e.g. add items to CC, change them, or also remove them should work.
-
-- see if we could support interpolation in keywords, e.g.:
-        Config('GCC', 'TARGET',
-                ldscript = 'architecture/$ARCH/kernel.ld')
 
 ==> Dependency system could be improved.... especially the caching is not clean..
 ==> Monitor filesystem for changes, all platforms:
