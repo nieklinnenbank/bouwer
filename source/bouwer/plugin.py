@@ -28,6 +28,7 @@ import importlib
 from bouwer.util import Singleton
 from bouwer.config import Configuration
 from bouwer.builder import BuilderManager
+from bouwer.action import ActionManager
 
 class Plugin:
     """
@@ -38,8 +39,9 @@ class Plugin:
         """
         Constructor
         """
-        self.conf  = Configuration.Instance()
-        self.build = BuilderManager.Instance()
+        self.conf   = Configuration.Instance()
+        self.build  = BuilderManager.Instance()
+        self.log    = logging.getLogger(__name__)
 
     def config_input(self):
         """ Configuration items as input """
@@ -49,13 +51,29 @@ class Plugin:
         """ Configuration items as output """
         return []
 
+    def config_action_output(self):
+        """ Configuration items as output that need to run an Action """
+        return []
+
     # TODO: why not add the prototypes here?
     # and then call that via BuildInstance?
     # The default prototypes could just invoke each other..
     # def execute_config()
     # def finished(self, action):
-    def completed(self, action):
-        pass
+
+    def action_event(self, action, event):
+        """
+        Default ActionEvent handler
+
+        This function is called when an ActionEvent occurs
+        for any submitted Actions. For example, when the Action
+        begins or has finished execution.
+        """
+        if event.name == 'finish':
+            if event.result != 0:
+                self.log.error(str(action.builder) + " terminated with unexpected exit status " + \
+                               event.result + " -- aborting")
+                sys.exit(event.result)
 
     def initialize(self):
         """ Initialize the plugin """
@@ -142,13 +160,11 @@ class PluginManager(Singleton):
         except AttributeError:
             pass
     
-        # Look for the first plugin with an output() function.
-        for plugin_name, plugin in self.plugins.items():
-            try:
-                getattr(plugin, 'output')
-                return plugin
-            except AttributeError:
-                pass
+        # Otherwise, use the PrettyOutput plugin.
+        try:
+            return self.plugins['PrettyOutput']
+        except KeyError:
+            pass
 
         # No output plugin available.
         return None

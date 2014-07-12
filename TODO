@@ -1,31 +1,63 @@
 [FOR RELEASE]
-(*) load & save configuration
 
-(*) ConfigHeader() support
+(*) Better detect need to rebuild, e.g. changed configs.
+    (*) detect if the Bouwconfig changed to rebuild???
 
-(*) see if we could support interpolation in keywords, e.g.:
+===> THis goes wrong in c/demo/library, because Object() is scheduled later than Library....
+
+ 22     ConfigHeader('config.h')
+  23     Object(conf.LIBDUMMY_UTIL, 'util.c')
+   24     Library(conf.LIBDUMMY, [ 'lookup.c' ])
+
+
+==> CheckFlags or CheckHeader can update a ConfigItem with confitem=conf tag
+
+==> CheckFlags?? Check for a C compiler flag like autoconf, and remove it if not?
+    ==> Extend the CheckCompiler?
+
+(*) Support fully overrides in a configtree.
+    - Support to override a ConfigList, e.g. add items to CC, change them, or also remove them should work.
+
+- see if we could support interpolation in keywords, e.g.:
         Config('GCC', 'TARGET',
                 ldscript = 'architecture/$ARCH/kernel.ld')
 
-(*) builder mesh is hiding the error in the python back trace... we should fix this. put the
-    original Bouwfile in the backtrace!
+==> Dependency system could be improved.... especially the caching is not clean..
+==> Monitor filesystem for changes, all platforms:
+    ==> https://pypi.python.org/pypi/watchdog
 
-(*) fix error messages in plugin errors, especially on unknown attributes:
-    Traceback (most recent call last):
-      File "/home/fox/Repositories/Bouwer.git/source/bouwer/config.py", line 159, in __getattr__
-          return self.__dict__[name]
+(*) Ensure high quality for release
 
-(*) implement implicit C header dependency scanner please!
-    --> watch out for performance here!
-    --> maybe caching?
+    (*) UseLibrary is a MESS.
+        --> it should all use the compiler backend.
+        --> it should work also with -Iinclude in incpath, e.g. a ConfigHeader() in include/Bouwfile
+            now it gives an error:
+      File "/home/fox/Repositories/Bouwer.git/source/bouwer/builder.py", line 155, in _invoke
+          return self.builder.execute_any(*arguments, **keywords)
+            File "/home/fox/Repositories/Bouwer.git/source/bouwer/plugins/UseLibrary.py", line 83, in execute_any
+                tmp._keywords['ldpath']  += ':' + os.path.dirname(target.absolute)
+                KeyError: 'ldpath'
 
-(*) unittester is OK
+    (*) builder mesh is hiding the error in the python back trace... we should fix this. put the
+        original Bouwfile in the backtrace!
+
+    (*) fix error messages in plugin errors, especially on unknown attributes:
+        Traceback (most recent call last):
+          File "/home/fox/Repositories/Bouwer.git/source/bouwer/config.py", line 159, in __getattr__
+              return self.__dict__[name]
+
+    (*) unittester is OK
 
 [features]
 - make a RequireVersion() builder or similar, to check for bouw version
+- Support for other languages, like Java.
+    ==> builders like Object(), Program(), Library() may need to be generic too.
 
-- when unknown dependency, the builder execution should be postponed as late as possible, such 
-  that the builder has a chance to generate & execute. If the unknown dependency never comes, its an error!
+    ==> perhaps the builders should be generic, but the compiler *backends* should be language specific.
+        they can look at the extension, and then decide which backend. thats how it works from the commandline too.
+
+--> when unknown dependency, the builder execution should be postponed as late as possible, such 
+    that the builder has a chance to generate & execute. If the unknown dependency never comes, its an error!
 
 - also depend on the .bouwconf/Configuration changes for builders!
     --> we may need to cache all Action command's... i.e. if the command changed, rebuild
@@ -98,6 +130,8 @@
 
 - implement on-the-fly action generation from Workers, to support source generators
 
+- CheckCompiler could try the next available C compiler if the current one failed.
+
 - localizable configuration text/titles?
 
  status output modules:
@@ -116,6 +150,8 @@
 
 - implement CheckHeader, CheckLibrary, CheckCompiler
     --> should go in parallel
+    --> maybe this needs inspect() in Plugin's, to decide if a plugin agrees on the current config...
+        --> or can the config_input()/config_output() work?
 
 - IDE integration, e.g. eclipse
 

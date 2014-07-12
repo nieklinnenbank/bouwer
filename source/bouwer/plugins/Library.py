@@ -27,7 +27,7 @@ class Library(Plugin):
 
     def config_input(self):
         """ Configuration input items """
-        return [ 'CC' ]
+        return [ 'CC', 'CHECK', 'CONFIG' ]
 
     def config_output(self):
         """ Configuration output items """
@@ -57,11 +57,15 @@ class Library(Plugin):
         for src in sources:
             compiler.c_object(src)
 
+        import pdb
+        pdb.set_trace()
+
         # Generate action for linking the library
         self.build.action(target, compiler.c_object_list,
                           cc['ar'] + ' ' +
                           cc['arflags'] + ' ' + str(target) + ' ' +
-                        (' '.join([str(o) for o in compiler.c_object_list])))
+                        (' '.join([str(o) for o in compiler.c_object_list])),
+                          pretty_name='LIB')
 
         # Clear C object list
         compiler.c_object_list = []

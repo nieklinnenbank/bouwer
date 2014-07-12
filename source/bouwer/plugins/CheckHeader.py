@@ -17,23 +17,55 @@
 
 import os
 import os.path
+from bouwer.plugin import *
+from bouwer.builder import *
+import bouwer.util
+import compiler
 
-##
-# Check if a configuration supports the given header file.
-#
-class CheckHeader:
+class CheckHeader(Plugin):
+    """
+    See if a C header exists.
+    """
 
     def config_input(self):
         return [ 'CC' ]
 
-    ##
-    # Decide if we "agree" with the given configuration.
-    #
-    def inspect(self, conf):
-        # Todo: attempt to compile a C program with this config.
-        # Then modify the configuration based on if the header file exists and compiles
-        pass
+    def config_action_output(self):
+        return [ 'CHECK' ]
 
-    def execute_any(self, filename):
-        print("outputting header to " + str(filename))
+    def execute_config(self, conf, header, is_required = False):
 
+        # Generate C file, if not yet done already.
+        # TODO: generic directory for putting these files please.
+        cfile = bouwer.util.tempfile(self.__class__.__name__ + '.' + conf.name + '.c')
+
+        # TODO: these must be cleaned up too. If in the generic directory, we can simply remove the directory....
+        if not os.path.isfile(cfile):
+            fp = open(cfile, 'w')
+            fp.write('#include "' + header + '"\nint main(void) { return 0; }')
+            fp.close()
+
+        # Schedule Action to compile it
+        compiler.c_object(SourcePath(cfile),
+                          confitem=conf, filename=header,
+                          pretty_name='CHECK', pretty_target=header,
+                          required=is_required, quiet=True)
+
+    def action_event(self, action, event):
+        """
+        Called when an Action has finished
+        """
+
+        item = action.tags['confitem']
+
+        # Update the configuration item
+        if event.name == 'finish' and event.result != 0:
+            if action.tags['required']:
+                self.log.error('C Header ' + action.tags['filename'] + ' not installed')
+                sys.exit(1)
+            else:
+                item.update(False)
+        else:
+            item.update(True)
+
+        action.tags['pretty_target'] += ' ... ' + str(item.value())

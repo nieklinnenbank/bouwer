@@ -15,7 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 #include "libdummy.h"
+#include "config.h"
 
 int lookup_string(char *param)
 {
@@ -27,5 +29,11 @@ int lookup_string(char *param)
 
 int lookup_int(int param)
 {
+#ifdef CONFIG_LIBDUMMY_BAR
+    printf("libdummy bar feature activated\n");
+    return param * 2;
+#else
+    printf("no bar feature available\n");
     return param;
+#endif
 }

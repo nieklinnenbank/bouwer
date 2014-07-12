@@ -35,6 +35,19 @@ class PrettyOutput(Plugin):
             default = argparse.SUPPRESS,
             help    = 'Output only the builder name and target of each action')
 
-    def output(self, action, event, **tags):
-        if event.event == 'execute':
-            print('  Object  ' + str(action.target))
+    def action_event(self, action, event):
+        if event.name == 'execute':
+            # TODO: how to get the builder instance?????
+
+            if 'pretty_name' in action.tags:
+                pretty_name = action.tags['pretty_name']
+            else:
+                pretty_name = str(action.builder.__class__.__name__)
+
+            if 'pretty_target' in action.tags:
+                pretty_target = action.tags['pretty_target']
+            else:
+                pretty_target = str(action.target)
+
+            print(pretty_name.rjust(6) + '  ' + pretty_target)
+

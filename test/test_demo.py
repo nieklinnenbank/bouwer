@@ -177,3 +177,11 @@ class OverrideTester(DemoClass):
         self.assertEqual(self._run_prog('hello1/hello1'), "Hello World 1!\n")
         self.assertEqual(self._run_prog('hello2/hello2'), "Hello World 2!\n")
 
+@demo('c/performance')
+class PerformanceTester(DemoClass):
+    """ Tests for performance """
+
+    def test_ratio(self):
+        """ Bouwer should faster than SCons, but slightly slower than Make """
+        raise Exception('implement')
+

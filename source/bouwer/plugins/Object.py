@@ -23,6 +23,10 @@ class Object(Plugin):
     Build an executable object
     """
 
+    def config_input(self):
+        """ Configuration input items """
+        return [ 'CC', 'LINK_LIBRARIES', 'CONFIG' ]
+
     def execute_source(self, source):
         """
         Build an executable object given its `source` file

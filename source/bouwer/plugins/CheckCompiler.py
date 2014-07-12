@@ -15,14 +15,52 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os
-import os.path
+from bouwer.plugin import *
+from bouwer.builder import *
+import bouwer.util
 
-class CheckCompiler:
+class CheckCompiler(Plugin):
+    """
+    Check if the given compiler exists
+    """
 
-    def config_output(self):
+    def config_action_output(self):
         return [ 'CC' ]
 
-    def execute_any(self, filename):
-        print("checking compiler")
+    def execute_config(self, item):
+        # TODO: but we should have a cache which this result.
+        #   --> generic module please.
+        # --> just make it a really target, e.g. .conf/$tree.$item.exe
+        # --> instead of a tmp file
 
+        # Save input C compiler
+        self.cc = self.conf.get(item.value())
+
+        # Generate C file, if not yet done already.
+        # TODO: generic directory for putting these files please.
+        cfile = bouwer.util.tempfile(self.__class__.__name__ + '.' + self.cc.name + '.c')
+
+        if not os.path.isfile(cfile):
+            fp = open(cfile, 'w')
+            fp.write('int main(void) { return 0; }')
+            fp.close()
+
+        # Schedule Action to compile it
+        self.build.action(TargetPath(cfile + '.o'),
+                         [SourcePath(cfile)],
+                          self.cc['cc'] + ' ' + cfile + '.o ' +
+                          self.cc['ccflags'] + ' ' + cfile,
+                          pretty_name='CHECK',
+                          pretty_target=self.cc.name)
+
+    def action_event(self, action, event):
+        """
+        Called when an Action has finished
+        """
+        if event.name == 'finish' and event.result != 0:
+            # The C compiler cannot generate C objects.
+            # TODO: Try the next C compiler automatically, if any.
+            self.log.error('C compiler not installed or unable to execute: ' + str(self.cc.name))
+            sys.exit(1)
+
+        action.tags['pretty_target'] += ' ... True'

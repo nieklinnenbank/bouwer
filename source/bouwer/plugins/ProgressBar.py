@@ -37,13 +37,12 @@ class ProgressBar(Plugin):
 
         self.bar = progressbar.ProgressBar('blue')
 
-    def output(self, action, event, **tags):
+    def action_event(self, action, event):
         """
         Called when an :class:`.ActionEvent` is triggered
         """
-
-        todo  = tags['pending'] + tags['running']
-        done  = tags['finished']
+        todo  = len(self.build.actions.pending) + len(self.build.actions.running)
+        done  = len(self.build.actions.finished)
         perc  = (done / (todo + done)) * 100
         
-        self.bar.render(perc, action.target)#, action.target)
+        self.bar.render(perc, action.target)

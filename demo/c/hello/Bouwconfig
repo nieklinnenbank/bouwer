@@ -27,3 +27,10 @@ config HELLOMSG
     help
       Message for the Hello World Program
 
+config HAS_SYSLOG
+    bool "Syslog facility"
+    default false
+    help
+      Fancy logging
+      Test.
+

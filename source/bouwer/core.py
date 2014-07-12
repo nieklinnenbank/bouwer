@@ -87,6 +87,7 @@ def execute():
 
         # TODO: generate an error if no targets are executed.
 
+        # TODO: execute tree's in parallel?
         # Traverse Bouwfiles for each custom tree
         if len(conf.trees) > 1:
             for tree_name, tree in conf.trees.items():
@@ -97,3 +98,5 @@ def execute():
         else:
             build.execute(target, conf.trees.get('DEFAULT'))
 
+    # Flush all caches
+    bouwer.util.Cache.FlushAll()

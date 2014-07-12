@@ -25,6 +25,7 @@ import sys
 import copy
 import logging
 import glob
+import shutil
 import bouwer.config
 import bouwer.action
 import bouwer.util
@@ -62,6 +63,8 @@ class SourcePath(Path):
         """
         super(SourcePath, self).__init__(path)
         #caller   = os.path.abspath(self.build.active_bouwfile)
+
+        # TODO: also do a os.stat() in here and in TargetPath(), to avoid doing multiple os.stat()....
         location = os.path.relpath(self.conf.active_dir) #os.path.dirname(caller))
         self.absolute = os.path.normpath(location + os.sep + path)
 
@@ -133,10 +136,11 @@ class BuilderInstance:
 
             # TODO: bug! how do we know the arguments list is a *FILES* list?
             if hasattr(self.builder, 'execute_config'):
-                return self.builder.execute_config(arguments[0],
-                                                   self._source_path_list(arguments[1]))
-            else:
-                return self.builder.execute_config_params(*arguments)
+                if len(arguments) == 2:
+                    return self.builder.execute_config(arguments[0],
+                                                       self._source_path_list(arguments[1]))
+                else:
+                    return self.builder.execute_config(*arguments)
 
         elif type(arguments[0]) is str:
             if len(arguments) == 1 and hasattr(self.builder, 'execute_source'):
@@ -184,9 +188,14 @@ class BuilderMesh:
         self.manager = manager
         self.conf = self.manager.conf
 
+        # Instances found in Bouwfiles, pending execution.
         self.instances = []
-        self.outputs   = {}
 
+        # Instance that is currently executing, if any.
+        self.active_instance = None
+
+        # Builders which can provide a particular config item.
+        self.outputs   = {}
         self.log = logging.getLogger(__name__)
 
     # TODO: also take into account, the config items passed to execute()!
@@ -197,7 +206,7 @@ class BuilderMesh:
         self.manager.log.debug("inserting instance: " + str(instance))
 
         # Add to outputs list
-        for output_item in instance.builder.config_output():
+        for output_item in instance.builder.config_output() + instance.builder.config_action_output():
             if output_item not in self.outputs:
                 self.outputs[output_item] = []
             self.outputs[output_item].append(instance)
@@ -207,41 +216,77 @@ class BuilderMesh:
     def _try_execute(self, instance):
         """
         Try to execute the given builder instance
+        BuilderInstance can only be executed if its Config inputs are satisfied.
         """
-        if instance.run: return
+        self.log.debug('instance=' + str(instance.builder))
+
+        if instance.run:
+            return False
 
         # See if all our input configuration items are done
         for input_item in instance.builder.config_input():
+
+            self.log.debug('depends='+str(input_item))
+
+            # Is the config item being produced in this round already?
+            # Do not schedule right now then, because otherwise the dependency
+            # is not met. 
+            if input_item in self.conf_this_round:
+                return False
+
+            # See if any other builder needs to output for us first.
             if input_item in self.outputs:
                 for output_instance in self.outputs[input_item]:
                     self._try_execute(output_instance)
-                return
+                return False
 
-        # If we got here, we may execute!
+            # None means the configuration must be final
+            if input_item is None:
+                if len(self.outputs) > 0 or len(self.conf_this_round) > 0:
+                    return False
+
+        # If we got here, we may execute! Remove us from output list.
         for output_item in instance.builder.config_output():
             self.outputs[output_item].remove(instance)
 
             if len(self.outputs[output_item]) == 0:
                 del self.outputs[output_item]
 
+        # If the output needs to run an Action, it must prevent its dependencies to execute this round.
+        for output_item in instance.builder.config_action_output():
+            self.conf_this_round.append(output_item)
+            self.outputs[output_item].remove(instance)
+            
+            if len(self.outputs[output_item]) == 0:
+                del self.outputs[output_item]
+
         self.log.debug("executing instance: " + str(instance))
+        self.active_instance = instance
         instance.call()
         self.instances.remove(instance) # TODO: performance bottleneck?
+        return True
 
     def execute(self):
         """
         Run all builders
         """
         while len(self.instances) > 0:
-            inst = self.instances[:]
+            inst  = self.instances[:]
+            again = True
+            self.conf_this_round = []
 
-            for instance in inst:
-                self._try_execute(instance)
+            while again:
+                again = False
+                for instance in inst:
+                    if self._try_execute(instance):
+                        again = True
 
-            # Now execute all generated actions
-            # TODO: execute all actions here, which have
-            # dependencies which can be solved at this point
             self.log.debug("executing all actions!")
+
+            if self.manager.conf.args.clean:
+                self.manager.actions.clean()
+            else:
+                self.manager.actions.run()
 
 class BuilderParser:
     """
@@ -320,6 +365,9 @@ class BuilderManager(bouwer.util.Singleton):
     Manages access to the builder layer
     """
 
+    """ Directory with temporary builder files """
+    BOUWTEMP = '.bouwtemp'
+
     def __init__(self):
         """ 
         Constructor
@@ -354,18 +402,22 @@ class BuilderManager(bouwer.util.Singleton):
             self.actions.dump()
 
         # Run or clean the actions?
+
+        # TODO: hey, the BuilderMesh also has this....
         if self.conf.args.clean:
             self.actions.clean()
+            shutil.rmtree(self.BOUWTEMP, True)
         else:
             self.actions.run()
 
-    def action(self, target, sources, command):
+    def action(self, target, sources, command, **tags):
         """ 
         Callback from builders to generate an Action
 
         :param str target: Target name of the new action
         :param list sources: List of dependencies
         :param str command: Command to execute
+        :param event_handler: Action event handler is called on events.
         """
 
         # TODO: inefficient!
@@ -380,5 +432,6 @@ class BuilderManager(bouwer.util.Singleton):
         if len(dirname) > 0 and not os.path.exists(dirname):
             os.makedirs(dirname)
 
-        self.actions.submit(target.absolute, src_list, command)
+        self.actions.submit(target.absolute, src_list, command, tags,
+                            self.parser.mesh.active_instance.builder)
 

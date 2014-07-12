@@ -45,11 +45,20 @@ config GCC
 config CLANG
     bool "LLVM Clang"
     keywords
-      cc      = clang
-      asm     = llvm-as
-      ld      = llvm-ld
-      ccflags = -Wall -Wextra
-    help
+      cc      = clang -o
+      asm     = clang -o
+      ld      = clang -o
+      ar      = ar
+      ccflags = -Wall -Wextra -c
+      ldflags = -Wall -Wextra
+      ldpath  = 
+      ldflag  = -L
+      libs    =
+      libflag = -l
+      incflag = -I
+      incpath =
+      arflags = crs
+help
       See the Clang compiler homepage at http://llvm.org
 
 config MSVC10
@@ -59,8 +68,26 @@ config MSVC10
       asm     = asm.exe
       ld      = link.exe
       ccflags = \err:full \extra:all
+      ldflags = 
+      ldpath  = 
+      ldflag  = 
+      libs    =
+      libflag = 
+      incflag = 
+      incpath =
+      arflags = 
     help
       See microsoft homepage at http://www.microsoft.com
+
+config TCC
+    bool "Tiny C Compiler"
+    keywords
+      cc      = tcc -o 
+      asm     = tcc -o 
+      ld      = tcc -o 
+      cflags  = -Wall
+    help
+      See the Tiny C compiler website http://bellard.org/tcc/
 
 endchoice
 

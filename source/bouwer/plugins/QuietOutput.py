@@ -33,7 +33,7 @@ class QuietOutput(Plugin):
             default = argparse.SUPPRESS,
             help    = 'Do not output anything unless an error occurs')
 
-    def output(self, action, event, **tags):
+    def action_event(self, action, event):
         """ Does nothing for quiet """
         pass
 

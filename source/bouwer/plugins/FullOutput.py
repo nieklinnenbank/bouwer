@@ -38,6 +38,6 @@ class FullOutput(Plugin):
     ##
     # Called just before the Action is executed by the worker.
     #
-    def output(self, action, event, **tags):
-        if event.event == 'execute':
+    def action_event(self, action, event):
+        if event.name == 'execute':
             print(str(event.worker) + ' : ' + str(action.command))

@@ -163,3 +163,11 @@ class ConfigTreeTester(ConfigTester):
         self.assertFalse(self.conf.get('TREE2').value())
         self.assertFalse(self.conf.get('TREE3').value())
 
+class ConfigListTester(ConfigTester):
+    def test_override_add_items(self):
+        pass
+    def test_override_change_items(self):
+        pass
+    def test_override_remove_items(self):
+        pass
+

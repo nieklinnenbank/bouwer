@@ -29,7 +29,7 @@ class Program(Plugin):
 
     def config_input(self):
         """ Configuration input items """
-        return [ 'CC', 'LINK_LIBRARIES' ]
+        return [ 'CC', 'LINK_LIBRARIES', 'CHECK', 'CONFIG' ]
 
     def execute_config(self, item, sources):
         """
@@ -71,5 +71,6 @@ class Program(Plugin):
                           objects + extra, 
                           cc['ld'] + ' ' + str(target) + ' ' +
                          (' '.join([str(o) for o in objects])) + ' ' + ldpath +
-                          cc['ldflags'])
+                          cc['ldflags'],
+                          pretty_name='LINK')
 

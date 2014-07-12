@@ -16,9 +16,11 @@
  */
 
 #include <stdio.h>
+#include "config.h"
 
 int main(void)
 {
-    printf("Hello World!\n");
+    printf(CONFIG_HELLOMSG "\n");
     return 0;
 }
+

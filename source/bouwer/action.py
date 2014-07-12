@@ -20,6 +20,7 @@ Bouwer action layer
 """
 
 import multiprocessing
+import subprocess
 import os
 import os.path
 import sys
@@ -108,11 +109,7 @@ class WorkerManager:
             ev = self._events.get()
             self.log.debug("got event: " + str(ev))
             
-            if ev.event == 'finish':
-                if ev.result != 0:
-                    self.log.critical('non-zero exit status ' + str(ev.result) + ' from ' + str(ev.worker))
-                    sys.exit(1)
-
+            if ev.name == 'finish':
                 self.log.debug("finished " + str(ev.target) + " by " + str(ev.worker))
             
                 for action in collect(ev.target):
@@ -132,13 +129,13 @@ class ActionEvent:
     Represents an event which occurred for an :class:`.Action`
     """
 
-    def __init__(self, worker, target, event, result = None):
+    def __init__(self, worker, target, name, result = None):
         """
         Constructor
         """ 
         self.worker = worker
         self.target = target
-        self.event  = event
+        self.name   = name
         self.result = result
         self.time   = datetime.datetime.now()
 
@@ -147,7 +144,7 @@ class Action:
     Represents an executable action.
     """
 
-    def __init__(self, args, target, sources, command):
+    def __init__(self, args, target, sources, command, tags, builder):
         """
         Constructor
         """
@@ -155,6 +152,8 @@ class Action:
         self.target  = target
         self.sources = sources
         self.command = command
+        self.tags    = tags
+        self.builder = builder
         self.provide = []
 
     def satisfied(self, pending, running):
@@ -191,9 +190,12 @@ class Action:
                 return True
 
             # See if their timestamp is larger than ours
-            st = os.stat(src)
-            if st.st_mtime > my_st.st_mtime:
-                return True
+            try:
+                st = os.stat(src)
+                if st.st_mtime > my_st.st_mtime:
+                    return True
+            except OSError:
+                pass
 
         # TODO: also decide() against the .bouwconf / Configuration!
         # Since, we need to (partly) rebuild if the config has changed.
@@ -205,7 +207,16 @@ class Action:
         """
         Execute the action
         """
-        return os.system(self.command)
+
+        # If quiet mode is set, do not show any output
+        if 'quiet' in self.tags and self.tags['quiet']: 
+            try:
+                subprocess.check_output(self.command.split(' '), stderr=subprocess.PIPE)
+                return 0
+            except subprocess.CalledProcessError as e:
+                return e.returncode
+        else:
+            return os.system(self.command)
 
     def __str__(self):
         """
@@ -251,7 +262,7 @@ class ActionManager:
         self.events   = multiprocessing.Queue()
         self.workers  = []
 
-    def submit(self, target, sources, command):
+    def submit(self, target, sources, command, tags, builder):
         """
         Submit a new :class:`.Action` for execution
         
@@ -260,7 +271,7 @@ class ActionManager:
         if target in self.pending:
             raise Exception("target " + str(target) + " already submitted")
 
-        action = Action(self.args, target, sources, command)
+        action = Action(self.args, target, sources, command, tags, builder)
         self.pending[target] = action
 
         # TODO: circular dep check
@@ -298,20 +309,17 @@ class ActionManager:
         # TODO: use class constants instead of strings
         # TODO: pass the action manager instead?
         #       together with the current configuration
-        if ev.event == 'execute':
-            self._output_plugin.output(self.running[ev.target],
-                                       ev,
-                                       pending=len(self.pending),
-                                       running=len(self.running),
-                                       finished=len(self.finished))
-            
-        elif ev.event == 'finish':
-            self._output_plugin.output(self.finished[ev.target],
-                                       ev,
-                                       pending=len(self.pending),
-                                       running=len(self.running),
-                                       finished=len(self.finished))
- 
+        if ev.name == 'execute':
+            action = self.running[ev.target]
+        if ev.name == 'finish':
+            action = self.finished[ev.target]
+
+        # Report the vent to the builder
+        action.builder.action_event(action, ev)
+         
+        # Invoke output plugin.
+        self._output_plugin.action_event(action, ev)
+
     def collect(self, target = None):
         """
         Retrieve more :class:`.Action` objects to execute

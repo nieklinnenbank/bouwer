@@ -553,8 +553,8 @@ class Configuration(bouwer.util.Singleton):
                                str(filename) + "':" + str(e))
             sys.exit(1)
 
-        # TODO: this function sets all strings to unicode instead of str()
-        conf_dict = json.loads(contents, object_pairs_hook = collections.OrderedDict)
+        # Parse the JSON and convert to python dict.
+        conf_dict = json.loads(contents, cls = bouwer.util.AsciiDecoder)
 
         # Add all items to the configuration
         for json_name, json_paths in conf_dict.iteritems():

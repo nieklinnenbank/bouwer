@@ -16,6 +16,7 @@
  */
 
 #include "libdummy.h"
+#include "config.h"
 
 int util_same(int param)
 {
