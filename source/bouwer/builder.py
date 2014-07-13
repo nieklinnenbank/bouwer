@@ -142,6 +142,10 @@ class BuilderInstance:
                 else:
                     return self.builder.execute_config(*arguments)
 
+            if hasattr(self.builder, 'execute_config_params'):
+                return self.builder.execute_config_params(*arguments)
+ 
+
         elif type(arguments[0]) is str:
             if len(arguments) == 1 and hasattr(self.builder, 'execute_source'):
                 return self.builder.execute_source(SourcePath(arguments[0]))
@@ -306,6 +310,7 @@ class BuilderParser:
         for plugin_name, plugin in bouwer.plugin.PluginManager.Instance().plugins.items():
             if hasattr(plugin, 'execute_target') or \
                hasattr(plugin, 'execute_config') or \
+               hasattr(plugin, 'execute_config_params') or \
                hasattr(plugin, 'execute_source') or \
                hasattr(plugin, 'execute_any'):
 

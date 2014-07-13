@@ -71,6 +71,6 @@ class Program(Plugin):
                           objects + extra, 
                           cc['ld'] + ' ' + str(target) + ' ' +
                          (' '.join([str(o) for o in objects])) + ' ' + ldpath +
-                          cc['ldflags'],
+                          cc['ldflags'] + ' ' + cc['ldscript'],
                           pretty_name='LINK')
 
