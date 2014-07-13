@@ -9,6 +9,7 @@
   23     Object(conf.LIBDUMMY_UTIL, 'util.c')
    24     Library(conf.LIBDUMMY, [ 'lookup.c' ])
 
+==> CheckLibrary
 ==> CheckFlags?? Check for a C compiler flag like autoconf, and remove it if not?
     ==> Extend the CheckCompiler?
 
@@ -32,6 +33,24 @@
             File "/home/fox/Repositories/Bouwer.git/source/bouwer/plugins/UseLibrary.py", line 83, in execute_any
                 tmp._keywords['ldpath']  += ':' + os.path.dirname(target.absolute)
                 KeyError: 'ldpath'
+
+    ? UseLibrary should look in the ActionTree to fill in -L <path>
+    --> if two libraries with the same name, then solve like this:
+        library/sub/path/libfoo.a
+        library/other/path/libfoo.a
+        UseLibrary(conf.FOO, ['sub/path/libfoo', 'libbar'])
+
+    --> add a config option to also add -I or -isystem for libraries, ie:
+        BoolConfig('GCC',
+                    libinc = '.')
+
+        this will make a -I to the directory of the library itself.
+        if the user has like a 'include/' dir for every source lib dir, then:
+        
+        BoolConfig('GCC',
+                    libinc = 'include')
+
+
 
     (*) builder mesh is hiding the error in the python back trace... we should fix this. put the
         original Bouwfile in the backtrace!
@@ -103,22 +122,6 @@
         help
           This item is True when FreeBSD is detected with CheckOS()
 
-? UseLibrary should look in the ActionTree to fill in -L <path>
-    --> if two libraries with the same name, then solve like this:
-        library/sub/path/libfoo.a
-        library/other/path/libfoo.a
-        UseLibrary(conf.FOO, ['sub/path/libfoo', 'libbar'])
-
-    --> add a config option to also add -I or -isystem for libraries, ie:
-        BoolConfig('GCC',
-                    libinc = '.')
-
-        this will make a -I to the directory of the library itself.
-        if the user has like a 'include/' dir for every source lib dir, then:
-        
-        BoolConfig('GCC',
-                    libinc = 'include')
-
 - make a builder for sphinx
 
 - implement simple cherrypy http frontend, e.g. for config and building
@@ -143,15 +146,13 @@
 - configuration frontends:
     + stdio fgets
     - curses menuconfig
+    - argparse autotools frontend: e.g. --with-feature=yes
     - qt4 graphical gui
-    - html web based frontend
+    - html web based frontend: HttpConfig
 - http frontend for build output too.
     - e.g. an http daemon mode plugin, which has a config + output plugin
-
-- implement CheckHeader, CheckLibrary, CheckCompiler
-    --> should go in parallel
-    --> maybe this needs inspect() in Plugin's, to decide if a plugin agrees on the current config...
-        --> or can the config_input()/config_output() work?
+- Builders:
+    - ISO: make an ISO image
 
 - IDE integration, e.g. eclipse
 
