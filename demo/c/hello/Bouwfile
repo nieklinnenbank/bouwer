@@ -17,9 +17,5 @@
 
 def build(conf):
     """ Build the hello world program """
-
-    CheckCompiler(conf.CC)
-    CheckHeader(conf.HAS_SYSLOG, 'syslog.h', False)
     ConfigHeader('config.h')
-
     Program(conf.HELLO, 'hello.c')
