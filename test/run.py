@@ -16,20 +16,21 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+"""
+Bouwer unit tester main entry
+"""
+
 import os
 import sys
 import inspect
 import unittest
 
 class MyTestResult(unittest.TextTestResult):
+    """
+    Result class that prints a textual description of the test
+    """
     def getDescription(self, test):
         return str(test)
-
-# TODO: this only allows me to select a testfile, not a testcase or class
-if len(sys.argv) > 1:
-    match = sys.argv[1]
-else:
-    match = 'test_*.py'
 
 # Find our own location
 curfile = os.path.abspath(inspect.getfile(inspect.currentframe()))
@@ -43,8 +44,13 @@ srcdir  = os.path.normpath(rootdir + os.sep + 'source')
 sys.path.insert(0, curdir)
 sys.path.insert(1, srcdir)
 
+# Retrieve tests to be executed
+if len(sys.argv) > 1:
+    suite = unittest.TestLoader().loadTestsFromName(sys.argv[1])
+else:
+    suite  = unittest.TestLoader().discover('.', 'test_*.py')
+
 # Startup the unit tests
-suite  = unittest.TestLoader().discover('.', match)
 runner = unittest.TextTestRunner(verbosity=2)
 runner.resultclass = MyTestResult
 runner.run(suite)

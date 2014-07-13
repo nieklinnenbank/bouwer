@@ -43,6 +43,11 @@
 
     (*) unittester is OK
 
+==> Test bouwer on example projects:
+    - GNU nano
+    - Apache
+    - Linux Kernel
+
 [features]
 - make a RequireVersion() builder or similar, to check for bouw version
 - Support for other languages, like Java.
