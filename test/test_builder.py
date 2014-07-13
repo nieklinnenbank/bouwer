@@ -32,6 +32,6 @@ class BuilderTester(common.BouwerTester):
         """
         dummy
         """
-        raise Exception('implement')
+        self.skipTest('implement')
 
 

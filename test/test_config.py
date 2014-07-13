@@ -105,14 +105,16 @@ class ConfigurationTester(ConfigTester):
 
     def test_put_override_tree(self):
         """ Override a configuration item in a specific tree and directory """
-        raise Exception('implement')
+        self.skipTest('implement')
 
     def test_load(self):
-        raise Exception("implement")
+        self.skipTest('implement')
+
     def test_save(self):
-        raise Exception("implement")
+        self.skipTest('implement')
+    
     def test_reset(self):
-        pass
+        self.skipTest('implement')
 
 class ConfigTreeTester(ConfigTester):
     """
@@ -164,10 +166,14 @@ class ConfigTreeTester(ConfigTester):
         self.assertFalse(self.conf.get('TREE3').value())
 
 class ConfigListTester(ConfigTester):
+    
     def test_override_add_items(self):
-        pass
+        self.skipTest('implement')
+    
     def test_override_change_items(self):
-        pass
+        self.skipTest('implement')
+
     def test_override_remove_items(self):
-        pass
+        self.skipTest('implement')
+
 

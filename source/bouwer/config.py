@@ -51,7 +51,8 @@ class Config(object):
 
     def get_key(self, key, default = None):
         """ Wrapper for the :obj:`dict.get` function """
-        return self._keywords.get(key, default)
+        # TODO: why do we need this function???
+        return self._interpolate(self._keywords.get(key, default))
 
     def keys(self):
         """ Retrieve a list of keyword keys """
@@ -84,6 +85,11 @@ class Config(object):
         """
         Substitute ${ITEMNAME} with the value of a Configuration item.
         """
+
+        # Only process strings.
+        if type(text) is not str:
+            return text
+
         offset = 0
         output = ""
         saved_idx = 0

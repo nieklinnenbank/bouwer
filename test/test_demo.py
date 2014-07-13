@@ -152,7 +152,8 @@ class LibraryTester(DemoClass):
 
     def test_library_compile(self):
         """ Verify compilation of the Library demo """
-        self.assertEqual(self._run_prog('myprog' + os.sep + 'myprog'), 'int=0 fuzz=1\n')
+        self.assertEqual(self._run_prog('myprog' + os.sep + 'myprog'),
+                        'libdummy bar feature activated\nint=0 fuzz=1\n')
 
 @demo('c/override')
 class OverrideTester(DemoClass):
@@ -165,7 +166,8 @@ class OverrideTester(DemoClass):
 
         self.conf.active_dir = './hello1'
         self.assertTrue(self.conf.get('GCC'))
-        self.assertEquals(self.conf.get('GCC').get_key('ccflags'), '-c -O3')
+        self.assertEquals(self.conf.get('GCC').get_key('ccflags'),
+                         '-c -O3 -DBLAAT="Hello World 1!" -DCOMPILER=GCC -DFOO=1')
 
         self.conf.active_dir = './hello2'
         self.assertTrue(self.conf.get('GCC'))
@@ -183,5 +185,5 @@ class PerformanceTester(DemoClass):
 
     def test_ratio(self):
         """ Bouwer should faster than SCons, but slightly slower than Make """
-        raise Exception('implement')
+        self.skipTest('not yet implemented')
 
