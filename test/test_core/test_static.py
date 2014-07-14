@@ -18,11 +18,11 @@
 import os
 import sys
 import glob
-import common
 import unittest
 import subprocess
+from test import *
 
-class StaticTester(common.BouwerTester):
+class StaticTester(BouwerTester):
     """
     Runs static code analyzer tools on Bouwer source code
     """

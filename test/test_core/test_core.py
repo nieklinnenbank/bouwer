@@ -15,18 +15,21 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import common
-import sys
-import os.path
-import inspect
-import unittest
+"""
+Bouwer core tests
+"""
 
-class CommandLineTester(common.BouwerTester):
+from test import *
+
+class CoreTester(BouwerTester):
     """
-    Tests for the Bouwer command line interface
+    Tester class for bouwer core
     """
-    
-    def test_version(self):
-        """ Retrieve Bouwer version """
-        os.system(self.bouwer + ' --version')
+
+    def test_dummy(self):
+        """
+        dummy
+        """
+        self.skipTest('implement')
+
 

@@ -19,6 +19,8 @@ import sys
 import os.path
 import inspect
 import unittest
+import bouwer.cli
+from bouwer.config import *
 
 class BouwerTester(unittest.TestCase):
     """
@@ -41,4 +43,24 @@ class BouwerTester(unittest.TestCase):
         # We need this to import generate.py's
         sys.path.insert(0, '.')
         sys.path.insert(1, self.srcdir)
+
+class ConfTester(BouwerTester):
+    """
+    Tester class for the configuration layer
+    """
+
+    def setUp(self):
+        """ Runs before each test case """
+
+        # Create commmand line object
+        sys.argv = [ "bouw", "--quiet" ]
+        self.cli = bouwer.cli.CommandLine()
+        
+        # Reload configuration
+        Configuration.Destroy()
+        self.conf = Configuration.Instance(self.cli)
+
+    def tearDown(self):
+        """ Runs after each test case """
+        Configuration.Destroy()
 

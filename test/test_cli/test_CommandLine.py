@@ -15,23 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-"""
-Bouwer builder layer tests
-"""
+from test import *
 
-import common
-import bouwer.cli
-from bouwer.config import *
-
-class BuilderTester(common.BouwerTester):
+class CommandLineTester(BouwerTester):
     """
-    Tester class for the builder layer
+    Tests for the Bouwer command line interface
     """
-
-    def test_dummy(self):
-        """
-        dummy
-        """
-        self.skipTest('implement')
-
+    
+    def test_version(self):
+        """ Retrieve Bouwer version """
+        os.system(self.bouwer + ' --version')
 

@@ -16,16 +16,15 @@
 #
 
 """
-Bouwer core tests
+Bouwer builder layer tests
 """
 
-import common
-import bouwer.cli
+from test import *
 from bouwer.config import *
 
-class CoreTester(common.BouwerTester):
+class BuilderManagerTester(BouwerTester):
     """
-    Tester class for bouwer core
+    Tester class for the builder layer
     """
 
     def test_dummy(self):

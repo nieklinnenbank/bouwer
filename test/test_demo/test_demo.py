@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import common
 import sys
 import os
 import os.path
@@ -30,6 +29,8 @@ import bouwer.config
 import bouwer.builder
 import bouwer.action
 
+from test import *
+
 def demo(path):
     """
     This class annotation sets the `path` member in the class.
@@ -40,7 +41,7 @@ def demo(path):
         return cls
     return demo_set_path
 
-class DemoClass(common.BouwerTester):
+class DemoClass(BouwerTester):
     """
     Tester class for Bouwer demo projects
     """
@@ -90,7 +91,7 @@ class DemoClass(common.BouwerTester):
 # from a previous run, but due to a change, are not compiled anymore. Then the run_prog()
 # tests succeed.. Please verify.
 
-class DemoTester(common.BouwerTester):
+class DemoTester(BouwerTester):
     """
     Tests running Bouwer on the demo projects
     """

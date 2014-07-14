@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import common
 import bouwer.util
+from test import *
 
 class DummySingleton1(bouwer.util.Singleton):
     """ First Dummy Singleton class """
@@ -39,7 +39,7 @@ class DummySingleton3(bouwer.util.Singleton):
     def __init__(self):
         self.arg1 = 123
 
-class SingletonTester(common.BouwerTester):
+class SingletonTester(BouwerTester):
     """ Tests for the Bouwer command line interface """
 
     def setUp(self):

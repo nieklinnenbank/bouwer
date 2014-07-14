@@ -19,11 +19,9 @@
 Bouwer action layer tests
 """
 
-import common
-import bouwer.cli
-from bouwer.config import *
+from test import *
 
-class ActionTester(common.BouwerTester):
+class ActionTester(BouwerTester):
     """
     Tester class for the action layer
     """

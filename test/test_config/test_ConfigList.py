@@ -16,22 +16,20 @@
 #
 
 """
-Bouwer plugin tests
+Bouwer configuration layer tests
 """
 
-import common
-import bouwer.cli
+from test import *
 from bouwer.config import *
 
-class PluginTester(common.BouwerTester):
-    """
-    Tester class for plugins
-    """
-
-    def test_dummy(self):
-        """
-        dummy
-        """
+class ConfigListTester(ConfTester):
+    
+    def test_override_add_items(self):
+        self.skipTest('implement')
+    
+    def test_override_change_items(self):
         self.skipTest('implement')
 
+    def test_override_remove_items(self):
+        self.skipTest('implement')
 
