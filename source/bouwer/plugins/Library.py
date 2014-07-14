@@ -27,7 +27,7 @@ class Library(Plugin):
 
     def config_input(self):
         """ Configuration input items """
-        return [ 'CC', 'CHECK', 'CONFIG' ]
+        return [ 'CC', 'CHECK', 'CONFIG', 'LIBRARY_OBJECTS' ]
 
     def config_output(self):
         """ Configuration output items """

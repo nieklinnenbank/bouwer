@@ -133,7 +133,10 @@ class BuilderInstance:
         """
 
         self.log.debug("executing: " + str(self.builder.__class__.__name__) +
-                       str(arguments) + ' ' + ' (depends: ' + str(self.builder.config_input()) + ')')
+                       str(arguments) + ' ' +
+                       ' (depends: ' + str(self.builder.config_input()) + ' ' +
+                       ' provides: ' + str(self.builder.config_output()) +
+                                       str(self.builder.config_action_output()) + ')')
 
         # if called with (target:str, source:str), convert to (target:str, [source:str]) automatically
         if isinstance(arguments[0], bouwer.config.Config):

@@ -28,17 +28,11 @@ class UseLibrary(Plugin):
 
     def config_input(self):
         """ Configuration input items """
-        return [ 'CC', 'LIBRARIES' ]
+        return [ 'CC', 'LIBRARIES', 'OBJECTS' ]
 
     def config_output(self):
         """ Configuration output items """
         return [ 'LINK_LIBRARIES' ]
-
-    def execute_before(self):
-        """
-        List of builders which must be executed first
-        """
-        return [ 'Library' ]
 
     def execute_config_params(self, item, libsrc):
         if item.value():
