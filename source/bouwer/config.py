@@ -44,8 +44,8 @@ class Config(object):
         """
         Constructor
         """
-        self.name     = name
-        self._value   = value
+        self.name      = name
+        self._value    = value
         self._keywords = keywords
         self.update(value)
 
@@ -94,6 +94,7 @@ class Config(object):
         output = ""
         saved_idx = 0
 
+        # TODO: is there an easier way in python???
         while True:
             # Start of the item name
             idx_start = text.find('${', saved_idx)

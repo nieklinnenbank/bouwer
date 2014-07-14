@@ -144,7 +144,6 @@ class Cache(object):
         self.log = logging.getLogger(__name__)
         self.name = name
         self.data = {}
-        self.log.debug('creating Cache : ' + self.name)
         self.filename = tempfile(self.name + '.cache')
 
         try:
@@ -153,20 +152,21 @@ class Cache(object):
             self.fp = open(self.filename, 'w+')
 
         self.stat = os.stat(self.filename)
-
         
         try:
             self.data = pickle.load(self.fp)
         except EOFError:
             self.data = {} 
 
+        self.log.debug('Cache ' + self.name + ' : created')
+
     def __del__(self):
         """
         Class destructor
         """
-        self.log.debug('destroying Cache : ' + str(self.name))
         self.flush()
         self.fp.close()
+        self.log.debug('Cache ' + str(self.name) + ' : destroyed')
 
     @classmethod
     def Instance(cls, name):
@@ -194,7 +194,7 @@ class Cache(object):
             return None
 
     def put(self, key, value):
-        self.log.debug('Putting in Cache ' + self.name + ' : ' + key + ' => ' + str(value))
+        self.log.debug('Cache ' + self.name + ' : ' + key + ' => ' + str(value))
         self.data[key] = value
 
     def flush(self):

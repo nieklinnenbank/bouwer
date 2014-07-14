@@ -102,6 +102,7 @@ class BuilderInstance:
         self.active_dir = active_dir
         self.arguments = arguments
         self.keywords = keywords
+        self.log = manager.log
         self.run = False
 
     def call(self):
@@ -130,6 +131,9 @@ class BuilderInstance:
         """
         Call the correct execute function of the builder
         """
+
+        self.log.debug("executing: " + str(self.builder.__class__.__name__) +
+                       str(arguments) + ' ' + ' (depends: ' + str(self.builder.config_input()) + ')')
 
         # if called with (target:str, source:str), convert to (target:str, [source:str]) automatically
         if isinstance(arguments[0], bouwer.config.Config):
@@ -207,7 +211,6 @@ class BuilderMesh:
 
     def insert(self, instance):
         """ Introduce a new builder instance """
-        self.manager.log.debug("inserting instance: " + str(instance))
 
         # Add to outputs list
         for output_item in instance.builder.config_output() + instance.builder.config_action_output():
@@ -222,16 +225,12 @@ class BuilderMesh:
         Try to execute the given builder instance
         BuilderInstance can only be executed if its Config inputs are satisfied.
         """
-        self.log.debug('instance=' + str(instance.builder))
-
         if instance.run:
             return False
 
         # See if all our input configuration items are done
         for input_item in instance.builder.config_input():
-
-            self.log.debug('depends='+str(input_item))
-
+            
             # Is the config item being produced in this round already?
             # Do not schedule right now then, because otherwise the dependency
             # is not met. 
@@ -264,7 +263,6 @@ class BuilderMesh:
             if len(self.outputs[output_item]) == 0:
                 del self.outputs[output_item]
 
-        self.log.debug("executing instance: " + str(instance))
         self.active_instance = instance
         instance.call()
         self.instances.remove(instance) # TODO: performance bottleneck?
@@ -285,10 +283,9 @@ class BuilderMesh:
                     if self._try_execute(instance):
                         again = True
 
-            self.log.debug("executing all actions!")
-
             if self.manager.conf.args.clean:
                 self.manager.actions.clean()
+                shutil.rmtree(bouwer.util.BOUWTEMP, True)
             else:
                 self.manager.actions.run()
 
@@ -370,9 +367,6 @@ class BuilderManager(bouwer.util.Singleton):
     Manages access to the builder layer
     """
 
-    """ Directory with temporary builder files """
-    BOUWTEMP = '.bouwtemp'
-
     def __init__(self):
         """ 
         Constructor
@@ -393,27 +387,12 @@ class BuilderManager(bouwer.util.Singleton):
         if not tree.value():
             return
 
-        self.log.debug("executing `" + tree.name + ':' + target + "'")
+        self.log.debug("executing build target: `" + tree.name + ':' + target + "'")
         self.actions = bouwer.action.ActionManager(self.conf.args)
 
+        # Let the mesh execute its builders, and run its actions
         mesh = self.parser.parse('.', target)
-        #mesh.inspect()
         mesh.execute()
-        #self._scan_dir('.', target, tree, actions)
-
-        # Dump generated actions?
-        # TODO: please do this better... ugly :-(
-        if self.conf.args.verbose:
-            self.actions.dump()
-
-        # Run or clean the actions?
-
-        # TODO: hey, the BuilderMesh also has this....
-        if self.conf.args.clean:
-            self.actions.clean()
-            shutil.rmtree(self.BOUWTEMP, True)
-        else:
-            self.actions.run()
 
     def action(self, target, sources, command, **tags):
         """ 

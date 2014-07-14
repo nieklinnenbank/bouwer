@@ -31,6 +31,9 @@ def _find_headers(source, paths):
     Return them as a list.
     """
 
+    # TODO: make this recursive
+    # TODO: look in the paths!!!!
+
     # Retrieve cache and file stat
     cache = Cache.Instance('c_headers')
     st = os.stat(source.absolute)

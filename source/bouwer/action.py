@@ -105,24 +105,14 @@ class WorkerManager:
             if finished() and self._work.empty():
                 break
 
-            self.log.debug("waiting for event")
             ev = self._events.get()
-            self.log.debug("got event: " + str(ev))
             
             if ev.name == 'finish':
-                self.log.debug("finished " + str(ev.target) + " by " + str(ev.worker))
-            
                 for action in collect(ev.target):
-                    self.log.debug("sending " + str(action))
                     self._work.put(action.target)
             
             # Let our caller post process the event
             handle_event(ev)
-
-        # TODO: possible to output stats, e.g. number of actions per worker, etc
-        #       this should be part of an output plugin too?
-        # TODO: output a completed ActionEvent here
-        self.log.debug("completed")
  
 class ActionEvent:
     """
@@ -279,7 +269,7 @@ class ActionManager:
             if src in self.pending:
                 self.pending[src].provide.append(target)
 
-        self.log.debug("submitted action " + str(action))
+        self.log.debug("submitted: " + str(action))
 
     def run(self):
         """
@@ -292,8 +282,6 @@ class ActionManager:
         """
         Remove all :class:`.Action` target files
         """
-        self.log.debug("cleaning all Actions")
-
         for action_name, action in self.pending.items():
             self.log.debug("removing " + str(action.target))
             try:
@@ -327,28 +315,26 @@ class ActionManager:
         if target is None:
             runnable = []
         else:
-            runnable = self._finish(target)
+            runnable = self._finish(target) # TODO: strange that decide() also happens here?
         
         for name in list(self.pending.keys()):
-
             if name not in self.pending:
                 continue
 
             work = self.pending[name]
 
+            # See if this action is satisfied with its dependencies
             if work.satisfied(self.pending, self.running):
-
-                self.log.debug("satisfied with " + str(work))
-
                 self.running[name] = work
                 del self.pending[name]
 
+                # Does it need to run?
                 if work.decide(self.pending, self.running):
                     runnable.append(work)
                 else:
                     runnable = runnable + self._finish(name)
 
-        self.log.debug("runnable is " + str(runnable))
+        self.log.debug("runnable = " + str(runnable) + " pending = " + str(self.pending.values()))
         return runnable
 
     def _finish(self, target):
@@ -366,19 +352,14 @@ class ActionManager:
             if name in self.pending:
                 act = self.pending.get(name)
                 
-                self.log.debug("trying to release providing " + str(act))
-                
                 if act.satisfied(self.pending, self.running):
                     del self.pending[name]
-                    self.log.debug("satisfied with providing " + str(act))
-                    
+                   
+                    # Decide if the action needs to run
                     if act.decide(self.pending, self.running):
-                        self.log.debug("running providing " + str(act))
-                        
                         self.running[name] = act
                         ret.append(act)
                     else:
-                        self.log.debug("finising providing " + str(act))
                         self.finished[name] = act
         
         return ret

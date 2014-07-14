@@ -69,6 +69,7 @@
 
 [features]
 - make a RequireVersion() builder or similar, to check for bouw version
+- Support BUILDROOT, BUILDPATH
 - Support for other languages, like Java.
     ==> builders like Object(), Program(), Library() may need to be generic too.
 
