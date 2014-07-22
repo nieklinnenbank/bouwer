@@ -26,18 +26,20 @@ import os.path
 import sys
 import datetime
 import logging
-import bouwer.plugins
+import bouwer.util
+from bouwer.cli import CommandLine
 
 class Worker(multiprocessing.Process):
     """
     Implements a consumer process for executable :class:`Action` objects.
 
     The :class:`Worker` class implements a simple consumer for
-    executing :class:`Action` objects. It takes a :obj:`list`
+    executing :class:`Action` objects. It takes a :obj:`dict`
     of available `actions` and receives target names of the
     appropriate action to execute from the `work` :class:`Queue`.
     The worker sends an :class:`ActionEvent` on the `events` :class:`Queue`
-    before and after executing an action.
+    before with type `ActionEvent.EXECUTE` and after executing
+    an action with type `ActionEvent.FINISH`.
     """
 
     def __init__(self, actions, work, events):
@@ -58,145 +60,182 @@ class Worker(multiprocessing.Process):
             target = self._work.get()
 
             # Trigger ActionEvents and execute the action
-            self._events.put(ActionEvent(self.name, target, 'execute'))
+            self._events.put(ActionEvent(self.name, target, ActionEvent.EXECUTE))
             result = self._actions[target]()
-            self._events.put(ActionEvent(self.name, target, 'finish', result))
+            self._events.put(ActionEvent(self.name, target, ActionEvent.FINISH, result))
 
 class WorkerManager:
     """
     Manages a pool of :class:`Worker` processes
     """
 
-    def __init__(self, actions, num_workers, plugins):
+    def __init__(self, actions):
         """
         Constructor
         """
-        self._workers = []
-        self._work    = multiprocessing.Queue()
-        self._events  = multiprocessing.Queue()
+        self.actions  = actions
+        self.work     = multiprocessing.Queue()
+        self.events   = multiprocessing.Queue()
+        self.workers  = []
         self.log      = logging.getLogger(__name__)
+        self.output_plugin = getattr(CommandLine.Instance().args, 'output_plugin', None)
+        self.running  = []
 
         # Create workers
-        for i in range(num_workers):
-            worker = Worker(actions, self._work, self._events)
-            self._workers.append(worker)
+        for i in range(CommandLine.Instance().args.workers):
+            worker = Worker(self.actions, self.work, self.events)
+            self.workers.append(worker)
             worker.start()
 
     def __del__(self):
         """
         Destructor
         """
-        for proc in self._workers:
+        for proc in self.workers:
             proc.terminate()
+            proc.join()
 
-    def execute(self, collect, finished, handle_event):
+    def execute(self):
         """
         Execute the :obj:`list` of :class:`.Action` objects
         """
-        self.log.debug("executing actions")
+        self.log.debug("running actions")
 
-        # Fill the work queue initially with work
-        for work in collect():
-            self._work.put(work.target)
-
-        # Now keep processing until all dependencies are done
         while True:
-            
-            if finished() and self._work.empty():
+            collecting = True
+
+            # TODO: performance bottleneck!!!
+
+            # Make as much as possible work available
+            while collecting:
+                collecting = False
+
+                for action in self.actions.values():
+                    if self.decide(action):
+                        action.status = ActionEvent.EXECUTE
+                        self.work.put(action.target)
+                        self.running.append(action)
+                        collecting = True
+
+            # Wait for events
+            if len(self.running) <= 0:
                 break
 
-            ev = self._events.get()
-            
-            if ev.name == 'finish':
-                for action in collect(ev.target):
-                    self._work.put(action.target)
-            
-            # Let our caller post process the event
-            handle_event(ev)
- 
+            event  = self.events.get()
+            action = self.actions[event.target]
+            action.status = event.type
+
+            if action.status == ActionEvent.FINISH:
+                self.running.remove(action)
+
+            # Report the event to the builder
+            action.builder.action_event(action, event)
+
+            # Invoke output plugin.
+            if self.output_plugin is not None:
+                self.output_plugin.action_event(action, event)
+
+    def decide(self, action):
+        """
+        Decide if this action needs to run.
+
+        Returns `True` if the :class:`Action` needs to run or `False` otherwise. 
+
+        >>> manager.decide(action)
+            True
+        """
+        need_run = False
+
+        # Is/has the action already ran?
+        if action.status is not ActionEvent.CREATE:
+            return False
+
+        # Try to see if the target exists
+        try:
+            my_st = os.stat(action.target)
+        except OSError:
+            need_run = True
+
+        # Do all our dependencies satisfy?
+        for src in action.sources:
+            try:
+                if self.actions[src].status != ActionEvent.FINISH:
+                    return False
+            except KeyError:
+                pass
+
+            # See if their timestamp is larger than ours
+            try:
+                st = os.stat(src)
+                if not need_run and st.st_mtime > my_st.st_mtime:
+                    need_run = True
+            except OSError:
+                pass
+
+        # Allow override to enfore full build from command line
+        if CommandLine.Instance().args.force or need_run:
+            return True
+
+        # None of the sources is updated and we exist. Don't build.
+        action.status = ActionEvent.FINISH
+        return False
+
 class ActionEvent:
     """
     Represents an event which occurred for an :class:`.Action`
     """
 
-    def __init__(self, worker, target, name, result = None):
+    CREATE  = 'create'
+    EXECUTE = 'execute'
+    FINISH  = 'finish'
+
+    def __init__(self, worker, target, event_type, result = None):
         """
         Constructor
-        """ 
+        """
         self.worker = worker
         self.target = target
-        self.name   = name
+        self.type   = event_type
         self.result = result
         self.time   = datetime.datetime.now()
+
+    def __str__(self):
+        """
+        Convert to string representation
+        """
+        return 'ActionEvent.' + self.type.upper() + ' : ' + self.target + ' @ worker[' + self.worker + '] type=' + \
+               self.type + ' result=' + str(self.result) + ' time=' + str(self.time)
+
+    def __repr__(self):
+        """
+        Convert to short string representation
+        """
+        return self.__str__()
 
 class Action:
     """
     Represents an executable action.
     """
 
-    def __init__(self, args, target, sources, command, tags, builder):
+    def __init__(self, target, sources, command, tags, builder):
         """
         Constructor
         """
-        self.args    = args
         self.target  = target
         self.sources = sources
         self.command = command
         self.tags    = tags
         self.builder = builder
-        self.provide = []
-
-    def satisfied(self, pending, running):
-        """
-        See if our dependencies are satisfied.
-        
-        >>> action.satisfied(pending, running)
-        True
-        """
-        for src in self.sources:
-            if src in pending or src in running:
-                return False
-        return True
-
-    def decide(self, pending, running):
-        """
-        Decide if this action needs to run.
-       
-        >>> action.decide(pending, running)
-            True
-        """
-
-        # Try to see if the target exists
-        try:
-            my_st = os.stat(self.target)
-        except OSError:
-            return True
-
-        # See if any of the sources changed.
-        for src in self.sources:
-            
-            # If the source to-be-completed, we always build.
-            if src in pending or src in running:
-                return True
-
-            # See if their timestamp is larger than ours
-            try:
-                st = os.stat(src)
-                if st.st_mtime > my_st.st_mtime:
-                    return True
-            except OSError:
-                pass
-
-        # TODO: also decide() against the .bouwconf / Configuration!
-        # Since, we need to (partly) rebuild if the config has changed.
-                    
-        # None of the sources is updated and we exist. Don't build.
-        return self.args.force
+        self.status  = ActionEvent.CREATE
 
     def __call__(self):
         """
         Execute the action
         """
+
+        # If the command is a python function, run it.
+        if callable(self.command):
+            return self.command(self)
 
         # If quiet mode is set, do not show any output
         if 'quiet' in self.tags and self.tags['quiet']: 
@@ -213,169 +252,50 @@ class Action:
         Convert to string representation
         """
         return self.target   + " <<< sources=" + \
-           str(self.sources) + " provide=" + \
-           str(self.provide) + "  :  [" + \
-           str(self.command) + "]"
+           str(self.sources) + " status=" + self.status + " : [" + str(self.command) + "]"
 
     def __repr__(self):
         """
         Convert to short string representation
         """
-        return self.target
+        return self.__str__()
 
-class ActionManager:
+class ActionManager(object):
     """
     Manages all :class:`.Action` objects registered for execution.
     """
 
-    def __init__(self, args):
+    def __init__(self):
         """
         Constructor
         """
-        self.args = args
-        self.plugins = bouwer.plugin.PluginManager.Instance()
-        self.log  = logging.getLogger(__name__)
-        # TODO: replace with invoke()
-        self._output_plugin = self.plugins.output_plugin()
-        self.reset()
-
-    def reset(self):
-        """
-        Reset the list of submitted :class:`.Action` objects.
-        """
-
-        # TODO: don't do this with lists?
-        self.pending  = {}
-        self.running  = {}
-        self.finished = {}
-        self.work     = multiprocessing.Queue()
-        self.events   = multiprocessing.Queue()
-        self.workers  = []
+        self.log     = logging.getLogger(__name__)
+        self.actions = {}
 
     def submit(self, target, sources, command, tags, builder):
         """
         Submit a new :class:`.Action` for execution
-        
+
+        >>> manager = ActionManager()
         >>> manager.submit('hello', ['hello.c'], 'gcc -o hello hello.c')
-        """ 
-        if target in self.pending:
-            raise Exception("target " + str(target) + " already submitted")
+        """
+        if target in self.actions:
+            raise Exception("target " + target + " already submitted")
 
-        action = Action(self.args, target, sources, command, tags, builder)
-        self.pending[target] = action
+        self.actions[target] = Action(target, sources, command, tags, builder)
+        self.log.debug("submitted: " + str(self.actions[target]))
 
-        # TODO: circular dep check
-        for src in sources:
-            if src in self.pending:
-                self.pending[src].provide.append(target)
-
-        self.log.debug("submitted: " + str(action))
-
-    def run(self):
+    def run(self, clean = False):
         """
         Run all registered :class:`.Action` objects
         """
-        master = WorkerManager(self.pending, self.args.workers, self.plugins)
-        master.execute(self.collect, self._done, self._event)
 
-    def clean(self):
-        """
-        Remove all :class:`.Action` target files
-        """
-        for action_name, action in self.pending.items():
-            self.log.debug("removing " + str(action.target))
-            try:
-                os.remove(action.target)
-            except OSError:
-                pass
-
-    def _event(self, ev):
-        """
-        Process an :class:`.ActionEvent` by invoking output plugins
-        """
-
-        # TODO: use class constants instead of strings
-        # TODO: pass the action manager instead?
-        #       together with the current configuration
-        if ev.name == 'execute':
-            action = self.running[ev.target]
-        if ev.name == 'finish':
-            action = self.finished[ev.target]
-
-        # Report the vent to the builder
-        action.builder.action_event(action, ev)
-         
-        # Invoke output plugin.
-        self._output_plugin.action_event(action, ev)
-
-    def collect(self, target = None):
-        """
-        Retrieve more :class:`.Action` objects to execute
-        """
-        if target is None:
-            runnable = []
+        if clean:
+            for action in self.actions.values():
+                self.log.debug("removing: " + action.target)
+                try:
+                    os.remove(action.target)
+                except OSError:
+                    pass
         else:
-            runnable = self._finish(target) # TODO: strange that decide() also happens here?
-        
-        for name in list(self.pending.keys()):
-            if name not in self.pending:
-                continue
-
-            work = self.pending[name]
-
-            # See if this action is satisfied with its dependencies
-            if work.satisfied(self.pending, self.running):
-                self.running[name] = work
-                del self.pending[name]
-
-                # Does it need to run?
-                if work.decide(self.pending, self.running):
-                    runnable.append(work)
-                else:
-                    runnable = runnable + self._finish(name)
-
-        self.log.debug("runnable = " + str(runnable) + " pending = " + str(self.pending.values()))
-        return runnable
-
-    def _finish(self, target):
-        """
-        Post-process an :class:`.Action` after completion.
-        """
-        action = self.running.pop(target)
-        self.finished[target] = action
-
-        # TODO: release all reverse dependencies now
-        ret = []
-
-        # TODO: cleanup this bit please..
-        for name in action.provide:
-            if name in self.pending:
-                act = self.pending.get(name)
-                
-                if act.satisfied(self.pending, self.running):
-                    del self.pending[name]
-                   
-                    # Decide if the action needs to run
-                    if act.decide(self.pending, self.running):
-                        self.running[name] = act
-                        ret.append(act)
-                    else:
-                        self.finished[name] = act
-        
-        return ret
-
-    def _done(self):
-        """
-        Check if all :class:`.Actions` are done
-        """
-        return len(self.pending) == 0 and len(self.running) == 0
-
-    # TODO: replace with __str__
-    def dump(self):
-        """
-        Dump internal information to standard output
-        """
-        self.log.debug("pending  = " + str(self.pending.keys()))
-        self.log.debug("running  = " + str(self.running.keys()))
-        self.log.debug("finished = " + str(self.finished.keys()))
-
+            WorkerManager(self.actions).execute()

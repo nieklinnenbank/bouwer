@@ -18,7 +18,7 @@
 import os
 import os.path
 import glob
-import compiler
+from CCompiler import CCompiler
 from bouwer.plugin import *
 from bouwer.builder import *
 
@@ -37,40 +37,11 @@ class Program(Plugin):
         """
         # TODO: also support the program = keyword, like library =
         if item.value():
-            self.execute_target(TargetPath(item.name.lower()), sources)
+            CCompiler.Instance().c_program(TargetPath(item.name.lower()), sources, item)
 
     def execute_target(self, target, sources):
         """
         Build an program given its `target` name and `sources` list
         """
-
-        # Retrieve compiler chain
-        chain = self.conf.get('CC')
-        cc    = self.conf.get(chain.value())
-        objects = []
-
-        if self.conf.get('SOURCES') is not None:
-            extra = self.conf.get('SOURCES').value()
-        else:
-            extra = []
-
-        # Traverse all source files given
-        for source in sources:
-            objects.append(compiler.c_object(source))
-
-        # Add linker paths
-        ldpath = ''
-        for path in cc['ldpath'].split(':'):
-            if len(path) > 0:
-                ldpath += cc['ldflag'] + path + ' '
-
-        # TODO: use the compiler.c_object_list 
-
-        # Link the program
-        self.build.action(target,
-                          objects + extra, 
-                          cc['ld'] + ' ' + str(target) + ' ' +
-                         (' '.join([str(o) for o in objects])) + ' ' + ldpath +
-                          cc['ldflags'] + ' ' + cc['ldscript'],
-                          pretty_name='LINK')
+        CCompiler.Instance().c_program(target, sources)
 

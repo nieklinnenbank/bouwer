@@ -16,7 +16,7 @@
 #
 
 from bouwer.plugin import Plugin
-import compiler
+from CCompiler import CCompiler
 
 class Object(Plugin):
     """
@@ -35,10 +35,7 @@ class Object(Plugin):
         """
         Build an executable object given its `source` file
         """
-        compiler.c_object(source)
-
-        # TODO: add to a temporary list of objects.
-        # that will be 'absorbed' by Program() and Library()
+        CCompiler.Instance().c_object(source)
 
     def execute_config(self, item, sources):
         """
@@ -46,4 +43,4 @@ class Object(Plugin):
         """
         if item.value():
             for source in sources:
-                self.execute_source(source)
+                self.execute_source(source, item)

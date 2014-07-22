@@ -15,11 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os
-import os.path
+from CCompiler import CCompiler
 from bouwer.plugin import Plugin
-from bouwer.config import ConfigBool, Config
-from bouwer.builder import TargetPath
 
 class UseLibrary(Plugin):
     """
@@ -46,49 +43,4 @@ class UseLibrary(Plugin):
         searching the generated :class:`.Action` objects in
         the actions layer.
         """
-
-        # TODO: this should become a *TEMPORARY* per-directory override instead
-        chain = self.conf.get('CC')
-        cc    = self.conf.get(chain.value())
-
-        # TODO: find the correct libary path using the actions layer!!!
-        # TODO: only do it like this if static linking!!!
-        # TODO: use keyword indirection instead of copying the original keywords?!
-        tmp = ConfigBool(cc.name, **cc._keywords)
-        slist = []
-
-        libs = self.conf.get('LIBRARIES')
-        if libs is None:
-            return
-        
-        libdict = libs.value()
-
-        # Loop all given libraries
-        for lib in libraries:
-
-            target, path = libdict[lib]
-            slist.append(target)
-
-            if lib[:3] == 'lib':
-                libname = lib[3:]
-            else:
-                libname = lib
-
-            tmp._keywords['ldpath']  += ':' + os.path.dirname(target.absolute)
-            tmp._keywords['incpath'] += ':' + path
-            tmp._keywords['ldflags'] += ' -l' + libname + ' '
-
-        self.conf.active_tree.add(tmp)
-        self.conf.active_tree.add(Config('SOURCES', slist, temporary = True))
- 
-        """
-        With this Library() instance, we can append e.g. libinc = 'include' or libinc='.'
-        to automatically append an -I path for each Library():
-
-           -I ./lib/fuzzors/libfuzz1 or -I ./lib/fuzzors/libfuzz1/include
-
-        If all headers are in a central location and not per-library, the user can simply put it in the incpath=['include']:
-
-           -I ./include
-        """
-
+        CCompiler.Instance().generate_library_override(libraries)

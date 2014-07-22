@@ -39,7 +39,7 @@ def execute():
         os.chdir(os.getcwd() + os.sep + '..' + os.sep)
 
     # Create command line interface object
-    cli = bouwer.cli.CommandLine()
+    cli = bouwer.cli.CommandLine().Instance()
 
     # Initialize logging
     logging.basicConfig(
@@ -68,6 +68,11 @@ def execute():
     # BUT: buildermanager also needs the final conf.args...
     
     conf.args = cli.parse()
+    # TODO: the default output plugin is PrettyOutput... wrong location to do it here.
+    try:
+        getattr(conf.args, 'output_plugin')
+    except AttributeError:
+        cli.args.output_plugin = plugins.plugins['PrettyOutput']
 
     # If we have a configuration plugin enabled by cli, invoke it
     conf_plugin = None

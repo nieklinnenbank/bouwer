@@ -20,7 +20,7 @@ import os.path
 from bouwer.plugin import *
 from bouwer.builder import *
 import bouwer.util
-import compiler
+from CCompiler import CCompiler
 
 class CheckHeader(Plugin):
     """
@@ -46,7 +46,7 @@ class CheckHeader(Plugin):
             fp.close()
 
         # Schedule Action to compile it
-        compiler.c_object(SourcePath(cfile),
+        CCompiler.Instance().c_object(SourcePath(cfile),
                           confitem=conf, filename=header,
                           pretty_name='CHECK', pretty_target=header,
                           required=is_required, quiet=True)
@@ -59,7 +59,7 @@ class CheckHeader(Plugin):
         item = action.tags['confitem']
 
         # Update the configuration item
-        if event.name == 'finish' and event.result != 0:
+        if event.type == ActionEvent.FINISH and event.result != 0:
             if action.tags['required']:
                 self.log.error('C Header ' + action.tags['filename'] + ' not installed')
                 sys.exit(1)

@@ -28,16 +28,10 @@ class CheckCompiler(Plugin):
         return [ 'CC' ]
 
     def execute_config(self, item):
-        # TODO: but we should have a cache which this result.
-        #   --> generic module please.
-        # --> just make it a really target, e.g. .conf/$tree.$item.exe
-        # --> instead of a tmp file
-
         # Save input C compiler
         self.cc = self.conf.get(item.value())
 
         # Generate C file, if not yet done already.
-        # TODO: generic directory for putting these files please.
         cfile = bouwer.util.tempfile(self.__class__.__name__ + '.' + self.cc.name + '.c')
 
         if not os.path.isfile(cfile):
@@ -45,6 +39,7 @@ class CheckCompiler(Plugin):
             fp.write('int main(void) { return 0; }')
             fp.close()
 
+        # TODO: use the CCompiler module?
         # Schedule Action to compile it
         self.build.action(TargetPath(cfile + '.o'),
                          [SourcePath(cfile)],
@@ -57,7 +52,7 @@ class CheckCompiler(Plugin):
         """
         Called when an Action has finished
         """
-        if event.name == 'finish' and event.result != 0:
+        if event.type == ActionEvent.FINISH and event.result != 0:
             # The C compiler cannot generate C objects.
             # TODO: Try the next C compiler automatically, if any.
             self.log.error('C compiler not installed or unable to execute: ' + str(self.cc.name))

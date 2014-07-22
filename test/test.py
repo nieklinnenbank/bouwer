@@ -19,7 +19,7 @@ import sys
 import os.path
 import inspect
 import unittest
-import bouwer.cli
+from bouwer.cli import CommandLine
 from bouwer.config import *
 
 class BouwerTester(unittest.TestCase):
@@ -41,8 +41,10 @@ class BouwerTester(unittest.TestCase):
         self.bouwer  = os.path.normpath(self.rootdir + os.sep + 'bouw')
 
         # We need this to import generate.py's
-        sys.path.insert(0, '.')
-        sys.path.insert(1, self.srcdir)
+        if '.' not in sys.path:
+            sys.path.insert(0, '.')
+        if self.srcdir not in sys.path:
+            sys.path.insert(1, self.srcdir)
 
 class ConfTester(BouwerTester):
     """
@@ -54,13 +56,13 @@ class ConfTester(BouwerTester):
 
         # Create commmand line object
         sys.argv = [ "bouw", "--quiet" ]
-        self.cli = bouwer.cli.CommandLine()
-        
+        self.cli = CommandLine.Instance()
+
         # Reload configuration
         Configuration.Destroy()
         self.conf = Configuration.Instance(self.cli)
 
     def tearDown(self):
         """ Runs after each test case """
+        CommandLine.Destroy()
         Configuration.Destroy()
-

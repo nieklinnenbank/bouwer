@@ -49,6 +49,11 @@ class Singleton(object):
         """
         raise Exception('Singletons may only be created with Instance()')
 
+    # TODO: this goes WRONG if the path to the class isnt the same everywhere... make a test case also.
+    # e.g. import compiler
+    # e.g. import bouwer.plugins.compiler
+    # leads to very subtile errors
+
     @classmethod
     def Instance(cls, *args, **kwargs):
         """
@@ -61,7 +66,7 @@ class Singleton(object):
             return cls.__class_obj__
         else:
             cls.__class_obj__ = cls.__new__(cls)
-            
+
             # Overwrite callbacks to raise exception later
             init = cls.__class_obj__.__init__
             cls.__orig_init__ = cls.__init__
@@ -69,7 +74,7 @@ class Singleton(object):
 
             # Invoke constructor
             init(*args, **kwargs)
-        
+
         return cls.__class_obj__
 
     @classmethod

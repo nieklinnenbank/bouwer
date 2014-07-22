@@ -39,5 +39,5 @@ class FullOutput(Plugin):
     # Called just before the Action is executed by the worker.
     #
     def action_event(self, action, event):
-        if event.name == 'execute':
+        if event.type == ActionEvent.FINISH:
             print(str(event.worker) + ' : ' + str(action.command))

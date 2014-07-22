@@ -23,16 +23,17 @@ import os
 import os.path
 import argparse
 import multiprocessing
+import bouwer.util
 
 try:
     from configparser import ConfigParser
 except ImportError:
     from ConfigParser import ConfigParser
 
-class CommandLine:
+class CommandLine(bouwer.util.Singleton):
     """
     Represents the command line interface to bouwer
-    
+
     TODO: extend somekind of argparse class here
     """
 
@@ -67,7 +68,7 @@ class CommandLine:
         """
         self.parser = argparse.ArgumentParser(parents = [self.parser],
                                      description='Bouwer build automation tool.',
-                                     epilog='Copyright (c) 2012 Niek Linnenbank.',
+                                     epilog='Copyright (c) 2014 Niek Linnenbank.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         self.args = self.parser.parse_args()
         return self.args

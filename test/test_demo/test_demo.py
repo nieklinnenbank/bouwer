@@ -29,6 +29,7 @@ import bouwer.config
 import bouwer.builder
 import bouwer.action
 
+from CCompiler import CCompiler
 from test import *
 
 def demo(path):
@@ -56,14 +57,19 @@ class DemoClass(BouwerTester):
         os.chdir(self.demopath)
 
         # Reset singletons
+        # TODO: solution: do NOT destroy singletons, ever!
+        # instead, provide a method, reset() or something...
+
         bouwer.config.Configuration.Destroy()
         bouwer.builder.BuilderManager.Destroy()
         bouwer.plugin.PluginManager.Destroy()
+        bouwer.cli.CommandLine.Destroy()
+        CCompiler.Destroy()
 
         # Create command line interface object
         # TODO: ugly hack!
         sys.argv = [ "bouw", "--quiet" ]
-        self.cli = bouwer.cli.CommandLine()
+        self.cli = bouwer.cli.CommandLine.Instance()
 
         # (Re)load configuration
         self.conf = bouwer.config.Configuration.Instance(self.cli)
@@ -76,12 +82,15 @@ class DemoClass(BouwerTester):
         self.conf.args = self.cli.parse()
 
         # Clean first
-        self.cli.args.clean = True
+        self.conf.args.clean = True
         self.build.execute('build', self.conf.trees.get('DEFAULT'))
 
         # Execute with the default tree
-        self.cli.args.clean = False
+        self.conf.args.clean = False
         self.build.execute('build', self.conf.trees.get('DEFAULT'))
+
+    def tearDown(self):
+        pass
 
     def _run_prog(self, prog):
         """ Run the given demo program """

@@ -39,10 +39,15 @@ curdir  = os.path.normpath(os.path.dirname(curfile))
 # Determine paths
 rootdir = os.path.normpath(curdir + os.sep + '..')
 srcdir  = os.path.normpath(rootdir + os.sep + 'source')
+plugdir = os.path.normpath(rootdir + os.sep + 'source' + os.sep + 'bouwer' + os.sep + 'plugins')
 
 # We need this to import bouwer and test code
-sys.path.insert(0, curdir)
-sys.path.insert(1, srcdir)
+if curdir not in sys.path:
+    sys.path.insert(0, curdir)
+if srcdir not in sys.path:
+    sys.path.insert(1, srcdir)
+if plugdir not in sys.path:
+    sys.path.insert(2, plugdir)
 
 # Retrieve tests to be executed
 if len(sys.argv) > 1:

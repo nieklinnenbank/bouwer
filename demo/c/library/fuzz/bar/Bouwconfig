@@ -20,3 +20,10 @@ config LIBFUZZ
     help
       This library is very fuzzy
 
+config LIBFUZZ_FOO
+    bool "Enable the foo feature"
+    depends on LIBFUZZ
+    default y
+    help
+      This option enables the foo feature.
+

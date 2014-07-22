@@ -287,7 +287,7 @@ class BuilderMesh:
                         again = True
 
             if self.manager.conf.args.clean:
-                self.manager.actions.clean()
+                self.manager.actions.run(True)
                 shutil.rmtree(bouwer.util.BOUWTEMP, True)
             else:
                 self.manager.actions.run()
@@ -391,7 +391,7 @@ class BuilderManager(bouwer.util.Singleton):
             return
 
         self.log.debug("executing build target: `" + tree.name + ':' + target + "'")
-        self.actions = bouwer.action.ActionManager(self.conf.args)
+        self.actions = bouwer.action.ActionManager()
 
         # Let the mesh execute its builders, and run its actions
         mesh = self.parser.parse('.', target)

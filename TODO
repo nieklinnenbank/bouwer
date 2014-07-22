@@ -1,57 +1,48 @@
 [FOR RELEASE]
 
+    --> the path is ugly. This leads to problems with Singletons.
+        we only need the $BOUWER_BASE/source and $BOUWER_BASE/source/bouwer/plugins
+
+    ==> make a test for it too?
+
+['/home/fox/Repositories/Bouwer.git', '/home/fox/Repositories/Bouwer.git/source/bouwer/plugins', '/home/fox/Repositories/Bouwer.git/source/bouwer', '/home/fox/Repositories/Bouwer.git/source',
+
+==> Configuration can be changed by builders
+    --> if so, it should be tainted, and save()'ed at the end of bouwer execution
+    --> but with the same modification timestamp as when bouwer opened it
+    --> because we KNOW FOR SURE that all config changes are synced to the builder / action execution in this invoke of bouwer
+    --> if an (external) configuration edit is done, then the modification timestamp is updated, and rebuilds will be done accordingly.
+    
+    ==> usefull for e.g. CheckFlag(), or TryCFlag()
+
+==> UseLibrary applies to all Program()s in that Bouwfile.... is that ok?
+    --> what if the user wants multiple Program()s in one directory... do we support that?
+
+    ==> keep it simple. For now UseLibrary applies to one directory.
+    ==> Program, Library, Object and even UseLibrary can be extended to limit to a specific binary.
+
+==> UseLibrary: should allow a subpath for library includes...
+
+==> Put all Program/Object/Library/* in the CCompiler.py plugin..
+    --> support multiple builders per plugin too.
+
+==> python doctest in unit tester.
+
 (*) Better detect need to rebuild, e.g. changed configs.
     (*) detect if the Bouwconfig changed to rebuild???
-
-===> THis goes wrong in c/demo/library, because Object() is scheduled later than Library....
-
- 22     ConfigHeader('config.h')
-  23     Object(conf.LIBDUMMY_UTIL, 'util.c')
-   24     Library(conf.LIBDUMMY, [ 'lookup.c' ])
 
 ==> CheckLibrary
 ==> CheckFlags?? Check for a C compiler flag like autoconf, and remove it if not?
     ==> Extend the CheckCompiler?
 
-==> improve the output of bouwer, especially debug when running actions etc...
+==> ConfigHeader() in include/. Test it.
 
 (*) Support fully overrides in a configtree.
     - Support to override a ConfigList, e.g. add items to CC, change them, or also remove them should work.
 
 ==> Dependency system could be improved.... especially the caching is not clean..
-==> Monitor filesystem for changes, all platforms:
-    ==> https://pypi.python.org/pypi/watchdog
 
 (*) Ensure high quality for release
-
-    (*) UseLibrary is a MESS.
-        --> it should all use the compiler backend.
-        --> it should work also with -Iinclude in incpath, e.g. a ConfigHeader() in include/Bouwfile
-            now it gives an error:
-      File "/home/fox/Repositories/Bouwer.git/source/bouwer/builder.py", line 155, in _invoke
-          return self.builder.execute_any(*arguments, **keywords)
-            File "/home/fox/Repositories/Bouwer.git/source/bouwer/plugins/UseLibrary.py", line 83, in execute_any
-                tmp._keywords['ldpath']  += ':' + os.path.dirname(target.absolute)
-                KeyError: 'ldpath'
-
-    ? UseLibrary should look in the ActionTree to fill in -L <path>
-    --> if two libraries with the same name, then solve like this:
-        library/sub/path/libfoo.a
-        library/other/path/libfoo.a
-        UseLibrary(conf.FOO, ['sub/path/libfoo', 'libbar'])
-
-    --> add a config option to also add -I or -isystem for libraries, ie:
-        BoolConfig('GCC',
-                    libinc = '.')
-
-        this will make a -I to the directory of the library itself.
-        if the user has like a 'include/' dir for every source lib dir, then:
-        
-        BoolConfig('GCC',
-                    libinc = 'include')
-
-
-
     (*) builder mesh is hiding the error in the python back trace... we should fix this. put the
         original Bouwfile in the backtrace!
 
@@ -129,10 +120,9 @@
     --> do this with threading
 
 - implement daemon mode --> watch a directory and build on change
+    --> see https://pypi.python.org/pypi/watchdog
 
 - implement a --pretend mode, which doesn't really execute commands, but prints Actions
-
-- implement on-the-fly action generation from Workers, to support source generators
 
 - CheckCompiler could try the next available C compiler if the current one failed.
 
@@ -154,6 +144,8 @@
     - e.g. an http daemon mode plugin, which has a config + output plugin
 - Builders:
     - ISO: make an ISO image
+    - ZIP: make a zip file
+    - TAR: make a tar file
 
 - IDE integration, e.g. eclipse
 

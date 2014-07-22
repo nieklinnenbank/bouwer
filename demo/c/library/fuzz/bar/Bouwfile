@@ -19,5 +19,8 @@ def build(conf):
     """
     Build the fuzz library
     """
+
+    ConfigHeader('config.h')
+    LibraryObject(conf.LIBFUZZ_FOO, 'foo.c')
     Library(conf.LIBFUZZ, [ 'fuzz.c' ])
 

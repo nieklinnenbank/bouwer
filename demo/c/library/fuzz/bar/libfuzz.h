@@ -18,6 +18,12 @@
 #ifndef __LIB_FUZZ_H
 #define __LIB_FUZZ_H
 
+#include "config.h"
+
 extern int fuzz(void);
+
+#ifdef CONFIG_LIBFUZZ_FOO
+extern int foo(void);
+#endif
 
 #endif /* __LIB_FUZZ_H */

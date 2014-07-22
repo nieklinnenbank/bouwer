@@ -47,7 +47,7 @@ class ConfigHeader(Plugin):
         """
         Called when an Action has finished
         """
-        if event.name == 'finish':
+        if event.type == ActionEvent.FINISH:
 
             splitfile = os.path.splitext(action.target)
             number = random.randint(100000, 999999)

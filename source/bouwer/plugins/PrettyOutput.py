@@ -32,11 +32,11 @@ class PrettyOutput(Plugin):
             dest    = 'output_plugin',
             action  = 'store_const',
             const   = self,
-            default = argparse.SUPPRESS,
+            default = self,
             help    = 'Output only the builder name and target of each action')
 
     def action_event(self, action, event):
-        if event.name == 'execute':
+        if event.type == ActionEvent.EXECUTE:
             # TODO: how to get the builder instance?????
 
             if 'pretty_name' in action.tags:

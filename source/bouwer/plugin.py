@@ -28,7 +28,7 @@ import importlib
 from bouwer.util import Singleton
 from bouwer.config import Configuration
 from bouwer.builder import BuilderManager
-from bouwer.action import ActionManager
+from bouwer.action import ActionEvent
 
 class Plugin:
     """
@@ -69,7 +69,7 @@ class Plugin:
         for any submitted Actions. For example, when the Action
         begins or has finished execution.
         """
-        if event.name == 'finish':
+        if event.type == ActionEvent.FINISH:
             if event.result != 0:
                 self.log.error(str(action.builder) + " terminated with unexpected exit status " + \
                                event.result + " -- aborting")
@@ -108,8 +108,7 @@ class PluginManager(Singleton):
             return
 
         # Append source directory to the python path, if exists.
-        if os.path.exists(path + os.sep + "__init__.py"):
-            sys.path.insert(1, os.path.dirname(path))
+        if os.path.exists(path + os.sep + "__init__.py") and path not in sys.path:
             sys.path.insert(1, path)
 
         # Attempt to load all plugins in the given path
@@ -127,12 +126,10 @@ class PluginManager(Singleton):
                 name, ext = os.path.splitext(filename)
                 class_ = None
 
-                # Construct load string
-                loadstr = os.path.basename(path) + '.' + name
-
                 # Import the builder as a module
-                module = importlib.import_module(loadstr)
+                module = importlib.import_module(name)
 
+                # TODO: a plugin could have multiple builders?
                 # Find the plugin class, if any
                 try:
                     class_ = getattr(module, name)
@@ -146,25 +143,3 @@ class PluginManager(Singleton):
 
                     # Add plugin to the list
                     self.plugins[name] = instance
-
-    # TODO: replace this with: def invoke(func, ...), e.g. invoke('output', foo, bar, zzz):
-
-    ##
-    # Retrieves the active output plugin
-    #
-    def output_plugin(self):
-
-        # If the output_plugin parameter is set, use that.
-        try:
-            return self.conf.args.output_plugin
-        except AttributeError:
-            pass
-    
-        # Otherwise, use the PrettyOutput plugin.
-        try:
-            return self.plugins['PrettyOutput']
-        except KeyError:
-            pass
-
-        # No output plugin available.
-        return None

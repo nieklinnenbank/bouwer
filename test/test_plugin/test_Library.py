@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 # Copyright (C) 2012 Niek Linnenbank
 #
@@ -16,27 +15,21 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os
-import sys
-import inspect
+"""
+Bouwer plugin tests
+"""
 
-# Retrieve the path to the currently executed file
-cur_file = os.path.abspath(inspect.getfile(inspect.currentframe()))
+from test import *
 
-# Is it a symbolic link?
-if os.path.islink(cur_file):
-    cur_path = os.readlink(cur_file)
-else:
-    cur_path = cur_file
+class LibraryTester(BouwerTester):
+    """
+    Tester class for the Library builder
+    """
 
-# Convert to directory name
-corepath = os.path.dirname(cur_path) + "/source"
+    def test_dummy(self):
+        """
+        dummy
+        """
+        self.skipTest('implement')
 
-# Append core source directory to the path
-if corepath not in sys.path:
-    sys.path.insert(1, corepath)
 
-import bouwer.core
-
-if __name__ == '__main__':
-    bouwer.core.execute()
