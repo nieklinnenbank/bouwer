@@ -71,8 +71,9 @@ class Plugin:
         """
         if event.type == ActionEvent.FINISH:
             if event.result != 0:
-                self.log.error(str(action.builder) + " terminated with unexpected exit status " + \
-                               event.result + " -- aborting")
+                self.log.error(str(action.builder.__class__.__name__) + \
+                             " terminated with unexpected exit status " + \
+                               str(event.result) + " -- aborting")
                 sys.exit(event.result)
 
     def initialize(self):
