@@ -22,7 +22,7 @@ from bouwer.builder import *
 from bouwer.config import *
 import bouwer.util
 
-#TODO: i want the Program, Object, Library, etc builders in this file. and call it CCompiler.py
+#TODO: i want the Program, Object, Library, etc builders in this file
 
 class CCompiler(bouwer.util.Singleton):
 
@@ -33,6 +33,8 @@ class CCompiler(bouwer.util.Singleton):
         self.conf  = Configuration.Instance()
         self.build = BuilderManager.Instance()
         self.c_object_list = []
+        self.libraries  = {}
+        self.use_libraries = {}
         self.objects_for_items = {}
 
     def _find_headers(self, source, paths):
@@ -120,52 +122,54 @@ class CCompiler(bouwer.util.Singleton):
         """
         Compile a C source file into an object file
         """
-        chain  = self.conf.active_tree.get('CC')
-        cc     = self.conf.active_tree.get(chain.value())
+        chain     = self.conf.active_tree.get('CC')
+        cc        = self.conf.active_tree.get(chain.value())
         splitfile = os.path.splitext(source.relative)
+        incflags  = ''
 
-        if splitfile[1] == '.c':
+        if splitfile[1] != '.c':
+            raise Exception('not a C source file: ' + source)
 
-            # Translate source and target paths relative from project-root
-            outfile = TargetPath(splitfile[0] + '.o')
+        # Translate source and target paths relative from project-root
+        outfile = TargetPath(splitfile[0] + '.o')
 
-            if item is not None:
-                deps = self._register_config_deps(outfile, item)
-            else:
-                self.c_object_list.append(outfile)
+        # Link the config item and its parents to this target file.
+        if item is not None:
+            self._register_config_deps(outfile, item)
+        else:
+            self.c_object_list.append(outfile)
 
-            # Add C preprocessor paths
-            incflags = ''
+        # Add C preprocessor paths
+        try:
+            for path in cc['incpath'].split(':'):
+                if path: incflags += cc['incflag'] + path + ' '
+        except KeyError:
+            pass
 
+        # Add C preprocessor paths from libraries
+        for libname in self.use_libraries.get(self.conf.active_tree, {}).get(self.conf.active_dir, {}):
             try:
-                for path in cc['incpath'].split(':'):
-                    if len(path) > 0:
-                        incflags += cc['incflag'] + path + ' '
+                incflags += cc['incflag'] + self.libraries[self.conf.active_tree][libname][1] + ' '
             except KeyError:
                 pass
 
-            # Determine dependencies to build output file.
-            deps = self._find_headers(source, cc['incpath'].split(':'))
-            deps.append(source)
+        # Determine dependencies to build output file.
+        deps = self._find_headers(source, cc['incpath'].split(':'))
+        deps.append(source)
 
-            # Set our pretty name
-            if 'pretty_name' not in extra_tags:
-                extra_tags['pretty_name'] = 'CC'
+        # Set our pretty name
+        if 'pretty_name' not in extra_tags:
+            extra_tags['pretty_name'] = 'CC'
 
-            # Register compile action
-            self.build.action(outfile, deps,
-                         cc['cc'] + ' ' +
-                         str(outfile) + ' ' +
-                         cc['ccflags'] + ' ' + incflags +
-                         str(source),
-                         **extra_tags
-            )
-
-            return outfile
-
-        # Unknown filetype
-        else:
-            raise Exception('unknown filetype: ' + source)
+        # Register compile action
+        self.build.action(outfile, deps,
+                          cc['cc'] + ' ' +
+                          str(outfile) + ' ' +
+                          cc['ccflags'] + ' ' + incflags +
+                          str(source),
+                        **extra_tags
+        )
+        return outfile
 
     def c_program(self, target, sources, item = None):
         """
@@ -173,34 +177,43 @@ class CCompiler(bouwer.util.Singleton):
         """
 
         # Retrieve compiler chain
-        chain = self.conf.get('CC')
-        cc    = self.conf.get(chain.value())
+        chain   = self.conf.get('CC')
+        cc      = self.conf.get(chain.value())
         objects = []
-
+        ldpath  = ''
+        ldflags = cc['ldflags']
+        incpath = ''
         extra_deps = self._lookup_config_deps(item) + self.c_object_list
 
-        # TODO: we dont need to do it like this anymore. Just save it in a member....
-        if self.conf.get('SOURCES') is not None:
-            extra_deps += self.conf.get('SOURCES').value()
+        # Add linker paths
+        for path in cc['ldpath'].split(':'):
+            if path: ldpath += cc['ldflag'] + path + ' '
+
+        for libname in self.use_libraries.get(self.conf.active_tree, {}).get(self.conf.active_dir, {}):
+            # Local library?
+            try:
+                lib = self.libraries[self.conf.active_tree][libname][0]
+                ldpath += cc['ldflag'] + os.path.dirname(lib.absolute) + ' '
+                extra_deps.append(lib)
+            except KeyError:
+                pass
+
+            # Link with the library
+            if libname[:3] == 'lib':
+                libname = libname[3:]
+
+            ldflags += ' -l' + libname
 
         # Traverse all source files given
         for source in sources:
             objects.append(self.c_object(source))
-
-        # Add linker paths
-        ldpath = ''
-        for path in cc['ldpath'].split(':'):
-            if len(path) > 0:
-                ldpath += cc['ldflag'] + path + ' '
-
-        # TODO: use the compiler.c_object_list 
 
         # Link the program
         self.build.action(target,
                           objects + extra_deps, 
                           cc['ld'] + ' ' + str(target) + ' ' +
                          (' '.join([str(o) for o in objects])) + ' ' + ldpath +
-                          cc['ldflags'] + ' ' + cc['ldscript'],
+                          ldflags + ' ' + cc['ldscript'],
                           pretty_name='LINK')
 
     def c_library(self, target, sources, item = None):
@@ -232,14 +245,10 @@ class CCompiler(bouwer.util.Singleton):
         self.c_object_list = []
 
         # Publish ourselves to the libraries list
-        if self.conf.active_tree.get('LIBRARIES') is None:
-            # TODO: why do i need to specify active_tree here...
-            self.conf.active_tree.add(Config('LIBRARIES', {}, temporary = True),
-                                      Configuration.Instance().base_conf) # TODO: path is an ugly hack...
+        if self.conf.active_tree not in self.libraries:
+            self.libraries[self.conf.active_tree] = {}
 
-        # Add ourselve to the libraries dictionary
-        libdict = self.conf.get('LIBRARIES').value()
-        libdict[libname] = (target, self.conf.active_dir)
+        self.libraries[self.conf.active_tree][libname] = (target, self.conf.active_dir)
 
     def generate_library_override(self, libraries):
         """
@@ -249,37 +258,7 @@ class CCompiler(bouwer.util.Singleton):
         searching the generated :class:`.Action` objects in
         the actions layer.
         """
+        if self.conf.active_tree not in self.use_libraries:
+            self.use_libraries[self.conf.active_tree] = {}
 
-        # TODO: this should become a *TEMPORARY* per-directory override instead
-        chain = self.conf.get('CC')
-        cc    = self.conf.get(chain.value())
-
-        # TODO: find the correct libary path using the actions layer!!!
-        # TODO: only do it like this if static linking!!!
-        # TODO: use keyword indirection instead of copying the original keywords?!
-        tmp = ConfigBool(cc.name, **cc._keywords)
-        slist = []
-        libs = self.conf.get('LIBRARIES')
-
-        # Loop all given libraries
-        for lib in libraries:
-            # Local library?
-            try:
-                target, path = libs.value()[lib]
-                slist.append(target)
-                tmp._keywords['ldpath']  += ':' + os.path.dirname(target.absolute)
-                tmp._keywords['incpath'] += ':' + path
-            except KeyError: pass
-            except AttributeError: pass
-
-            if lib[:3] == 'lib':
-                libname = lib[3:]
-            else:
-                libname = lib
-
-            if 'ldflags' not in tmp._keywords:
-                tmp._keywords['ldflags'] = ''
-            tmp._keywords['ldflags'] += ' -l' + libname + ' '
-
-        self.conf.active_tree.add(tmp)
-        self.conf.active_tree.add(Config('SOURCES', slist, temporary = True))
+        self.use_libraries[self.conf.active_tree][self.conf.active_dir] = libraries
