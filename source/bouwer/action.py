@@ -80,6 +80,7 @@ class WorkerManager:
         self.log      = logging.getLogger(__name__)
         self.output_plugin = getattr(CommandLine.Instance().args, 'output_plugin', None)
         self.running  = []
+        self.pending  = self.actions.copy()
 
         # Create workers
         for i in range(CommandLine.Instance().args.workers):
@@ -104,17 +105,16 @@ class WorkerManager:
         while True:
             collecting = True
 
-            # TODO: performance bottleneck!!!
-
             # Make as much as possible work available
             while collecting:
                 collecting = False
 
-                for action in self.actions.values():
+                for key, action in self.pending.items():
                     if self.decide(action):
                         action.status = ActionEvent.EXECUTE
                         self.work.put(action.target)
                         self.running.append(action)
+                        del self.pending[key]
                         collecting = True
 
             # Wait for events
