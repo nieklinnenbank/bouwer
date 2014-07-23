@@ -1,12 +1,5 @@
 [FOR RELEASE]
 
-    --> the path is ugly. This leads to problems with Singletons.
-        we only need the $BOUWER_BASE/source and $BOUWER_BASE/source/bouwer/plugins
-
-    ==> make a test for it too?
-
-['/home/fox/Repositories/Bouwer.git', '/home/fox/Repositories/Bouwer.git/source/bouwer/plugins', '/home/fox/Repositories/Bouwer.git/source/bouwer', '/home/fox/Repositories/Bouwer.git/source',
-
 ==> Configuration can be changed by builders
     --> if so, it should be tainted, and save()'ed at the end of bouwer execution
     --> but with the same modification timestamp as when bouwer opened it
@@ -22,6 +15,8 @@
     ==> Program, Library, Object and even UseLibrary can be extended to limit to a specific binary.
 
 ==> UseLibrary: should allow a subpath for library includes...
+
+==> UseLibrary: if no Library(), then the library must be external. Do that.
 
 ==> Put all Program/Object/Library/* in the CCompiler.py plugin..
     --> support multiple builders per plugin too.
@@ -56,7 +51,8 @@
 ==> Test bouwer on example projects:
     - GNU nano
     - Apache
-    - Linux Kernel
+    - VLC
+    - Linux Kernel?
 
 [features]
 - make a RequireVersion() builder or similar, to check for bouw version

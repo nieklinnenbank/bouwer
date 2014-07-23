@@ -259,26 +259,26 @@ class CCompiler(bouwer.util.Singleton):
         # TODO: use keyword indirection instead of copying the original keywords?!
         tmp = ConfigBool(cc.name, **cc._keywords)
         slist = []
-
         libs = self.conf.get('LIBRARIES')
-        if libs is None:
-            return
-        
-        libdict = libs.value()
 
         # Loop all given libraries
         for lib in libraries:
-
-            target, path = libdict[lib]
-            slist.append(target)
+            # Local library?
+            try:
+                target, path = libs.value()[lib]
+                slist.append(target)
+                tmp._keywords['ldpath']  += ':' + os.path.dirname(target.absolute)
+                tmp._keywords['incpath'] += ':' + path
+            except KeyError: pass
+            except AttributeError: pass
 
             if lib[:3] == 'lib':
                 libname = lib[3:]
             else:
                 libname = lib
 
-            tmp._keywords['ldpath']  += ':' + os.path.dirname(target.absolute)
-            tmp._keywords['incpath'] += ':' + path
+            if 'ldflags' not in tmp._keywords:
+                tmp._keywords['ldflags'] = ''
             tmp._keywords['ldflags'] += ' -l' + libname + ' '
 
         self.conf.active_tree.add(tmp)
