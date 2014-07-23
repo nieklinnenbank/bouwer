@@ -17,6 +17,10 @@
 
 """
 Bouwer action layer
+
+This layer is responsible for executing actions. An action can
+be a shell command or a python function. The action layer does not know
+about the other layers (build and configuration).
 """
 
 import multiprocessing
@@ -45,6 +49,10 @@ class Worker(multiprocessing.Process):
     def __init__(self, actions, work, events):
         """
         Constructor
+
+        :param dict actions: Dictionary with :class:`Action` objects
+        :param :class:`Queue` work: Queue to receive target names to execute
+        :param :class:`Queue` events: Queue to publish events to the :class:`WorkerManager`
         """
         super(Worker, self).__init__()
         self._actions = actions
@@ -53,7 +61,7 @@ class Worker(multiprocessing.Process):
 
     def run(self):
         """
-        Main execution loop of the Worker.
+        Main execution loop of the Worker. Does not return.
         """
         while True:
             # Retrieve the next Action target
@@ -72,6 +80,8 @@ class WorkerManager:
     def __init__(self, actions):
         """
         Constructor
+
+        :param dict actions: Dictionary with :class:`Action` objects
         """
         self.actions  = actions
         self.work     = multiprocessing.Queue()
@@ -98,7 +108,7 @@ class WorkerManager:
 
     def execute(self):
         """
-        Execute the :obj:`list` of :class:`.Action` objects
+        Execute all :class:`.Action` objects
         """
         self.log.debug("running actions")
 
@@ -124,6 +134,7 @@ class WorkerManager:
             event  = self.events.get()
             action = self.actions[event.target]
             action.status = event.type
+            self.log.debug("event: " + str(event))
 
             if action.status == ActionEvent.FINISH:
                 self.running.remove(action)
@@ -139,10 +150,9 @@ class WorkerManager:
         """
         Decide if this action needs to run.
 
-        Returns `True` if the :class:`Action` needs to run or `False` otherwise. 
+        :param :class:`Action` action: the action to try
 
-        >>> manager.decide(action)
-            True
+        Returns `True` if the :class:`Action` needs to run or `False` otherwise.
         """
         need_run = False
 
@@ -192,6 +202,11 @@ class ActionEvent:
     def __init__(self, worker, target, event_type, result = None):
         """
         Constructor
+
+        :param str worker: the name of the :class:`Worker` that caused the event
+        :param str target: target of the :class:`Action` for this event
+        :param str event_type: type of event
+        :param int result: exit code of the :class:`Action`
         """
         self.worker = worker
         self.target = target
@@ -203,8 +218,9 @@ class ActionEvent:
         """
         Convert to string representation
         """
-        return 'ActionEvent.' + self.type.upper() + ' : ' + self.target + ' @ worker[' + self.worker + '] type=' + \
-               self.type + ' result=' + str(self.result) + ' time=' + str(self.time)
+        return 'ActionEvent.' + self.type.upper() + ' : ' + self.target + \
+               ' @ worker[' + self.worker + '] type=' + self.type + \
+               ' result=' + str(self.result) + ' time=' + str(self.time)
 
     def __repr__(self):
         """
@@ -220,6 +236,12 @@ class Action:
     def __init__(self, target, sources, command, tags, builder):
         """
         Constructor
+
+        :param str target: target file for the action
+        :param list sources: a `list` of source files as dependency
+        :param str command: Either a `str` with a shell command or a python function
+        :param dict tags: Dictionary with parameters called tags
+        :param :class:`Plugin` builder: the builder that generated this action
         """
         self.target  = target
         self.sources = sources
@@ -276,8 +298,11 @@ class ActionManager(object):
         """
         Submit a new :class:`.Action` for execution
 
-        >>> manager = ActionManager()
-        >>> manager.submit('hello', ['hello.c'], 'gcc -o hello hello.c')
+        :param str target: target file for the action
+        :param list sources: a `list` of source files as dependency
+        :param str command: Either a `str` with a shell command or a python function
+        :param dict tags: Dictionary with parameters called tags
+        :param :class:`Plugin` builder: the builder that generated this action
         """
         if target in self.actions:
             raise Exception("target " + target + " already submitted")
@@ -288,6 +313,8 @@ class ActionManager(object):
     def run(self, clean = False):
         """
         Run all registered :class:`.Action` objects
+
+        :param bool clean: True to remove the targets. False to execute.
         """
 
         if clean:
