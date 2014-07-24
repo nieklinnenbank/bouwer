@@ -37,7 +37,9 @@ class PrettyOutput(Plugin):
 
     def action_event(self, action, event):
         if event.type == ActionEvent.FINISH:
-            # TODO: how to get the builder instance?????
+
+            if action.tags.get('pretty_skip', False):
+                return
 
             if 'pretty_name' in action.tags:
                 pretty_name = action.tags['pretty_name']

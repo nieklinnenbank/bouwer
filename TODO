@@ -7,6 +7,7 @@
     --> if an (external) configuration edit is done, then the modification timestamp is updated, and rebuilds will be done accordingly.
     
     ==> usefull for e.g. CheckFlag(), or TryCFlag()
+==> use set_default() for dicts...
 
 ==> Let the Check*() functions create a config item, if it does not exist!
 

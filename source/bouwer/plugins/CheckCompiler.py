@@ -45,17 +45,18 @@ class CheckCompiler(Plugin):
                          [SourcePath(cfile)],
                           self.cc['cc'] + ' ' + cfile + '.o ' +
                           self.cc['ccflags'] + ' ' + cfile,
-                          pretty_name='CHECK',
+                          pretty_name='CHK',
                           pretty_target=self.cc.name)
 
     def action_event(self, action, event):
         """
         Called when an Action has finished
         """
-        if event.type == ActionEvent.FINISH and event.result != 0:
-            # The C compiler cannot generate C objects.
-            # TODO: Try the next C compiler automatically, if any.
-            self.log.error('C compiler not installed or unable to execute: ' + str(self.cc.name))
-            sys.exit(1)
+        if event.type == ActionEvent.FINISH:
+            if event.result != 0:
+                # The C compiler cannot generate C objects.
+                # TODO: Try the next C compiler automatically, if any.
+                self.log.error('C compiler not installed or unable to execute: ' + str(self.cc.name))
+                sys.exit(1)
 
-        action.tags['pretty_target'] += ' ... True'
+            action.tags['pretty_target'] += ' ... True'

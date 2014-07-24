@@ -118,6 +118,13 @@ class CCompiler(bouwer.util.Singleton):
         else:
             return []
 
+    def _get_libraries_for_target(self, target):
+        treedict  = self.use_libraries.get(self.conf.active_tree, {})
+        dirdict   = treedict.get(self.conf.active_dir, {})
+        use_libs  = dirdict.get(target.absolute, [])
+        use_libs += dirdict.get(None, [])
+        return use_libs
+
     def c_object(self, source, item = None, **extra_tags):
         """
         Compile a C source file into an object file
@@ -136,7 +143,7 @@ class CCompiler(bouwer.util.Singleton):
         # Link the config item and its parents to this target file.
         if item is not None:
             self._register_config_deps(outfile, item)
-        else:
+        elif not extra_tags.get('standalone', False):
             self.c_object_list.append(outfile)
 
         # Add C preprocessor paths
@@ -147,7 +154,7 @@ class CCompiler(bouwer.util.Singleton):
             pass
 
         # Add C preprocessor paths from libraries
-        for libname in self.use_libraries.get(self.conf.active_tree, {}).get(self.conf.active_dir, {}):
+        for libname in self._get_libraries_for_target(outfile):
             try:
                 incflags += cc['incflag'] + self.libraries[self.conf.active_tree][libname][1] + ' '
             except KeyError:
@@ -179,17 +186,17 @@ class CCompiler(bouwer.util.Singleton):
         # Retrieve compiler chain
         chain   = self.conf.get('CC')
         cc      = self.conf.get(chain.value())
-        objects = []
         ldpath  = ''
         ldflags = cc['ldflags']
         incpath = ''
-        extra_deps = self._lookup_config_deps(item) + self.c_object_list
+        objects = self._lookup_config_deps(item) + self.c_object_list
+        extra_deps = []
 
         # Add linker paths
         for path in cc['ldpath'].split(':'):
             if path: ldpath += cc['ldflag'] + path + ' '
 
-        for libname in self.use_libraries.get(self.conf.active_tree, {}).get(self.conf.active_dir, {}):
+        for libname in self._get_libraries_for_target(target):
             # Local library?
             try:
                 lib = self.libraries[self.conf.active_tree][libname][0]
@@ -204,7 +211,6 @@ class CCompiler(bouwer.util.Singleton):
 
             ldflags += ' -l' + libname
 
-
         # Traverse all source files given
         for source in sources:
             objects.append(self.c_object(source, **extra_tags))
@@ -214,11 +220,14 @@ class CCompiler(bouwer.util.Singleton):
             extra_tags['pretty_name'] = 'LINK'
 
         # Link the program
-        self.build.action(target, objects + extra_deps, 
+        self.build.action(target, objects + extra_deps,
                           cc['ld'] + ' ' + str(target) + ' ' +
                          (' '.join([str(o) for o in objects])) + ' ' + ldpath +
                           ldflags + ' ' + cc['ldscript'],
                          **extra_tags)
+
+        # Clear list of objects
+        self.c_object_list = []  # TODO: do we still need this???
 
     def c_library(self, target, sources, item = None):
         """
@@ -254,7 +263,7 @@ class CCompiler(bouwer.util.Singleton):
 
         self.libraries[self.conf.active_tree][libname] = (target, self.conf.active_dir)
 
-    def generate_library_override(self, libraries):
+    def use_library(self, libraries, target = None):
         """
         Build against a :py:`list` of `libraries`
 
@@ -262,12 +271,9 @@ class CCompiler(bouwer.util.Singleton):
         searching the generated :class:`.Action` objects in
         the actions layer.
         """
-        if self.conf.active_tree not in self.use_libraries:
-            self.use_libraries[self.conf.active_tree] = {}
+        if target: target = target.absolute
 
-        if self.conf.active_dir not in self.use_libraries[self.conf.active_tree]:
-            self.use_libraries[self.conf.active_tree][self.conf.active_dir] = libraries
-        else:
-            use_list = self.use_libraries[self.conf.active_tree][self.conf.active_dir]
-            for lib in libraries:
-                if lib not in use_list: use_list.append(lib)
+        use_lib_tree   = self.use_libraries.setdefault(self.conf.active_tree, {})
+        use_lib_dir    = use_lib_tree.setdefault(self.conf.active_dir, {})
+        use_lib_target = use_lib_dir.setdefault(target, [])
+        use_lib_target += libraries

@@ -35,12 +35,10 @@ class UseLibrary(Plugin):
         if item.value():
             self.execute_any(libsrc)
 
-    def execute_any(self, libraries):
+    def execute_any(self, libraries, target = None):
         """
         Build against a :py:`list` of `libraries`
 
-        The library target for linking will be discovered by
-        searching the generated :class:`.Action` objects in
-        the actions layer.
+        The library target for linking will be discovered internally.
         """
-        CCompiler.Instance().generate_library_override(libraries)
+        CCompiler.Instance().use_library(libraries, target)

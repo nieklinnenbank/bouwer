@@ -41,7 +41,7 @@ class ConfigHeader(Plugin):
         target = TargetPath(filename)
 
         # Schedule Action to compile it
-        self.build.action(target, [SourcePath('.bouwconf')], '',
+        self.build.action(target, [SourcePath('.bouwconf')], '# ConfigHeader',
                           pretty_name='GEN',
                           pretty_target=target.absolute,
                           prefix=prefix)

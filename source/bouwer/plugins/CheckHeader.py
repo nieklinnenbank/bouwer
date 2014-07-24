@@ -56,9 +56,9 @@ class CheckHeader(Plugin):
 
         # Schedule Action to compile it
         CCompiler.Instance().c_object(SourcePath(cfile),
-                          confitem=conf, filename=header,
-                          pretty_name='CHECK', pretty_target=header,
-                          required=is_required, quiet=True)
+                                      confitem=conf, filename=header,
+                                      pretty_name='CHK', pretty_target=header,
+                                      standalone=True, required=is_required, quiet=True)
 
     def action_event(self, action, event):
         """
@@ -68,13 +68,14 @@ class CheckHeader(Plugin):
         item = action.tags['confitem']
 
         # Update the configuration item
-        if event.type == ActionEvent.FINISH and event.result != 0:
-            if action.tags['required']:
-                self.log.error('C Header ' + action.tags['filename'] + ' not installed')
-                sys.exit(1)
+        if event.type == ActionEvent.FINISH:
+            if event.result != 0:
+                if action.tags['required']:
+                    self.log.error('C Header ' + action.tags['filename'] + ' not installed')
+                    sys.exit(1)
+                else:
+                    item.update(False)
             else:
-                item.update(False)
-        else:
-            item.update(True)
+                item.update(True)
 
-        action.tags['pretty_target'] += ' ... ' + str(item.value())
+            action.tags['pretty_target'] += ' ... ' + str(item.value())

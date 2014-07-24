@@ -46,6 +46,7 @@ class CheckFunction(Plugin):
     def execute_config(self, conf, function, lib, is_required = False):
         # Generate C file, if not yet done already.
         cfile = bouwer.util.tempfile(self.__class__.__name__ + '.' + conf.name + '.c')
+        tfile = TargetPath(cfile + '.o')
 
         if not os.path.isfile(cfile):
             fp = open(cfile, 'w')
@@ -53,32 +54,42 @@ class CheckFunction(Plugin):
             fp.close()
 
         # Use the given library
-        CCompiler.Instance().generate_library_override([lib])
+        CCompiler.Instance().use_library([lib], tfile)
+
+        # Seperate object action, which does not have pretty output.
+        CCompiler.Instance().c_object(SourcePath(cfile), item=conf, pretty_skip=True)
 
         # Schedule Action to compile it
-        CCompiler.Instance().c_program(TargetPath(cfile + '.o'),
-                                      [SourcePath(cfile)],
-                                       confitem=conf, function=function, library=lib,
-                                       pretty_name='CHECK', pretty_target=function + ' in ' + lib,
+        CCompiler.Instance().c_program(tfile, [],
+                                       item=conf, confitem=conf, function=function, library=lib,
+                                       pretty_name='CHK', pretty_target=function,
                                        required=is_required, quiet=True)
-
 
     def action_event(self, action, event):
         """
         Called when an Action has finished
         """
 
-        item = action.tags['confitem']
+        try:
+            item = action.tags['confitem']
+        except:
+            return
 
-        # Update the configuration item
-        if event.type == ActionEvent.FINISH and event.result != 0:
-            if action.tags['required']:
-                self.log.error('C function ' + action.tags['function'] +
-                               ' does not exist in library ' + action.tags['library'])
-                sys.exit(1)
+        # Update the configuration item on finish.
+        if event.type == ActionEvent.FINISH:
+            if event.result != 0:
+
+                # Make sure the target file is updated.
+                open(action.target, 'w').close()
+
+                if action.tags['required']:
+                    self.log.error('C function ' + action.tags['function'] +
+                                   ' does not exist in library ' + action.tags['library'])
+                    sys.exit(1)
+                else:
+                    item.update(False)
             else:
-                item.update(False)
-        else:
-            item.update(True)
+                item.update(True)
 
-        action.tags['pretty_target'] += ' ... ' + str(item.value())
+            # Fancy output
+            action.tags['pretty_target'] += ' ... ' + str(item.value())

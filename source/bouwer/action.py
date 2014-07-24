@@ -139,12 +139,12 @@ class WorkerManager:
             if action.status == ActionEvent.FINISH:
                 self.running.remove(action)
 
+            # Report the event to the builder
+            action.builder.action_event(action, event)
+
             # Invoke output plugin.
             if self.output_plugin:
                 self.output_plugin.action_event(action, event)
-
-            # Report the event to the builder
-            action.builder.action_event(action, event)
 
     def decide(self, action):
         """
