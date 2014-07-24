@@ -34,14 +34,17 @@ class ConfigHeader(Plugin):
         """ We can only write the config header when all items are final """
         return [ 'CHECK', 'CC' ]
 
-    def execute_any(self, filename):
+    def execute_any(self, filename, prefix='CONFIG_'):
         """ Builder implementation for ConfigHeader() """
 
         # TODO: we should be able to provide a python function as builder also...
         target = TargetPath(filename)
 
         # Schedule Action to compile it
-        self.build.action(target, [SourcePath('.bouwconf')], '', pretty_name='GEN', pretty_target=target.absolute)
+        self.build.action(target, [SourcePath('.bouwconf')], '',
+                          pretty_name='GEN',
+                          pretty_target=target.absolute,
+                          prefix=prefix)
 
     def action_event(self, action, event):
         """
@@ -63,18 +66,18 @@ class ConfigHeader(Plugin):
                                    '#define __H_' + str(number) + '\n\n') 
 
                 for tree in self.conf.trees.values():
-                    self._write_c_header(tree)
+                    self._write_c_header(tree, action.tags['prefix'])
 
                 self.outfile.write('#endif\n\n')
                 self.outfile.close()
 
-    def _write_c_header(self, item):
+    def _write_c_header(self, item, prefix):
        """ Append item to a C header file """
 
        if type(item) is ConfigBool and not item.value():
-           self.outfile.write('/* CONFIG_' + item.name + ' not set */\n')
+           self.outfile.write('/* ' + prefix + item.name + ' not set */\n')
        else:
-           self.outfile.write('#define CONFIG_' + item.name + ' ')
+           self.outfile.write('#define ' + prefix + item.name + ' ')
 
            if type(item) is ConfigBool:
                self.outfile.write('true\n')
@@ -84,5 +87,5 @@ class ConfigHeader(Plugin):
            if isinstance(item, ConfigTree):
                for paths in item.subitems.values():
                    for child_item in paths.values():
-                       self._write_c_header(child_item)
+                       self._write_c_header(child_item, prefix)
 

@@ -32,7 +32,7 @@ config GCC
       ccflags = -Wall -Wextra -c
       ldflags = -Wall -Wextra
       ldscript =
-      ldpath  = 
+      ldpath  =
       ldflag  = -L
       libs    =
       libflag = -l
@@ -53,7 +53,7 @@ config CLANG
       ccflags = -Wall -Wextra -c
       ldflags = -Wall -Wextra
       ldscript =
-      ldpath  = 
+      ldpath  =
       ldflag  = -L
       libs    =
       libflag = -l

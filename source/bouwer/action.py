@@ -263,7 +263,7 @@ class Action:
         # If quiet mode is set, do not show any output
         if 'quiet' in self.tags and self.tags['quiet']: 
             try:
-                subprocess.check_output(self.command.split(' '), stderr=subprocess.PIPE)
+                subprocess.check_output(self.command, stderr=subprocess.PIPE, shell=True)
                 return 0
             except subprocess.CalledProcessError as e:
                 return e.returncode

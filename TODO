@@ -8,6 +8,8 @@
     
     ==> usefull for e.g. CheckFlag(), or TryCFlag()
 
+==> Let the Check*() functions create a config item, if it does not exist!
+
 ==> UseLibrary applies to all Program()s in that Bouwfile.... is that ok?
     --> what if the user wants multiple Program()s in one directory... do we support that?
 

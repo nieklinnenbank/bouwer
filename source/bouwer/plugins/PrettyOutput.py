@@ -36,7 +36,7 @@ class PrettyOutput(Plugin):
             help    = 'Output only the builder name and target of each action')
 
     def action_event(self, action, event):
-        if event.type == ActionEvent.EXECUTE:
+        if event.type == ActionEvent.FINISH:
             # TODO: how to get the builder instance?????
 
             if 'pretty_name' in action.tags:

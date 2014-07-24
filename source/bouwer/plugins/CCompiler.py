@@ -171,7 +171,7 @@ class CCompiler(bouwer.util.Singleton):
         )
         return outfile
 
-    def c_program(self, target, sources, item = None):
+    def c_program(self, target, sources, item = None, **extra_tags):
         """
         Build an program given its `target` name and `sources` list
         """
@@ -204,17 +204,21 @@ class CCompiler(bouwer.util.Singleton):
 
             ldflags += ' -l' + libname
 
+
         # Traverse all source files given
         for source in sources:
-            objects.append(self.c_object(source))
+            objects.append(self.c_object(source, **extra_tags))
+
+        # Set our pretty name
+        if 'pretty_name' not in extra_tags:
+            extra_tags['pretty_name'] = 'LINK'
 
         # Link the program
-        self.build.action(target,
-                          objects + extra_deps, 
+        self.build.action(target, objects + extra_deps, 
                           cc['ld'] + ' ' + str(target) + ' ' +
                          (' '.join([str(o) for o in objects])) + ' ' + ldpath +
                           ldflags + ' ' + cc['ldscript'],
-                          pretty_name='LINK')
+                         **extra_tags)
 
     def c_library(self, target, sources, item = None):
         """
@@ -261,4 +265,9 @@ class CCompiler(bouwer.util.Singleton):
         if self.conf.active_tree not in self.use_libraries:
             self.use_libraries[self.conf.active_tree] = {}
 
-        self.use_libraries[self.conf.active_tree][self.conf.active_dir] = libraries
+        if self.conf.active_dir not in self.use_libraries[self.conf.active_tree]:
+            self.use_libraries[self.conf.active_tree][self.conf.active_dir] = libraries
+        else:
+            use_list = self.use_libraries[self.conf.active_tree][self.conf.active_dir]
+            for lib in libraries:
+                if lib not in use_list: use_list.append(lib)

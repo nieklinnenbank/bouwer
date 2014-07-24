@@ -19,12 +19,13 @@ import os
 import os.path
 from bouwer.plugin import *
 from bouwer.builder import *
+from bouwer.config import ConfigBool
 import bouwer.util
 from CCompiler import CCompiler
 
-class CheckHeader(Plugin):
+class CheckFunction(Plugin):
     """
-    See if a C header exists.
+    See if a C function exists.
     """
 
     def config_input(self):
@@ -33,32 +34,34 @@ class CheckHeader(Plugin):
     def config_action_output(self):
         return [ 'CHECK' ]
 
-    def execute_any(self, confname, header, is_required = False):
+    def execute_any(self, confname, function, lib, is_required = False):
         # Create a boolean, if needed.
         item = self.conf.get(confname)
         if item is None:
             item = bouwer.config.ConfigBool(confname)
             self.conf.active_tree.add(item)
 
-        self.execute_config(item, header, is_required)
+        self.execute_config(item, function, lib, is_required)
 
-    def execute_config(self, conf, header, is_required = False):
-
+    def execute_config(self, conf, function, lib, is_required = False):
         # Generate C file, if not yet done already.
-        # TODO: generic directory for putting these files please.
         cfile = bouwer.util.tempfile(self.__class__.__name__ + '.' + conf.name + '.c')
 
-        # TODO: these must be cleaned up too. If in the generic directory, we can simply remove the directory....
         if not os.path.isfile(cfile):
             fp = open(cfile, 'w')
-            fp.write('#include "' + header + '"\nint main(void) { return 0; }')
+            fp.write('int ' + function + '();\nint main(void) { return ' + function + '(); }')
             fp.close()
 
+        # Use the given library
+        CCompiler.Instance().generate_library_override([lib])
+
         # Schedule Action to compile it
-        CCompiler.Instance().c_object(SourcePath(cfile),
-                          confitem=conf, filename=header,
-                          pretty_name='CHECK', pretty_target=header,
-                          required=is_required, quiet=True)
+        CCompiler.Instance().c_program(TargetPath(cfile + '.o'),
+                                      [SourcePath(cfile)],
+                                       confitem=conf, function=function, library=lib,
+                                       pretty_name='CHECK', pretty_target=function + ' in ' + lib,
+                                       required=is_required, quiet=True)
+
 
     def action_event(self, action, event):
         """
@@ -70,7 +73,8 @@ class CheckHeader(Plugin):
         # Update the configuration item
         if event.type == ActionEvent.FINISH and event.result != 0:
             if action.tags['required']:
-                self.log.error('C Header ' + action.tags['filename'] + ' not installed')
+                self.log.error('C function ' + action.tags['function'] +
+                               ' does not exist in library ' + action.tags['library'])
                 sys.exit(1)
             else:
                 item.update(False)
