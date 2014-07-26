@@ -17,12 +17,140 @@
 
 import os
 import os.path
+import glob
 from bouwer.plugin import *
 from bouwer.builder import *
 from bouwer.config import *
 import bouwer.util
 
-#TODO: i want the Program, Object, Library, etc builders in this file
+class Object(Plugin):
+    """
+    Build an executable object for a program.
+    """
+
+    def config_input(self):
+        """ Configuration input items """
+        return [ 'CC', 'LINK_LIBRARIES', 'CONFIG' ]
+
+    def config_output(self):
+        """ Configuration output items """
+        return [ 'OBJECTS' ]
+
+    def execute_source(self, source):
+        """
+        Build an executable object given its `source` file
+        """
+        CCompiler.Instance().c_object(source)
+
+    def execute_config(self, item, sources):
+        """
+        Build executable objects if configurion item `item` is True
+        """
+        if item.value():
+            for source in sources:
+                self.execute_source(source, item)
+
+class Program(Plugin):
+    """
+    Build an executable program
+    """
+
+    def config_input(self):
+        """ Configuration input items """
+        return [ 'CC', 'LINK_LIBRARIES', 'CHECK', 'CONFIG' ]
+
+    def execute_config(self, item, sources):
+        """
+        Build a program given a :class:`.Config` `item` and `sources` list.
+        """
+        # TODO: also support the program = keyword, like library =
+        if item.value():
+            CCompiler.Instance().c_program(TargetPath(item.name.lower()), sources, item)
+
+    def execute_target(self, target, sources):
+        """
+        Build an program given its `target` name and `sources` list
+        """
+        CCompiler.Instance().c_program(target, sources)
+
+class Library(Plugin):
+    """ Build a software library """
+
+    def config_input(self):
+        """ Configuration input items """
+        return [ 'CC', 'CHECK', 'CONFIG', 'LIBRARY_OBJECTS' ]
+
+    def config_output(self):
+        """ Configuration output items """
+        return [ 'LIBRARIES' ]
+
+    def execute_config(self, item, sources):
+        """
+        Build a library using a :class:`.Config` and list of `sources`
+        """
+        if not item.value():
+            return
+
+        target = item.get_key('library', item.name.lower())
+        CCompiler.Instance().c_library(TargetPath(target), sources, item)
+
+    def execute_target(self, target, sources):
+        """
+        Build a library using a `target` name and list of `sources`
+        """
+        CCompiler.Instance().c_library(target, sources)
+
+class LibraryObject(Plugin):
+    """
+    Specify an additional object for a library
+    """
+
+    def config_input(self):
+        """ Configuration input items """
+        return [ 'CC', 'CONFIG' ]
+
+    def config_output(self):
+        """ Configuration output items """
+        return [ 'LIBRARY_OBJECTS' ]
+
+    def execute_source(self, source):
+        """
+        Build an executable object given its `source` file
+        """
+        compiler.CCompiler.Instance().c_object(source)
+
+    def execute_config(self, item, sources):
+        """
+        Build executable objects if configurion item `item` is True
+        """
+        if item.value():
+            for source in sources:
+                CCompiler.Instance().c_object(source, item)
+
+class UseLibrary(Plugin):
+    """
+    Build and link a program against a library
+    """
+
+    def config_input(self):
+        """ Configuration input items """
+        return [ 'CC', 'LIBRARIES', 'OBJECTS' ]
+
+    def config_output(self):
+        """ Configuration output items """
+        return [ 'LINK_LIBRARIES' ]
+
+    def execute_config_params(self, item, libsrc):
+        if item.value():
+            self.execute_any(libsrc)
+
+    def execute_any(self, libraries, target = None):
+        """
+        Build against a :py:`list` of `libraries`
+
+        The library target for linking will be discovered internally.
+        """
+        CCompiler.Instance().use_library(libraries, target)
 
 class CCompiler(bouwer.util.Singleton):
 

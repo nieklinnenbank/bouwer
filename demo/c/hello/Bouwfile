@@ -18,4 +18,8 @@
 def build(conf):
     """ Build the hello world program """
     ConfigHeader('config.h')
+
+    CheckLibrary('HAS_NCURSES', 'ncurses', False)
+    CheckFunction('HAS_VSNPRINTF', 'vsnprintf', 'c', False)
+
     Program(conf.HELLO, 'hello.c')

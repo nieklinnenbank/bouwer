@@ -25,6 +25,7 @@ import os.path
 import inspect
 import logging
 import importlib
+import inspect
 from bouwer.util import Singleton
 from bouwer.config import Configuration
 from bouwer.builder import BuilderManager
@@ -86,7 +87,9 @@ class PluginManager(Singleton):
     """
 
     def __init__(self):
-        """ Constructor """
+        """
+        Constructor
+        """
 
         self.conf    = Configuration.Instance()
         self.log     = logging.getLogger(__name__)
@@ -96,13 +99,13 @@ class PluginManager(Singleton):
         core_path = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
         plug_path = core_path + os.sep + 'plugins'
 
-        self._load_path(plug_path)
-        self._load_path(self.conf.args.plugin_dir)
+        self.load_path(plug_path)
+        self.load_path(self.conf.args.plugin_dir)
 
-    ##
-    # Load all plugins in the given directory
-    #
-    def _load_path(self, path):
+    def load_path(self, path):
+        """
+        Load all plugins in the given directory *path*
+        """
 
         # The path must exist, otherwise don't attempt
         if not os.path.exists(path):
@@ -125,22 +128,24 @@ class PluginManager(Singleton):
 
                 # Setup variables
                 name, ext = os.path.splitext(filename)
-                class_ = None
 
                 # Import the builder as a module
                 module = importlib.import_module(name)
+                self.load_builders(module)
 
-                # TODO: a plugin could have multiple builders?
-                # Find the plugin class, if any
-                try:
-                    class_ = getattr(module, name)
-                except AttributeError:
-                    pass
+    def load_builders(self, module):
+        """
+        Load all builders from the given module.
+        """
 
-                # Initialize the plugin, if available
-                if class_ is not None and Plugin in class_.__bases__:
-                    instance = class_()
-                    instance.initialize()
+        # Discover all Plugin derived classes and load them.
+        for name, obj in module.__dict__.iteritems():
+            if inspect.isclass(obj) and issubclass(obj, Plugin):
+                if name in self.plugins:
+                    continue
 
-                    # Add plugin to the list
-                    self.plugins[name] = instance
+                instance = obj()
+                instance.initialize()
+
+                # Add plugin to the list
+                self.plugins[name] = instance

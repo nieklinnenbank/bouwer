@@ -2,7 +2,7 @@
 # Copyright (C) 2012 Niek Linnenbank
 #
 # This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
+# it under the terms of the GNU General Public License cc published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
@@ -15,5 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-def dist(conf):
-    Archive('library.tar.gz', exclude=['*.o', '*.a', 'config.h', 'myprog'])
+config PREFIX
+    string "Installation root directory"
+    default "/usr/local"
+    help
+      Root directory for installing files
+
+config BINDIR
+    string "Program installation subdirectory"
+    default "/bin"
+    help
+      Path to install programs
