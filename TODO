@@ -2,6 +2,16 @@
 
 ==> RequireBouwer('1.0.0') or something
 
+==> perhaps we can also support default build target:
+
+    Bouwfile:
+
+        Program('hello')
+
+  Bouwer should then add these builders to the default build target
+
+==> also error when a non-existing target is choosen
+
 ==> ConfigHeader() in include/. Test it.
     ==> and then specify in incpath too?
 
@@ -14,7 +24,7 @@
 
 ==> CheckFlags?? Check for a C compiler flag like autoconf, and remove it if not?
     ==> Extend the CheckCompiler?
-==> Configuration can be changed by builders
+    ==> Configuration can be changed by builders
     --> if so, it should be tainted, and save()'ed at the end of bouwer execution
     --> but with the same modification timestamp as when bouwer opened it
     --> because we KNOW FOR SURE that all config changes are synced to the builder / action execution in this invoke of bouwer
@@ -23,6 +33,16 @@
     ==> usefull for e.g. CheckFlag(), or TryCFlag()
 
 ==> use set_default() for dicts...
+
+==> progressbar :D
+
+==> check lineconfig better, 
+    (*) Support fully overrides in a configtree.
+        - Support to override a ConfigList, e.g. add items to CC, change them, or also remove them should work.
+    (*) Better detect need to rebuild, e.g. changed configs.
+        (*) detect if the Bouwconfig changed to rebuild???
+
+==> 'make oldconfig'
 
 ==> UseLibrary applies to all Program()s in that Bouwfile.... is that ok?
     --> what if the user wants multiple Program()s in one directory... do we support that?
@@ -37,13 +57,10 @@
     ==> StaticLibrary
     ==> SharedLibrary
 
+- circular loop detection in the ActionManager.submit()
+- Better support path changing for tree's. maybe like: Support BUILDROOT, BUILDPATH?
+
 ==> python doctest in unit tester.
-
-(*) Better detect need to rebuild, e.g. changed configs.
-    (*) detect if the Bouwconfig changed to rebuild???
-
-(*) Support fully overrides in a configtree.
-    - Support to override a ConfigList, e.g. add items to CC, change them, or also remove them should work.
 
 ==> Dependency system could be improved.... especially the caching is not clean..
 
@@ -65,9 +82,6 @@
     - Linux Kernel?
 
 [features]
-- circular loop detection in the ActionManager.submit()
-- make a RequireVersion() builder or similar, to check for bouw version
-- Support BUILDROOT, BUILDPATH
 - Support for other languages, like Java.
     ==> builders like Object(), Program(), Library() may need to be generic too.
 
@@ -82,13 +96,6 @@
     --> but then what about python functions?
     --> or, timestamp each Config object also
 
-- perhaps we can also support default build target:
-
-    Bouwfile:
-
-        Program('hello')
-
-  Bouwer should then add these builders to the default build target
 
 - Support generating a dynamic list of build targets for output in -h, and also include the python """ comments """ in the output!        
 

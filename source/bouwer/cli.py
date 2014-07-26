@@ -37,12 +37,14 @@ class CommandLine(bouwer.util.Singleton):
     TODO: extend somekind of argparse class here
     """
 
+    VERSION='1.0.0'
+
     def __init__(self):
         """ Constructor """
-        self.parser = argparse.ArgumentParser(description='Bouwer build automation tool.',
+        self.parser = argparse.ArgumentParser(description='Bouwer build automation tool v' + self.VERSION,
                                      epilog='Copyright (c) 2012 Niek Linnenbank.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help = False)
-        self.parser.add_argument('--version', action='version', version='0.1.0')
+        self.parser.add_argument('--version', action='version', version=self.VERSION)
         self.parser.add_argument('-l', '--log', help='Send logging output to the given file', type=str, default=None)
         self.parser.add_argument('-L', '--log-level', help='Set the logging level', type=str, default='WARNING', choices = [ 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL' ])
         self.parser.add_argument('-v', '--verbose', help='alias for -L DEBUG', action='store_true', default=False)
@@ -67,7 +69,7 @@ class CommandLine(bouwer.util.Singleton):
         Interpret all command line arguments
         """
         self.parser = argparse.ArgumentParser(parents = [self.parser],
-                                     description='Bouwer build automation tool.',
+                                     description='Bouwer build automation tool v' + self.VERSION,
                                      epilog='Copyright (c) 2014 Niek Linnenbank.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         self.args = self.parser.parse_args()

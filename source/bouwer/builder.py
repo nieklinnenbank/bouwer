@@ -395,7 +395,12 @@ class BuilderManager(bouwer.util.Singleton):
 
         # Let the mesh execute its builders, and run its actions
         mesh = self.parser.parse('.', target)
-        mesh.execute()
+
+        if mesh.instances:
+            mesh.execute()
+        else:
+            self.log.error('no such target: ' + str(target))
+            sys.exit(1)
 
     def action(self, target, sources, command, **tags):
         """ 
