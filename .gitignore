@@ -1,4 +1,8 @@
 *.pyc
+*.o
+*.a
+.bouwtemp
+config.h
 __pycache__
 demo/c/performance/*.c
 
