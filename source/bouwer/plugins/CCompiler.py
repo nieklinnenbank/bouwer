@@ -30,7 +30,7 @@ class Object(Plugin):
 
     def config_input(self):
         """ Configuration input items """
-        return [ 'CC', 'LINK_LIBRARIES', 'CONFIG' ]
+        return [ 'CC', 'USE_LIBRARIES', 'LIBRARIES', 'CONFIG' ]
 
     def config_output(self):
         """ Configuration output items """
@@ -57,15 +57,27 @@ class Program(Plugin):
 
     def config_input(self):
         """ Configuration input items """
-        return [ 'CC', 'LINK_LIBRARIES', 'CHECK', 'CONFIG' ]
+        return [ 'CC', 'LIBRARIES', 'USE_LIBRARIES', 'CHECK', 'CONFIG' ]
 
-    def execute_config(self, item, sources):
+    def execute_config_params(self, item, sources, libraries = []):
         """
         Build a program given a :class:`.Config` `item` and `sources` list.
         """
         # TODO: also support the program = keyword, like library =
         if item.value():
-            CCompiler.Instance().c_program(TargetPath(item.name.lower()), sources, item)
+            src_list = []
+            if type(sources) is str:
+                sources = [sources]
+
+            for src in sources:
+                srcpath = SourcePath(src)
+                src_list.append(srcpath)
+                CCompiler.Instance().use_library(libraries,
+                                                 TargetPath(src.replace('.c', '.o'))) # TODO: this goes wrong with BUILDROOT etc
+
+            tpath = TargetPath(item.name.lower())
+            CCompiler.Instance().use_library(libraries, tpath)
+            CCompiler.Instance().c_program(tpath, src_list, item)
 
     def execute_target(self, target, sources):
         """
@@ -138,19 +150,19 @@ class UseLibrary(Plugin):
 
     def config_output(self):
         """ Configuration output items """
-        return [ 'LINK_LIBRARIES' ]
+        return [ 'USE_LIBRARIES' ]
 
-    def execute_config_params(self, item, libsrc):
+    def execute_config_params(self, item, libraries):
         if item.value():
-            self.execute_any(libsrc)
+            self.execute_any(libraries)
 
-    def execute_any(self, libraries, target = None):
+    def execute_any(self, libraries):
         """
         Build against a :py:`list` of `libraries`
 
         The library target for linking will be discovered internally.
         """
-        CCompiler.Instance().use_library(libraries, target)
+        CCompiler.Instance().use_library(libraries)
 
 class CCompiler(bouwer.util.Singleton):
 
@@ -399,7 +411,12 @@ class CCompiler(bouwer.util.Singleton):
         searching the generated :class:`.Action` objects in
         the actions layer.
         """
-        if target: target = target.absolute
+        if target:
+            if isinstance(target, Config):
+                target = TargetPath(target.name.lower())
+            elif isinstance(target, str):
+                target = TargetPath(target)
+            target = target.absolute
 
         use_lib_tree   = self.use_libraries.setdefault(self.conf.active_tree, {})
         use_lib_dir    = use_lib_tree.setdefault(self.conf.active_dir, {})
