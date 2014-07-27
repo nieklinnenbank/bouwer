@@ -139,33 +139,34 @@ class BuilderInstance:
                                        str(self.builder.config_action_output()) + ')')
 
         # if called with (target:str, source:str), convert to (target:str, [source:str]) automatically
-        if isinstance(arguments[0], bouwer.config.Config):
+        if arguments:
+            if isinstance(arguments[0], bouwer.config.Config):
 
-            # TODO: bug! how do we know the arguments list is a *FILES* list?
-            if hasattr(self.builder, 'execute_config'):
-                if len(arguments) == 2:
-                    return self.builder.execute_config(arguments[0],
+                # TODO: bug! how do we know the arguments list is a *FILES* list?
+                if hasattr(self.builder, 'execute_config'):
+                    if len(arguments) == 2:
+                        return self.builder.execute_config(arguments[0],
+                                                           self._source_path_list(arguments[1]))
+                    else:
+                        return self.builder.execute_config(*arguments)
+
+                if hasattr(self.builder, 'execute_config_params'):
+                    return self.builder.execute_config_params(*arguments)
+     
+
+            elif type(arguments[0]) is str:
+                if len(arguments) == 1 and hasattr(self.builder, 'execute_source'):
+                    return self.builder.execute_source(SourcePath(arguments[0]))
+
+                elif hasattr(self.builder, 'execute_target'):
+                    return self.builder.execute_target(TargetPath(arguments[0]),
                                                        self._source_path_list(arguments[1]))
-                else:
-                    return self.builder.execute_config(*arguments)
 
-            if hasattr(self.builder, 'execute_config_params'):
-                return self.builder.execute_config_params(*arguments)
- 
+            elif type(arguments[0]) is TargetPath:
+                return self.builder.execute_target(*arguments)
 
-        elif type(arguments[0]) is str:
-            if len(arguments) == 1 and hasattr(self.builder, 'execute_source'):
-                return self.builder.execute_source(SourcePath(arguments[0]))
-
-            elif hasattr(self.builder, 'execute_target'):
-                return self.builder.execute_target(TargetPath(arguments[0]),
-                                                   self._source_path_list(arguments[1]))
-
-        elif type(arguments[0]) is TargetPath:
-            return self.builder.execute_target(*arguments)
-
-        elif type(arguments[0]) is SourcePath:
-            return self.builder.execute_source(*arguments)
+            elif type(arguments[0]) is SourcePath:
+                return self.builder.execute_source(*arguments)
 
         return self.builder.execute_any(*arguments, **keywords)
 

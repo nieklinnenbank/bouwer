@@ -2,6 +2,10 @@
 
 ==> RequireBouwer('1.0.0') or something
 
+==> ConfigHeader() should include all version information for FreeNOS...
+
+==> CheckProgram()
+
 ==> perhaps we can also support default build target:
 
     Bouwfile:
@@ -10,10 +14,10 @@
 
   Bouwer should then add these builders to the default build target
 
-==> also error when a non-existing target is choosen
-
 ==> ConfigHeader() in include/. Test it.
     ==> and then specify in incpath too?
+
+==> Let FreeNOS 0.0.5 compile with Bouwer, on all platforms!
 
 ==> Unit Testers / Something or some plugin to run unit test hooks.
     ==> Bouwer should have a more generic mechanism to hook into actions of other builders
