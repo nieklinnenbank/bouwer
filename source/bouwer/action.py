@@ -326,5 +326,8 @@ class ActionManager(object):
                 except OSError:
                     pass
         else:
-            WorkerManager(self.actions).execute()
+            # Allow output plugins
+            self.workers = WorkerManager(self.actions)
+            self.workers.execute()
+            self.workers = None
             self.actions.clear()
