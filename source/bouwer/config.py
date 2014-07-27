@@ -40,7 +40,7 @@ class Config(object):
     Represents a single generic configuration item
     """
 
-    def __init__(self, name, value, **keywords):
+    def __init__(self, name, value = None, **keywords):
         """
         Constructor
         """
@@ -52,7 +52,11 @@ class Config(object):
     def get_key(self, key, default = None):
         """ Wrapper for the :obj:`dict.get` function """
         # TODO: why do we need this function???
-        return self._interpolate(self._keywords.get(key, default))
+        #return self._interpolate(self._keywords.get(key, default))
+        try:
+            return self.__getitem__(key)
+        except KeyError:
+            return default
 
     def keys(self):
         """ Retrieve a list of keyword keys """
@@ -69,17 +73,27 @@ class Config(object):
             # TODO: there should be a clean way to ask for the item, which is directly
             #  "above" us in the override path
             # TODO: hack! we always take the base_conf as active dir...
+            def_item = self._get_override_parent()
 
-            conf = Configuration.Instance()
-            saved_dir = conf.active_dir
-            conf.active_dir = conf.base_conf
-            def_item = conf.trees['DEFAULT'].get(self.name)
-            conf.active_dir = saved_dir
-
-            if def_item is not None and def_item is not self:
+            if def_item:
                 return self._interpolate(def_item[key])
             else:
                 raise KeyError('no such key: ' + str(key))
+
+    def _get_override_parent(self):
+        """
+        Retrieve the base configuration item (if the current Config is an override)
+        """
+        conf = Configuration.Instance()
+        saved_dir = conf.active_dir
+        conf.active_dir = conf.base_conf
+        def_item = conf.trees['DEFAULT'].get(self.name)
+        conf.active_dir = saved_dir
+
+        if def_item is not self:
+            return def_item
+        else:
+            return None
 
     def _interpolate(self, text):
         """
@@ -109,7 +123,7 @@ class Config(object):
             # Get item
             length = idx_end - idx_start
             item = Configuration.Instance().get(text[idx_start+2 : idx_start+length])
-            
+
             # Append to the output
             output += text[ saved_idx : saved_idx + (idx_start-saved_idx) ]
             output += str(item.value())
@@ -148,6 +162,12 @@ class Config(object):
         """
         Retrieve the current value of the configuration item
         """
+        # TODO: do we need the tree parameter???
+        if self._value is None:
+            def_item = self._get_override_parent()
+            if def_item:
+                return def_item.value(tree)
+
         return self._value
 
     def update(self, value):
@@ -235,14 +255,17 @@ class ConfigList(Config):
     List configuration item
     """
 
-    def __init__(self, name, value = None, **keywords):
-        """
-        Constructor
-        """
-        if 'options' not in keywords:
-            keywords['options'] = []
+    #def __init__(self, name, value = None, **keywords):
+    #    """
+    #    Constructor
+    #    """
+    #    super(ConfigList, self).__init__(name, value, **keywords)
 
-        super(ConfigList, self).__init__(name, value, **keywords)
+    def add(self, item):
+        """
+        Add an option to the list
+        """
+        self._keywords.setdefault('options', []).append(item.name)
 
     # TODO: refix this
     #def update(self, value):
@@ -455,10 +478,8 @@ class BouwConfigParser:
         return line[:index]
 
     def _parse_depends(self, line):
-
         if 'depends' not in self.item._keywords:
             self.item._keywords['depends'] = []
-        
         self.item._keywords['depends'].append(self.parsed[2])
 
     def _parse_keywords(self, line):
@@ -502,14 +523,14 @@ class BouwConfigParser:
 
     def _parse_bool(self, line):
         if self.mode == self.CHOICE_MODE:
-            self.item   = ConfigList(self.name, '')
+            self.item   = ConfigList(self.name)
             self.choice = self.item
         else:
             self.item = ConfigBool(self.name)
 
             if self.choice is not None:
                 self.item._keywords['in_list'] = self.choice.name
-                self.choice._keywords['options'].append(self.item.name)
+                self.choice.add(self.item)
 
         self.conf.put(self.item, self.tree)
 

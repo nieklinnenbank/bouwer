@@ -276,7 +276,7 @@ class CCompiler(bouwer.util.Singleton):
 
         # Add C preprocessor paths
         try:
-            for path in cc['incpath'].split(':'):
+            for path in (cc.get_key('incpath', '').split(':') + chain.get_key('incpath', '').split(':')):
                 if path: incflags += cc['incflag'] + path + ' '
         except KeyError:
             pass

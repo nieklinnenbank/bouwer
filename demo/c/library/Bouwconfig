@@ -15,3 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+choice CC
+    bool "compiler toolchain"
+    keywords
+      incpath = include
+endchoice
+
+#config CC
+#    bool "GCC compiler"
+#    keywords
+#      incpath = include

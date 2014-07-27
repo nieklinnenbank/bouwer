@@ -20,6 +20,8 @@ choice CC
     default GCC
     help
       Choose a C compiler toolchain for compiling C programs and libraries
+    keywords
+      incpath =
 
 config GCC
     bool "GNU C Compiler"
@@ -60,7 +62,7 @@ config CLANG
       incflag = -I
       incpath =
       arflags = crs
-help
+    help
       See the Clang compiler homepage at http://llvm.org
 
 config MSVC10
