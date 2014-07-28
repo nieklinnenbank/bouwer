@@ -16,24 +16,27 @@
 #
 
 import os
-from bouwer.plugin import *
-from bouwer.config import *
+from bouwer.plugin import Plugin
+from bouwer.builder import TargetPath, SourcePath
 
 class Command(Plugin):
     """
     Run a shell command
     """
 
-    def execute_config_params(self, item, command):
+    def config_input(self):
+        return [ 'CHECK', 'CONFIG' ]
+
+    def execute_config(self, item, sources, command, outfile=None):
         """
         Runs a command only if item is True
         """
         if item.value():
-            os.system(command)
+            self.build.action(TargetPath(outfile), sources,
+                              command,
+                              pretty_name='CMD',
+                              pretty_target=command)
 
     def execute_any(self, command):
         """ Run a shell command """
         os.system(command)
-
-        # self.build.generate_action(...)
-        # os.system(cmd)

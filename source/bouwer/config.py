@@ -623,7 +623,6 @@ class Configuration(bouwer.util.Singleton):
                 conf_item  = conf_class(json_item['name'],
                                         json_item['value'],
                                       **json_item['keywords'])
-                
                 # set active_dir to path
                 if 'path' in json_item:
                     self.active_dir = json_item['path']

@@ -57,4 +57,12 @@ config NETWARE
     bool
     default False
 
+config OS2
+    bool
+    default False
+
+config OS390
+    bool
+    default False
+
 endchoice

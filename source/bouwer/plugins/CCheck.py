@@ -33,7 +33,7 @@ class CheckCompiler(Plugin):
     def config_action_output(self):
         return [ 'CC' ]
 
-    def execute_config(self, item):
+    def execute_config_params(self, item):
         # Save input C compiler
         self.cc = self.conf.get(item.value())
 
@@ -75,9 +75,9 @@ class CheckLibrary(Plugin):
             item = bouwer.config.ConfigBool(confname)
             self.conf.active_tree.add(item)
 
-        self.execute_config(item, library, is_required)
+        self.execute_config_params(item, library, is_required)
 
-    def execute_config(self, conf, library, is_required = False):
+    def execute_config_params(self, conf, library, is_required = False):
         # Generate C file, if not yet done already.
         cfile = bouwer.util.tempfile(self.__class__.__name__ + '.' + conf.name + '.c')
         tfile = TargetPath(cfile + '.o')
@@ -147,9 +147,9 @@ class CheckFunction(Plugin):
             item = bouwer.config.ConfigBool(confname)
             self.conf.active_tree.add(item)
 
-        self.execute_config(item, function, lib, is_required)
+        self.execute_config_params(item, function, lib, is_required)
 
-    def execute_config(self, conf, function, lib, is_required = False):
+    def execute_config_params(self, conf, function, lib, is_required = False):
         # Generate C file, if not yet done already.
         cfile = bouwer.util.tempfile(self.__class__.__name__ + '.' + conf.name + '.c')
         tfile = TargetPath(cfile + '.o')
@@ -218,9 +218,9 @@ class CheckHeader(Plugin):
             item = bouwer.config.ConfigBool(confname)
             self.conf.active_tree.add(item)
 
-        self.execute_config(item, header, is_required)
+        self.execute_config_params(item, header, is_required)
 
-    def execute_config(self, conf, header, is_required = False):
+    def execute_config_params(self, conf, header, is_required = False):
 
         # Generate C file, if not yet done already.
         # TODO: generic directory for putting these files please.

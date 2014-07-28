@@ -61,7 +61,7 @@ class LineConfig(Plugin):
             if sys.stdin.readline().strip().lower() == 'y':
                 conf.save()
                 print('Configuration saved!')
-                print()                
+                print()
                 conf.dump()
         except KeyboardInterrupt:
             print()

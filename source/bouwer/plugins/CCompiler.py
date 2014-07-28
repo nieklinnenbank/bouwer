@@ -36,19 +36,19 @@ class Object(Plugin):
         """ Configuration output items """
         return [ 'OBJECTS' ]
 
-    def execute_source(self, source):
+    def execute_source(self, source, item = None, depends = []):
         """
         Build an executable object given its `source` file
         """
-        CCompiler.Instance().c_object(source)
+        CCompiler.Instance().c_object(source, item, depends)
 
-    def execute_config(self, item, sources):
+    def execute_config(self, item, sources, depends = []):
         """
         Build executable objects if configurion item `item` is True
         """
         if item.value():
             for source in sources:
-                self.execute_source(source, item)
+                self.execute_source(source, item, depends)
 
 class Program(Plugin):
     """
@@ -59,31 +59,26 @@ class Program(Plugin):
         """ Configuration input items """
         return [ 'CC', 'LIBRARIES', 'USE_LIBRARIES', 'CHECK', 'CONFIG' ]
 
-    def execute_config_params(self, item, sources, libraries = []):
+    def execute_config(self, item, sources, libraries = [], depends = []):
         """
         Build a program given a :class:`.Config` `item` and `sources` list.
         """
+
         # TODO: also support the program = keyword, like library =
         if item.value():
-            src_list = []
-            if type(sources) is str:
-                sources = [sources]
+            self.execute_target(TargetPath(item.name.lower()), sources, libraries, depends, item)
 
-            for src in sources:
-                srcpath = SourcePath(src)
-                src_list.append(srcpath)
-                CCompiler.Instance().use_library(libraries,
-                                                 TargetPath(src.replace('.c', '.o'))) # TODO: this goes wrong with BUILDROOT etc
-
-            tpath = TargetPath(item.name.lower())
-            CCompiler.Instance().use_library(libraries, tpath)
-            CCompiler.Instance().c_program(tpath, src_list, item)
-
-    def execute_target(self, target, sources):
+    def execute_target(self, target, sources, libraries = [], depends = [], item = None):
         """
         Build an program given its `target` name and `sources` list
         """
-        CCompiler.Instance().c_program(target, sources)
+        for src in sources:
+            CCompiler.Instance().use_library(libraries,
+                                             TargetPath(os.path.basename(src.absolute).replace('.c', '.o')))
+                                             # TODO: this goes wrong with BUILDROOT etc
+
+        CCompiler.Instance().use_library(libraries, target)
+        CCompiler.Instance().c_program(target, sources, item=item, depends=depends)
 
 class Library(Plugin):
     """ Build a software library """
@@ -96,7 +91,7 @@ class Library(Plugin):
         """ Configuration output items """
         return [ 'LIBRARIES' ]
 
-    def execute_config(self, item, sources):
+    def execute_config(self, item, sources, depends = []):
         """
         Build a library using a :class:`.Config` and list of `sources`
         """
@@ -104,13 +99,13 @@ class Library(Plugin):
             return
 
         target = item.get_key('library', item.name.lower())
-        CCompiler.Instance().c_library(TargetPath(target), sources, item)
+        CCompiler.Instance().c_library(TargetPath(target), sources, item, depends)
 
-    def execute_target(self, target, sources):
+    def execute_target(self, target, sources, depends = []):
         """
         Build a library using a `target` name and list of `sources`
         """
-        CCompiler.Instance().c_library(target, sources)
+        CCompiler.Instance().c_library(target, sources, depends)
 
 class LibraryObject(Plugin):
     """
@@ -125,19 +120,19 @@ class LibraryObject(Plugin):
         """ Configuration output items """
         return [ 'LIBRARY_OBJECTS' ]
 
-    def execute_source(self, source):
+    def execute_source(self, source, depends = []):
         """
         Build an executable object given its `source` file
         """
-        CCompiler.Instance().c_object(source)
+        CCompiler.Instance().c_object(source, depends = depends)
 
-    def execute_config(self, item, sources):
+    def execute_config(self, item, sources, depends = []):
         """
         Build executable objects if configurion item `item` is True
         """
         if item.value():
             for source in sources:
-                CCompiler.Instance().c_object(source, item)
+                CCompiler.Instance().c_object(source, item, depends)
 
 class UseLibrary(Plugin):
     """
@@ -163,6 +158,39 @@ class UseLibrary(Plugin):
         The library target for linking will be discovered internally.
         """
         CCompiler.Instance().use_library(libraries)
+
+class Include(Plugin):
+    """
+    Extend the C/C++ include path
+    """
+
+    def config_inputz___(self):
+        """ Configuration input items """
+        return [ 'CC', 'USE_LIBRARIES', 'LIBRARIES', 'CONFIG' ]
+
+    def config_output(self):
+        """ Configuration output items """
+        return [ 'CONFIG' ]
+
+    def execute_config_params(self, conf, includes):
+        """
+        Append includes to the incpath for CC.
+        """
+        if not conf.value():
+            return
+        if type(includes) is str:
+            includes = [ includes ]
+
+        if self.conf.active_dir not in self.conf.active_tree.subitems['CC']:
+            self.conf.put(ConfigList('CC'))
+        cc = self.conf.get('CC')
+
+        for inc in includes:
+            if inc not in cc._keywords.get('incpath', '').split(':'):
+                if 'incpath' in cc._keywords:
+                    cc._keywords['incpath'] +=  ':' + inc
+                else:
+                    cc._keywords['incpath'] = inc
 
 class CCompiler(bouwer.util.Singleton):
 
@@ -198,6 +226,7 @@ class CCompiler(bouwer.util.Singleton):
                 headers.append(SourcePath(hdr))
             return headers
 
+        # Search for '#include' lines
         fp = open(source.absolute, "r")
         for line in fp.readlines():
             idx = line.find('#include')
@@ -209,16 +238,18 @@ class CCompiler(bouwer.util.Singleton):
             else:
                 header_name = line.split('"')[1]
 
-            try:
-                # TODO: try to find it in any of the paths too....
-                sourcepath = SourcePath(header_name)
-
-                os.stat(sourcepath.absolute)
-                headers.append(sourcepath) # TODO: only if in current dir...
-                headers_str.append(sourcepath.absolute)
-
-            except Exception as e:
-                pass
+            # Try to locate the header in any of the include paths
+            paths.append(os.path.dirname(SourcePath(header_name).absolute))
+            for p in paths:
+                try:
+                    if p:
+                        os.stat(p + os.sep + header_name)
+                        sp = SourcePath('')
+                        sp.absolute = p + os.sep + header_name
+                        headers.append(sp)
+                        headers_str.append(sp.absolute)
+                except OSError as e:
+                    pass
 
         # Update the cache. Finish up.
         fp.close()
@@ -265,7 +296,7 @@ class CCompiler(bouwer.util.Singleton):
         use_libs += dirdict.get(None, [])
         return use_libs
 
-    def c_object(self, source, item = None, **extra_tags):
+    def c_object(self, source, item = None, depends = [], **extra_tags):
         """
         Compile a C source file into an object file
         """
@@ -274,11 +305,16 @@ class CCompiler(bouwer.util.Singleton):
         splitfile = os.path.splitext(source.relative)
         incflags  = ''
 
-        if splitfile[1] != '.c':
-            raise Exception('not a C source file: ' + source)
-
         # Translate source and target paths relative from project-root
         outfile = TargetPath(splitfile[0] + '.o')
+
+        # Fill compiler command
+        if splitfile[1] == '.c':
+            compiler = cc['cc'] + ' ' + str(outfile) + ' ' + cc['ccflags']
+        elif splitfile[1] == '.cpp':
+            compiler = cc['c++'] + ' ' + str(outfile) + ' ' + cc['c++flags']
+        else:
+            raise Exception('not a C source file: ' + source)
 
         # Link the config item and its parents to this target file.
         if item is not None:
@@ -287,11 +323,9 @@ class CCompiler(bouwer.util.Singleton):
             self.c_object_list.append(outfile)
 
         # Add C preprocessor paths
-        try:
-            for path in (cc.get_key('incpath', '').split(':') + chain.get_key('incpath', '').split(':')):
-                if path: incflags += cc['incflag'] + path + ' '
-        except KeyError:
-            pass
+        incpath = cc.get_key('incpath', '').split(':') + chain.get_key('incpath', '').split(':')
+        for path in incpath:
+            if path: incflags += cc['incflag'] + path + ' '
 
         # Add C preprocessor paths from libraries
         for libname in self._get_libraries_for_target(outfile):
@@ -301,7 +335,7 @@ class CCompiler(bouwer.util.Singleton):
                 pass
 
         # Determine dependencies to build output file.
-        deps = self._find_headers(source, cc['incpath'].split(':'))
+        deps = self._find_headers(source, incpath) + depends
         deps.append(source)
 
         # Set our pretty name
@@ -310,15 +344,12 @@ class CCompiler(bouwer.util.Singleton):
 
         # Register compile action
         self.build.action(outfile, deps,
-                          cc['cc'] + ' ' +
-                          str(outfile) + ' ' +
-                          cc['ccflags'] + ' ' + incflags +
-                          str(source),
+                          compiler + ' ' + incflags + str(source),
                         **extra_tags
         )
         return outfile
 
-    def c_program(self, target, sources, item = None, **extra_tags):
+    def c_program(self, target, sources, item = None, depends = [], **extra_tags):
         """
         Build an program given its `target` name and `sources` list
         """
@@ -327,20 +358,28 @@ class CCompiler(bouwer.util.Singleton):
         chain   = self.conf.get('CC')
         cc      = self.conf.get(chain.value())
         ldpath  = ''
-        ldflags = cc['ldflags']
         incpath = ''
         objects = self._lookup_config_deps(item) + self.c_object_list
-        extra_deps = []
+        extra_deps = depends
+
+        # C or C++ program?
+        if not sources or sources[0].absolute.endswith('.c'):
+            link = cc['clink']
+            ldflags = cc['clinkflags']
+        elif sources[0].absolute.endswith('.cpp'):
+            link = cc['c++link']
+            ldflags = cc['c++linkflags']
 
         # Add linker paths
         for path in cc['ldpath'].split(':'):
             if path: ldpath += cc['ldflag'] + path + ' '
 
+        # Use libraries
         for libname in self._get_libraries_for_target(target):
             # Local library?
             try:
                 lib = self.libraries[self.conf.active_tree][libname][0]
-                ldpath += cc['ldflag'] + os.path.dirname(lib.absolute) + ' '
+                ldpath += cc['ldflag'] + './' + os.path.dirname(lib.absolute) + ' '
                 extra_deps.append(lib)
             except KeyError:
                 pass
@@ -361,7 +400,7 @@ class CCompiler(bouwer.util.Singleton):
 
         # Link the program
         self.build.action(target, objects + extra_deps,
-                          cc['ld'] + ' ' + str(target) + ' ' +
+                          link + ' ' + str(target) + ' ' +
                          (' '.join([str(o) for o in objects])) + ' ' + ldpath +
                           ldflags + ' ' + cc['ldscript'],
                          **extra_tags)
@@ -369,7 +408,7 @@ class CCompiler(bouwer.util.Singleton):
         # Clear list of objects
         self.c_object_list = []  # TODO: do we still need this???
 
-    def c_library(self, target, sources, item = None):
+    def c_library(self, target, sources, item = None, depends = []):
         """
         Build a library using a `target` name and list of `sources`
         """
@@ -385,7 +424,7 @@ class CCompiler(bouwer.util.Singleton):
         for src in sources:
             self.c_object(src)
 
-        extra_deps = self._lookup_config_deps(item) + self.c_object_list
+        extra_deps = depends + self._lookup_config_deps(item) + self.c_object_list
 
         # Generate action for linking the library
         self.build.action(target, extra_deps,

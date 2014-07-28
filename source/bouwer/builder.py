@@ -120,9 +120,14 @@ class BuilderInstance:
         out = []
         for src in input_list:
             relative = self.manager.conf.active_dir
+            path = relative + os.sep + src
+
+            src_list = glob.glob(path)
+            if not src_list:
+                src_list.append(path)
 
             # TODO: hmm. a lot of convertions here. needed?
-            for src_file in glob.glob(relative + os.sep + src):
+            for src_file in src_list:
                 out.append(SourcePath(os.path.dirname(src) + os.sep + os.path.basename(src_file)))
 
         return out
@@ -144,29 +149,28 @@ class BuilderInstance:
 
                 # TODO: bug! how do we know the arguments list is a *FILES* list?
                 if hasattr(self.builder, 'execute_config'):
-                    if len(arguments) == 2:
-                        return self.builder.execute_config(arguments[0],
-                                                           self._source_path_list(arguments[1]))
-                    else:
-                        return self.builder.execute_config(*arguments)
+                    return self.builder.execute_config(arguments[0],
+                                                       self._source_path_list(arguments[1]),
+                                                      *arguments[2:],
+                                                      **keywords)
+                    #if len(arguments) == 2:
+                    #    return self.builder.execute_config(arguments[0],
+                    #                                       self._source_path_list(arguments[1]))
+                    #else:
+                    #    return self.builder.execute_config(*arguments)
 
-                if hasattr(self.builder, 'execute_config_params'):
-                    return self.builder.execute_config_params(*arguments)
-     
+                if hasattr(self.builder, 'execute_config_params'): # TODO: <--- same as execute_any?
+                    return self.builder.execute_config_params(*arguments, **keywords)
 
             elif type(arguments[0]) is str:
                 if len(arguments) == 1 and hasattr(self.builder, 'execute_source'):
-                    return self.builder.execute_source(SourcePath(arguments[0]))
+                    return self.builder.execute_source(SourcePath(arguments[0]), *arguments[1:], **keywords)
 
                 elif hasattr(self.builder, 'execute_target'):
                     return self.builder.execute_target(TargetPath(arguments[0]),
-                                                       self._source_path_list(arguments[1]))
-
-            elif type(arguments[0]) is TargetPath:
-                return self.builder.execute_target(*arguments)
-
-            elif type(arguments[0]) is SourcePath:
-                return self.builder.execute_source(*arguments)
+                                                       self._source_path_list(arguments[1]),
+                                                      *arguments[2:],
+                                                      **keywords)
 
         return self.builder.execute_any(*arguments, **keywords)
 
@@ -416,7 +420,10 @@ class BuilderManager(bouwer.util.Singleton):
         # TODO: inefficient!
         src_list = []
         for src in sources:
-            src_list.append(src.absolute)
+            if type(src) is SourcePath or type(src) is TargetPath:
+                src_list.append(src.absolute)
+            else:
+                src_list.append(src)
 
         # TODO: measure what is the best place to put this: inside the worker,
         # or here at the master?

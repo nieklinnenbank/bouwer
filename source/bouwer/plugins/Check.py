@@ -43,7 +43,7 @@ class CheckOS(Plugin):
             'netware': 'NETWARE'
         }
 
-    def execute_config(self, conf):
+    def execute_config_params(self, conf):
         os_file = bouwer.util.tempfile(self.__class__.__name__ + '.' + conf.name)
 
         self.build.action(TargetPath(os_file), [],

@@ -24,23 +24,27 @@ choice CC
       incpath =
 
 config GCC
-    bool "GNU C Compiler"
+    bool "GNU C/C++ Compiler"
     default y
     keywords
       cc      = gcc -o
+      clink   = gcc -o
+      c++     = g++ -o
+      c++link = g++ -o
       asm     = gcc -o
-      ld      = gcc -o
       ar      = ar
-      ccflags = -Wall -Wextra -c
-      ldflags = -Wall -Wextra
-      ldscript =
-      ldpath  =
-      ldflag  = -L
-      libs    =
-      libflag = -l
-      incflag = -I
-      incpath =
-      arflags = crs
+      ccflags      = -Wall -Wextra -c
+      clinkflags   = -Wall -Wextra
+      c++flags     = -Wall -Wextra -c
+      c++linkflags = -Wall -Wextra
+      ldscript     =
+      ldpath       =
+      ldflag       = -L
+      libs         =
+      libflag      = -l
+      incflag      = -I
+      incpath      =
+      arflags      = crs
     help
       Standard C compiler on most Linux/BSD systems
       See the GNU C compiler homepage at http://gcc.gnu.org
@@ -50,10 +54,11 @@ config CLANG
     keywords
       cc      = clang -o
       asm     = clang -o
-      ld      = clang -o
+      clink   = clang -o
       ar      = ar
       ccflags = -Wall -Wextra -c
-      ldflags = -Wall -Wextra
+      cplusflags =
+      clinkflags = -Wall -Wextra
       ldscript =
       ldpath  =
       ldflag  = -L
