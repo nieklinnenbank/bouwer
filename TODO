@@ -6,7 +6,9 @@
 - FreeNOS 0.0.5
 ==> Let FreeNOS 0.0.5 compile with Bouwer, on all platforms!
     ==> ConfigHeader() should include all version information for FreeNOS...
-    ==> Include(conf, incpath) instead of env.Prepare()
+    ==> BUILDROOT, BUILDPATH and also in the incpath...
+        ==> TREE contains the current tree name.
+        ==> BUILDROOT is a prefix for the tree.
 ==> For the images:
     --> Bouwer does not support inter-configtree dependencies.
         --> if the host does need to run something for a target system file, it should be a builder

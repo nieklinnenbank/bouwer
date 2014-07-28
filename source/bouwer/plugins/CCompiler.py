@@ -181,10 +181,14 @@ class Include(Plugin):
         if type(includes) is str:
             includes = [ includes ]
 
-        if self.conf.active_dir not in self.conf.active_tree.subitems['CC']:
-            self.conf.put(ConfigList('CC'))
+        # Introduce an CC override
+        if self.conf.active_dir not in self.conf.active_tree.subitems.get('CC', {}):
+            clist = ConfigList('CC')
+            clist._keywords['incpath'] = self.conf.get('CC')['incpath']
+            self.conf.put(clist, self.conf.active_tree.name)
         cc = self.conf.get('CC')
 
+        # Append to the incpath of the override
         for inc in includes:
             if inc not in cc._keywords.get('incpath', '').split(':'):
                 if 'incpath' in cc._keywords:

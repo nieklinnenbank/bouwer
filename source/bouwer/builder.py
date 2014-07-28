@@ -81,13 +81,17 @@ class TargetPath(Path):
         # TODO: support the BUILDROOT, BUILDPATH configuration items
         # TODO: use Configuration.Instance().active_dir instead
         #caller   = os.path.abspath(self.build.active_bouwfile)
+        root = self.conf.get('BUILDROOT').value()
+        if root and not root.endswith('/'):
+            root = root + '/'
+
         location = os.path.relpath( self.conf.active_dir ) #os.path.dirname(caller))
 
         # If only the default tree is active, don't prefix with tree name.
         if len(self.conf.trees) == 1:
-            self.absolute = os.path.normpath(location + os.sep + path)
+            self.absolute = os.path.normpath(root + location + os.sep + path)
         else:
-            self.absolute = os.path.normpath(self.conf.active_tree.name + \
+            self.absolute = os.path.normpath(root + self.conf.active_tree.name + \
                                              os.sep + location + os.sep + path)
 
 class BuilderInstance:
@@ -392,6 +396,7 @@ class BuilderManager(bouwer.util.Singleton):
         """
 
         self.conf.active_tree = tree
+        self.conf.get('TREE').update(self.conf.active_tree.name)
         if not tree.value():
             return
 

@@ -37,12 +37,12 @@ class CommandLine(bouwer.util.Singleton):
     TODO: extend somekind of argparse class here
     """
 
-    VERSION='1.0.0'
+    VERSION='0.1.0'
 
     def __init__(self):
         """ Constructor """
         self.parser = argparse.ArgumentParser(description='Bouwer build automation tool v' + self.VERSION,
-                                     epilog='Copyright (c) 2012 Niek Linnenbank.',
+                                     epilog='Copyright (c) 2014 Niek Linnenbank.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter, add_help = False)
         self.parser.add_argument('--version', action='version', version=self.VERSION)
         self.parser.add_argument('-l', '--log', help='Send logging output to the given file', type=str, default=None)

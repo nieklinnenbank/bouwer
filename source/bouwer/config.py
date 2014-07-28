@@ -438,6 +438,7 @@ class BouwConfigParser:
         self.name = None
         self.item = None
         self.choice = None
+        self.mode = self.CONFIG_MODE
 
         for line in open(filename).readlines():
             if self.mode == self.KEYWORD_MODE:

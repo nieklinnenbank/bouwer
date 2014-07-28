@@ -2,7 +2,7 @@
 # Copyright (C) 2012 Niek Linnenbank
 #
 # This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
+# it under the terms of the GNU General Public License cc published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
@@ -15,6 +15,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-def build(conf):
-    """ Build the hello world program """
-    Program('hello', 'hello.c')
+config TREE
+    string "Active ConfigTree name"
+    default "DEFAULT"
+    help
+      Name of the currently active tree
+
+config BUILDROOT
+    string "Root path to output build files"
+    default ""
+    help
+      Root directory for build output files
+
