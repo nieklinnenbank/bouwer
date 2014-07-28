@@ -146,7 +146,7 @@ class Config(object):
         for dep in self.get_key('depends', []):
             if tree.get(dep) is not None and not tree.get(dep).satisfied(tree):
                 return False
-            
+
         # If we are in a list, then we must be selected to satisfy.
         if self.get_key('in_list', False):
             lst = tree.get(self.get_key('in_list'))
@@ -194,7 +194,7 @@ class Config(object):
                     type = self.__class__.__name__,
                     value = self.value(tree),
                     keywords = self._keywords)
-        
+
     def __str__(self):
         """ String representation """
         return str(self.value())

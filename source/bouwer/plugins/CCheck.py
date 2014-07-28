@@ -51,8 +51,8 @@ class CheckCompiler(Plugin):
                          [SourcePath(cfile)],
                           self.cc['cc'] + ' ' + cfile + '.o ' +
                           self.cc['ccflags'] + ' ' + cfile,
-                          pretty_name='CHK',
-                          pretty_target=self.cc.name)
+                          pretty_name='Checking for',
+                          pretty_target=self.cc.name.lower())
 
     def action_event(self, action, event):
         """
@@ -96,7 +96,7 @@ class CheckLibrary(Plugin):
         # Schedule Action to compile it
         CCompiler.Instance().c_program(tfile, [],
                                        item=conf, confitem=conf, library=library,
-                                       pretty_name='CHK', pretty_target='lib'+library,
+                                       pretty_name='Checking for', pretty_target='lib'+library,
                                        required=is_required, quiet=True)
 
     def action_event(self, action, event):
@@ -168,7 +168,7 @@ class CheckFunction(Plugin):
         # Schedule Action to compile it
         CCompiler.Instance().c_program(tfile, [],
                                        item=conf, confitem=conf, function=function, library=lib,
-                                       pretty_name='CHK', pretty_target=function,
+                                       pretty_name='Checking for', pretty_target=function,
                                        required=is_required, quiet=True)
 
     def action_event(self, action, event):
@@ -235,7 +235,7 @@ class CheckHeader(Plugin):
         # Schedule Action to compile it
         CCompiler.Instance().c_object(SourcePath(cfile),
                                       confitem=conf, filename=header,
-                                      pretty_name='CHK', pretty_target=header,
+                                      pretty_name='Checking for', pretty_target=header,
                                       standalone=True, required=is_required, quiet=True)
 
     def action_event(self, action, event):

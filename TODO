@@ -1,4 +1,6 @@
 [FOR RELEASE]
+==> CheckOS()
+    ==> for APR
 
 [libraries]
 ==> Library/UseLibrary: should allow a subpath for library includes...
@@ -8,7 +10,6 @@
     ==> StaticLibrary
     ==> SharedLibrary
 
-
 [config]
 ==> check lineconfig better, 
     (*) Support fully overrides in a configtree.
@@ -17,7 +18,6 @@
         (*) detect if the Bouwconfig changed to rebuild???
 ==> 'make oldconfig'
 
-
 [unittest]
 ==> Unit Testers / Something or some plugin to run unit test hooks.
     ==> Bouwer should have a more generic mechanism to hook into actions of other builders
@@ -25,7 +25,6 @@
 	==> on ActionEvent.FINISH it would schedule a new Action, or do the check directly...
 	==> better to schedule, because that allows parallelism.
     ==> Also CPPCheck() should have a pre-shipped ConfigBool() to enable/disable it?
-
 
 [autoconf]
 ==> CheckProgram()
@@ -54,14 +53,17 @@
 [misc]
 ==> use set_default() for dicts...
 
-==> progressbar :D
-
 ==> circular loop detection in the ActionManager.submit()
 ==> Better support path changing for tree's. maybe like: Support BUILDROOT, BUILDPATH?
 
 ==> python doctest in unit tester.
 
 ==> Dependency system could be improved.... especially the caching is not clean..
+
+==> a python function Action should be able to return at least Action tags...
+    ==> it cannot at the moment because it is a separate process.
+    
+    ==> maybe just start a thread if the Action is a function?
 
 (*) Ensure high quality for release
     (*) builder mesh is hiding the error in the python back trace... we should fix this. put the

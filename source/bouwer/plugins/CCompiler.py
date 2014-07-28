@@ -129,7 +129,7 @@ class LibraryObject(Plugin):
         """
         Build an executable object given its `source` file
         """
-        compiler.CCompiler.Instance().c_object(source)
+        CCompiler.Instance().c_object(source)
 
     def execute_config(self, item, sources):
         """
