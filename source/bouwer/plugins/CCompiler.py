@@ -59,14 +59,16 @@ class Program(Plugin):
         """ Configuration input items """
         return [ 'CC', 'LIBRARIES', 'USE_LIBRARIES', 'CHECK', 'CONFIG' ]
 
-    def execute_config(self, item, sources, libraries = [], depends = []):
+    def execute_config(self, item, sources, libraries = [], depends = [], name = None):
         """
         Build a program given a :class:`.Config` `item` and `sources` list.
         """
+        if not name:
+            name = item.name.lower()
 
         # TODO: also support the program = keyword, like library =
         if item.value():
-            self.execute_target(TargetPath(item.name.lower()), sources, libraries, depends, item)
+            self.execute_target(TargetPath(name), sources, libraries, depends, item)
 
     def execute_target(self, target, sources, libraries = [], depends = [], item = None):
         """
@@ -157,6 +159,9 @@ class UseLibrary(Plugin):
 
         The library target for linking will be discovered internally.
         """
+        if type(libraries) is str:
+            libraries = [ libraries ]
+
         CCompiler.Instance().use_library(libraries)
 
 class Include(Plugin):

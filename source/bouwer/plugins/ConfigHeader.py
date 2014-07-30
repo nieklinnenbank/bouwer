@@ -65,27 +65,36 @@ class ConfigHeader(Plugin):
                 self.outfile.write('#ifndef __H_' + str(number) + '\n'
                                    '#define __H_' + str(number) + '\n\n') 
 
-                for tree in self.conf.trees.values():
-                    self._write_c_header(tree, action.tags['prefix'])
+                # Current tree.
+                self._write_c_header(self.conf.active_tree, action.tags['prefix'])
+
+                # Also the default tree
+                if self.conf.active_tree.name != 'DEFAULT':
+                    self._write_c_header(self.conf.trees['DEFAULT'], action.tags['prefix'])
 
                 self.outfile.write('#endif\n\n')
                 self.outfile.close()
 
     def _write_c_header(self, item, prefix):
-       """ Append item to a C header file """
+        """ Append item to a C header file """
 
-       if type(item) is ConfigBool and not item.value():
-           self.outfile.write('/* ' + prefix + item.name + ' not set */\n')
-       else:
-           self.outfile.write('#define ' + prefix + item.name + ' ')
+        if isinstance(item, ConfigBool) and not item.value():
+            self.outfile.write('/* ' + prefix + item.name + ' not set */\n')
+        else:
+            self.outfile.write('#define ' + prefix + item.name + ' ')
 
-           if type(item) is ConfigBool:
-               self.outfile.write('true\n')
-           else:
-               self.outfile.write('"' + str(item.value()) + '"\n')
+            if isinstance(item, ConfigBool):
+                self.outfile.write('true\n')
+            else:
+                self.outfile.write('"' + str(item.value()) + '"\n')
 
-           if isinstance(item, ConfigTree):
-               for paths in item.subitems.values():
-                   for child_item in paths.values():
-                       self._write_c_header(child_item, prefix)
+        if isinstance(item, ConfigTree):
+            for paths in item.subitems.values():
+                child_item = paths.values()[0]
 
+                # Skip items that are overridden in the default tree.
+                if item != self.conf.active_tree and child_item.name in self.conf.active_tree.subitems:
+                    continue
+
+                # Only take the first item. Not multiple overrides.
+                self._write_c_header(child_item, prefix)

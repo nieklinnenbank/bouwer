@@ -17,4 +17,5 @@
 
 def build(conf):
     """ Build the hello world program """
+    ConfigHeader('config.h')
     Program('hello', 'hello.c')

@@ -15,27 +15,26 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-configtree DEBUG
-    bool "Build in debug mode"
+config DEBUG
+    tree "Build in debug mode"
     help
       Build configuration for debugging
 
-configtree RELEASE
-    bool "Build for releasing"
+config RELEASE
+    tree "Build for releasing"
     help
       Build configuration for releasing
 
-override GCC
-    tree DEBUG
+config GCC
+    inside DEBUG
     bool
     keywords
       ccflags = -g3 -Wall -Werror -Wextra -O0 -c
       ldflags = -g3 -Wall -Werror -Wextra -O0
 
-override GCC
-    tree RELEASE
+config GCC
+    inside RELEASE
     bool
     keywords
       ccflags = -O3 -c
       ldflags = -O3
-

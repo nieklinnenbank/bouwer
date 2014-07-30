@@ -417,14 +417,13 @@ class BouwConfigParser:
         self.syntax = { 'config'     : self._parse_config,
                         'choice'     : self._parse_choice,
                         'tree'       : self._parse_tree,
-                        'configtree' : self._parse_configtree,
+                        'inside'     : self._parse_inside,
                         'keywords'   : self._parse_keywords,
                         'help'       : self._parse_help,
                         'default'    : self._parse_default,
                         'string'     : self._parse_string,
                         'tristate'   : self._parse_tristate,
                         'bool'       : self._parse_bool,
-                        'override'   : self._parse_config, # TMP!!!
                         'endchoice'  : self._parse_endchoice,
                         'depends'    : self._parse_depends }
 
@@ -462,7 +461,7 @@ class BouwConfigParser:
                     helpstr = line[ len(self.helpindent) : ]
                     self.item._keywords['help'] += helpstr
                     continue
-            
+
             self.parsed = shlex.split(line, True)
             if len(self.parsed) == 0:
                 continue
@@ -500,14 +499,12 @@ class BouwConfigParser:
         self.mode = self.CONFIG_MODE
         self.choice = None
 
-    def _parse_tree(self, line):
+    def _parse_inside(self, line):
         self.tree = self.parsed[1]
 
-    def _parse_configtree(self, line):
-        self.name = self.parsed[1]
-        self.tree = 'DEFAULT'
+    def _parse_tree(self, line):
         self.item = ConfigTree(self.name)
-        self.conf.put(self.item, self.tree)
+        self.conf.put(self.item)
 
     def _parse_default(self, line):
         self.item._value = self.parsed[1]
