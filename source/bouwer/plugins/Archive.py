@@ -48,13 +48,14 @@ class Archive(Plugin):
 	    raise Exception('archive format not supported: ' + filename)
 
 	sources = self.get_filelist(filename, '.', include, exclude)
+        target  = TargetPath(filename)
 
         # Schedule Action to compile it
-        self.build.action(TargetPath(filename),
+        self.build.action(target,
 			  sources,
 			  self.action_run,
                           pretty_name=name,
-                          pretty_target=filename,
+                          pretty_target=target.absolute,
 			  format=format)
 
     def action_run(self, action):
