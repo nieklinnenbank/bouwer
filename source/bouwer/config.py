@@ -40,12 +40,14 @@ class Config(object):
     Represents a single generic configuration item
     """
 
-    def __init__(self, name, value = None, **keywords):
+    def __init__(self, name, value, path = None, **keywords):
         """
         Constructor
         """
         self.name      = name
         self._value    = value
+        self._parent   = None
+        self._path     = path
         self._keywords = keywords
         self.update(value)
 
@@ -68,32 +70,11 @@ class Config(object):
         """
         try:
             return self._interpolate(self._keywords[key])
-        except KeyError:
-
-            # TODO: there should be a clean way to ask for the item, which is directly
-            #  "above" us in the override path
-            # TODO: hack! we always take the base_conf as active dir...
-            def_item = self._get_override_parent()
-
-            if def_item:
-                return self._interpolate(def_item[key])
+        except KeyError as e:
+            if self._parent:
+                return self._parent[key]
             else:
-                raise KeyError('no such key: ' + str(key))
-
-    def _get_override_parent(self):
-        """
-        Retrieve the base configuration item (if the current Config is an override)
-        """
-        conf = Configuration.Instance()
-        saved_dir = conf.active_dir
-        conf.active_dir = conf.base_conf
-        def_item = conf.trees['DEFAULT'].get(self.name)
-        conf.active_dir = saved_dir
-
-        if def_item is not self:
-            return def_item
-        else:
-            return None
+                raise e
 
     def _interpolate(self, text):
         """
@@ -158,17 +139,15 @@ class Config(object):
         else:
             return True
 
-    def value(self, tree = None):
+    def value(self, tree = None): # TODO: do we need the tree argument???
         """
         Retrieve the current value of the configuration item
         """
         # TODO: do we need the tree parameter???
-        if self._value is None:
-            def_item = self._get_override_parent()
-            if def_item:
-                return def_item.value(tree)
-
-        return self._value
+        if self._value is None and self._parent:
+            return self._parent.value()
+        else:
+            return self._value
 
     def update(self, value):
         """
@@ -210,11 +189,11 @@ class ConfigBool(Config):
     This type of configuration item can only be `True` or `False`.
     """
 
-    def __init__(self, name, value = True, **keywords):
+    def __init__(self, name, value, path, **keywords):
         """
         Constructor
         """
-        super(ConfigBool, self).__init__(name, bool(value), **keywords)
+        super(ConfigBool, self).__init__(name, bool(value), path, **keywords)
 
     def value(self, tree = None):
         """
@@ -301,35 +280,42 @@ class ConfigTree(ConfigBool):
     Tree configuration items can contain other configuration items
     """
 
-    def __init__(self, name, value = True, **keywords):
+    def __init__(self, name, value, parent = None, **keywords):
         """
         Constructor
         """
-        super(ConfigTree, self).__init__(name, value, **keywords)
-        self.subitems    = {}
+        super(ConfigTree, self).__init__(name, value, ".", **keywords)
+        self.subitems = {}
+        self._parent = parent
 
     def add(self, item, path = None):
         """
         Introduce a new :class:`.Config` item to the tree
         """
 
-        # Every item in the tree contains a dict with
-        # paths for which it is active or overriden
-        # TODO: make sure this only contains the 'projectwide path' and not absolute OS path
+        # TODO: here we must set the parent correctly....
+        # if the item is not in this tree, look for the parent of us (the tree).
+        # if our parent has the item, make the parent of the new item that item in our parent tree...
+
+        # TODO: watch out... are subdirectories added in the correct sequence?
+        # we want to avoid the scenario where we need to re-update all the parents again.
+
+        # Every item in the tree contains a list with items
         if item.name not in self.subitems:
-            self.subitems[item.name] = {}
-       
+            self.subitems[item.name] = []
+
+            if self._parent:
+                item._parent = self._parent.get(item.name)
+        # TODO: this assumes items are added in order of directory hierarchy... is this true???
+        else:
+            item._parent = self.subitems[item.name][-1]
+
         # Add to the subitems dict
         if path is None:
             path = Configuration.Instance().active_dir
-        self.subitems[item.name][path] = item
- 
-        # Let all childs depend on the item
-        #for child_name in item.get_key('childs', []):
-        #    # TODO: validate that the child is there!
-        #
-        #    for path, child in self.subitems[child_name].items():
-        #        child.add_dependency(item.name)
+
+        item._path = path
+        self.subitems[item.name].append(item)
 
     def get(self, item_name):
         """
@@ -368,27 +354,37 @@ class ConfigTree(ConfigBool):
             return self
         elif name in self.__dict__:
             return self.__dict__[name]
-        
+
         conf = Configuration.Instance()
-        path = conf.active_dir # TODO: but what about this one ...
 
+        # See if we know this item in this tree
         if name in self.__dict__['subitems']:
-            cfiles = self.__dict__['subitems'][name] 
-        
-            # See if there is a specific override
-            while path and path != '/':
-                if path in cfiles:
-                    return cfiles[path]
-                else:
-                    path = os.path.dirname(path)
+            items = self.__dict__['subitems'][name]
+            path  = conf.active_dir
+            match_item = None
 
-            # If not specifically overriden, just return the first found
-            return cfiles.itervalues().next()
+            # Find a matching item
+            while path and path != '/' and not match_item:
+                for item in items:
+                    if item._path == path:
+                        match_item = item
+                        break
+                path = os.path.dirname(path)
 
-        elif name in conf.trees:
+            # If no match, ask the parent
+            if not match_item and self._parent:
+                match_item = self._parent.get(name)
+
+            # If still no match, just return the first available
+            if not match_item:
+                match_item = items[0]
+
+            return match_item
+
+        if name in conf.trees:
             return conf.trees[name]
-        elif name in conf.trees['DEFAULT'].subitems:
-            return conf.trees['DEFAULT'].get(name)
+        elif '_parent' in self.__dict__:
+            return self.__dict__['_parent'].get(name)
         else:
             raise AttributeError('no such attribute: ' + str(name))
 
@@ -503,14 +499,14 @@ class BouwConfigParser:
         self.tree = self.parsed[1]
 
     def _parse_tree(self, line):
-        self.item = ConfigTree(self.name)
+        self.item = ConfigTree(self.name, True, self.conf.trees['DEFAULT'])
         self.conf.put(self.item)
 
     def _parse_default(self, line):
-        self.item._value = self.parsed[1]
+        self.item._value = self.parsed[1] # TODO: this goes WRONG!!!!! Now all the config items get a string....
 
     def _parse_string(self, line):
-        self.item = ConfigString(self.name, '')
+        self.item = ConfigString(self.name, '', self.conf.active_dir)
         self.conf.put(self.item, self.tree)
 
     def _parse_tristate(self, line):
@@ -521,10 +517,10 @@ class BouwConfigParser:
 
     def _parse_bool(self, line):
         if self.mode == self.CHOICE_MODE:
-            self.item   = ConfigList(self.name)
+            self.item   = ConfigList(self.name, None, self.conf.active_dir)
             self.choice = self.item
         else:
-            self.item = ConfigBool(self.name)
+            self.item = ConfigBool(self.name, True, self.conf.active_dir)
 
             if self.choice is not None:
                 self.item._keywords['in_list'] = self.choice.name
@@ -582,14 +578,14 @@ class Configuration(bouwer.util.Singleton):
         """
         return self.active_tree.get(item_name)
 
-    def put(self, item, tree_name = 'DEFAULT'): 
+    def put(self, item, tree_name = 'DEFAULT', path = None):
         """
         Introduce a new :class:`.Config` object `item`
         """
         if isinstance(item, ConfigTree):
             self.trees[item.name] = item
         else:
-            self.trees[tree_name].add(item)
+            self.trees[tree_name].add(item, path)
 
             # Add item to the Bouwconfig mapping
             if not self.active_dir in self.bouwconf_map:
@@ -643,10 +639,10 @@ class Configuration(bouwer.util.Singleton):
         # i.e. ConfigTree's will appear first in the JSON file
         conf_dict = collections.OrderedDict()
 
-        # Save only default tree items and overwrites        
+        # Save only default tree items and overwrites
         for tree in self.trees.values():
             conf_dict[tree.name] = [ tree.serialize(tree) ]
-        
+
             for subitem_entry in tree.subitems.values():
                 for path, subitem in subitem_entry.iteritems():
 
@@ -667,7 +663,7 @@ class Configuration(bouwer.util.Singleton):
         Reset configuration to the initial predefined state using Bouwconfigs
         """
         # Insert the default tree.
-        self.put(ConfigTree('DEFAULT'))
+        self.put(ConfigTree('DEFAULT', True))
         self.active_tree = self.trees['DEFAULT']
 
         # Parse all pre-defined configurations from Bouwer
@@ -676,6 +672,7 @@ class Configuration(bouwer.util.Singleton):
         # Parse all user defined configurations
         self._scan_dir('.') #os.getcwd())
 
+    # TODO: this should be inside the ConfigTree... not in here...
     def dump(self):
         """
         Dump the current configuration to the debug log
@@ -704,8 +701,8 @@ class Configuration(bouwer.util.Singleton):
         Dump a single configuration item
         """
 
-        self.log.debug(parent + item.name + ':' + str(item.__class__) + ' = ' + str(item.value(tree)))
-                
+        self.log.debug(parent + item.name + ':' + str(item.__class__) + ' = ' + str(item.value(tree)) + ' (@'+str(item._path)+')')
+
         for key in item._keywords:
             self.log.debug('\t' + key + ' => ' + str(item._keywords[key]).replace('\n', '.'))
         self.log.debug('')
@@ -714,8 +711,8 @@ class Configuration(bouwer.util.Singleton):
         # TODO: perhaps put the dump method in ConfigTree itself?
         if isinstance(item, ConfigTree):
 
-            for child_item_name, paths in item.subitems.items():
-                for path, child_item in paths.items():
+            for child_item_name, subitems in item.subitems.items():
+                for child_item in subitems:
                     self._dump_item(child_item, tree, parent + item.name + '.')
 
     def _scan_dir(self, dirname):
@@ -737,5 +734,5 @@ class Configuration(bouwer.util.Singleton):
             for filename in os.listdir(dirname):
                 if os.path.isdir(dirname + os.sep + filename):
                     self._scan_dir(dirname + os.sep + filename)
-        
+
 

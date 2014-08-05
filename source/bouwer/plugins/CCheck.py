@@ -72,7 +72,7 @@ class CheckLibrary(Plugin):
         # Create a boolean, if needed.
         item = self.conf.get(confname)
         if item is None:
-            item = bouwer.config.ConfigBool(confname)
+            item = bouwer.config.ConfigBool(confname, True, self.conf.active_dir)
             self.conf.active_tree.add(item)
 
         self.execute_config_params(item, library, is_required)
@@ -144,7 +144,7 @@ class CheckFunction(Plugin):
         # Create a boolean, if needed.
         item = self.conf.get(confname)
         if item is None:
-            item = bouwer.config.ConfigBool(confname)
+            item = bouwer.config.ConfigBool(confname, True, self.conf.active_dir)
             self.conf.active_tree.add(item)
 
         self.execute_config_params(item, function, lib, is_required)
@@ -215,7 +215,7 @@ class CheckHeader(Plugin):
         # Create a boolean, if needed.
         item = self.conf.get(confname)
         if item is None:
-            item = bouwer.config.ConfigBool(confname)
+            item = bouwer.config.ConfigBool(confname, True, self.conf.active_dir)
             self.conf.active_tree.add(item)
 
         self.execute_config_params(item, header, is_required)

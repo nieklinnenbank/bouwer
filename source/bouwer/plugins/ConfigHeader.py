@@ -89,8 +89,8 @@ class ConfigHeader(Plugin):
                 self.outfile.write('"' + str(item.value()) + '"\n')
 
         if isinstance(item, ConfigTree):
-            for paths in item.subitems.values():
-                child_item = paths.values()[0]
+            for items in item.subitems.values():
+                child_item = items[0]
 
                 # Skip items that are overridden in the default tree.
                 if item != self.conf.active_tree and child_item.name in self.conf.active_tree.subitems:

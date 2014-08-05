@@ -1,4 +1,7 @@
 [FOR RELEASE]
+
+==> UseLibrary() is not able to "transfer" to subdirectories, e.g. a Program() and Object()'s in separate dirs...
+
 ==> support these projects:
 + nano
 + apr

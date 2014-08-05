@@ -242,7 +242,7 @@ class BuilderMesh:
 
         # See if all our input configuration items are done
         for input_item in instance.builder.config_input():
-            
+
             # Is the config item being produced in this round already?
             # Do not schedule right now then, because otherwise the dependency
             # is not met. 
@@ -252,7 +252,7 @@ class BuilderMesh:
             # See if any other builder needs to output for us first.
             if input_item in self.outputs:
                 for output_instance in self.outputs[input_item]:
-                    self._try_execute(output_instance)
+                    self._try_execute(output_instance)                  # TODO: recursion is limited!!! big projects have a LOT of instances .....
                 return False
 
             # None means the configuration must be final

@@ -20,8 +20,3 @@ choice CC
     keywords
       incpath = include
 endchoice
-
-#config CC
-#    bool "GCC compiler"
-#    keywords
-#      incpath = include

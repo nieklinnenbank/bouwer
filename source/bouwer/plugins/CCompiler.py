@@ -18,6 +18,7 @@
 import os
 import os.path
 import glob
+import copy
 from bouwer.plugin import *
 from bouwer.builder import *
 from bouwer.config import *
@@ -47,6 +48,9 @@ class Object(Plugin):
         Build executable objects if configurion item `item` is True
         """
         if item.value():
+            if type(sources) is str:
+                sources = [ sources ]
+
             for source in sources:
                 self.execute_source(source, item, depends)
 
@@ -57,7 +61,7 @@ class Program(Plugin):
 
     def config_input(self):
         """ Configuration input items """
-        return [ 'CC', 'LIBRARIES', 'USE_LIBRARIES', 'CHECK', 'CONFIG' ]
+        return [ 'CC', 'LIBRARIES', 'USE_LIBRARIES', 'CHECK', 'CONFIG', 'OBJECTS' ]
 
     def execute_config(self, item, sources, libraries = [], depends = [], name = None):
         """
@@ -143,7 +147,7 @@ class UseLibrary(Plugin):
 
     def config_input(self):
         """ Configuration input items """
-        return [ 'CC', 'LIBRARIES', 'OBJECTS' ]
+        return [ 'CC', 'LIBRARIES' ]#, 'OBJECTS' ]
 
     def config_output(self):
         """ Configuration output items """
@@ -188,9 +192,9 @@ class Include(Plugin):
 
         # Introduce an CC override
         if self.conf.active_dir not in self.conf.active_tree.subitems.get('CC', {}):
-            clist = ConfigList('CC')
+            clist = ConfigList('CC', None, self.conf.active_tree.name)
             clist._keywords['incpath'] = self.conf.get('CC')['incpath']
-            self.conf.put(clist, self.conf.active_tree.name)
+            self.conf.put(clist, self.conf.active_tree.name, self.conf.active_dir)
         cc = self.conf.get('CC')
 
         # Append to the incpath of the override
@@ -299,6 +303,9 @@ class CCompiler(bouwer.util.Singleton):
             return []
 
     def _get_libraries_for_target(self, target):
+        """
+        Return a list of libraries for the given target/item
+        """
         treedict  = self.use_libraries.get(self.conf.active_tree, {})
         dirdict   = treedict.get(self.conf.active_dir, {})
         use_libs  = dirdict.get(target.absolute, [])
@@ -318,7 +325,7 @@ class CCompiler(bouwer.util.Singleton):
         outfile = TargetPath(splitfile[0] + '.o')
 
         # Fill compiler command
-        if splitfile[1] == '.c':
+        if splitfile[1] == '.c' or splitfile[1] == '.S':
             compiler = cc['cc'] + ' ' + str(outfile) + ' ' + cc['ccflags']
         elif splitfile[1] == '.cpp':
             compiler = cc['c++'] + ' ' + str(outfile) + ' ' + cc['c++flags']
@@ -369,7 +376,7 @@ class CCompiler(bouwer.util.Singleton):
         ldpath  = ''
         incpath = ''
         objects = self._lookup_config_deps(item) + self.c_object_list
-        extra_deps = depends
+        extra_deps = copy.deepcopy(depends)
 
         # C or C++ program?
         if not sources or sources[0].absolute.endswith('.c'):
@@ -398,6 +405,7 @@ class CCompiler(bouwer.util.Singleton):
                 libname = libname[3:]
 
             ldflags += ' -l' + libname
+
 
         # Traverse all source files given
         for source in sources:

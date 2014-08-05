@@ -31,6 +31,7 @@ class ConfigTester(ConfTester):
         super(ConfigTester, self).setUp()
         self.item1 = Config('TESTITEM',
                              True,
+                             'DEFAULT',
                              key1=True, key2='text', key3=['a', 'b', 'c'])
 
     def test_keyword_non_existing(self):

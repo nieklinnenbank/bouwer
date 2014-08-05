@@ -37,6 +37,19 @@ def tempfile(filename):
         os.mkdir(BOUWTEMP)
     return BOUWTEMP + '/' + filename
 
+def compare_str(s1, s2):
+    """
+    Compare strings s1 and s1. Return the number of characters that are equal.
+    """
+    i = 0
+
+    count = min(len(s1), len(s2))
+
+    for i in range(0, count - 1):
+        if s1[i] != s2[i]:
+            break
+    return i
+
 class Singleton(object):
     """
     Singleton classes may have only one instance

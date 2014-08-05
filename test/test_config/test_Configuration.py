@@ -36,8 +36,8 @@ class ConfigurationTester(ConfTester):
     def test_put_default(self):
         """ Store a configuration item in the default tree """
 
-        item1 = Config('TEST_ITEM1', 123)
-        item2 = Config('TEST_ITEM2', 456)
+        item1 = Config('TEST_ITEM1', 123, '.')
+        item2 = Config('TEST_ITEM2', 456, '.')
 
         # Test insert items to the default tree
         self.conf.put(item1)
@@ -52,8 +52,9 @@ class ConfigurationTester(ConfTester):
         item2 = Config('TEST_ITEM', 456)
 
         # Try to insert an item with the same name and directory
-        self.conf.put(item1)
-        self.conf.put(item2)
+        self.conf.put(item1, path = '.')
+        self.conf.put(item2, path = './subdir')
+        self.conf.active_dir = './subdir'
         self.assertEquals(self.conf.get(item2.name), item2)
         self.assertNotEqual(self.conf.get(item2.name), item1)
 
@@ -62,14 +63,14 @@ class ConfigurationTester(ConfTester):
 
         item1 = Config('TEST_ITEM', 123)
         item2 = Config('TEST_ITEM', 456)
-        
+
         # Put item1 in the default tree.
-        self.conf.put(item1)
+        self.conf.put(item1, path = '.')
         self.assertEquals(self.conf.get(item1.name), item1)
 
         # Override item1 in some sub directory only
         self.conf.active_dir = './test/directory'
-        self.conf.put(item2)
+        self.conf.put(item2, path = './test/directory')
         self.assertEquals(self.conf.get(item2.name), item2)
         self.assertNotEqual(self.conf.get(item1.name), item1)
 
