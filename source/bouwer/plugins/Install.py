@@ -33,19 +33,19 @@ class Install(Plugin):
     def execute_any(self, stritem_dir, files):
         """ Builder implementation """
 
-	# If a prefix is configured, add it.
-	if self.conf.get('PREFIX'):
-	    prefix = self.conf.get('PREFIX').value()
-	else:
-	    prefix = ''
+        # If a prefix is configured, add it.
+        if self.conf.get('PREFIX'):
+            prefix = self.conf.get('PREFIX').value()
+        else:
+            prefix = ''
 
         # Schedule Action to compile it
-	for f in files:
-	    path = TargetPath('')
-	    path.absolute = prefix + str(stritem_dir) + '/' + os.path.basename(f)
+        for f in files:
+            path = TargetPath('')
+            path.absolute = prefix + str(stritem_dir) + '/' + os.path.basename(f)
 
-    	    self.build.action(path, [SourcePath(f)],
-			      self.action_run,
+            self.build.action(path, [SourcePath(f)],
+                              self.action_run,
                               pretty_name='COPY',
                               pretty_target=f + ' -> ' + path.absolute)
 
@@ -53,9 +53,9 @@ class Install(Plugin):
         """
         Run the given action
         """
-	try:
-	    shutil.copy(action.sources[0], action.target)
-	except IOError as e:
-	    print(e)
-	    return 1
-	return 0
+        try:
+            shutil.copy(action.sources[0], action.target)
+        except IOError as e:
+            print(e)
+            return 1
+        return 0

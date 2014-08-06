@@ -139,7 +139,7 @@ class PluginManager(Singleton):
         """
 
         # Discover all Plugin derived classes and load them.
-        for name, obj in module.__dict__.iteritems():
+        for name, obj in module.__dict__.items():
             if inspect.isclass(obj) and issubclass(obj, Plugin):
                 if name in self.plugins:
                     continue

@@ -119,7 +119,8 @@ class WorkerManager:
             while collecting or (self.pending and not self.running):
                 collecting = False
 
-                for key, action in self.pending.items():
+                for key in list(self.pending.keys()):
+                    action = self.pending[key]
                     if self.decide(action):
                         action.status = ActionEvent.EXECUTE
                         self.work.put(action.target)

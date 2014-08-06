@@ -225,7 +225,6 @@ class CCompiler(bouwer.util.Singleton):
         """
 
         # TODO: make this recursive
-        # TODO: look in the paths!!!!
 
         # Retrieve cache and file stat
         cache = bouwer.util.Cache.Instance('c_headers')
@@ -236,7 +235,9 @@ class CCompiler(bouwer.util.Singleton):
         # Do we have the file still in an up-to-date cache?
         if cache.timestamp() >= st.st_mtime and cache.get(source.absolute) is not None:
             for hdr in cache.get(source.absolute):
-                headers.append(SourcePath(hdr))
+                sp = SourcePath('')
+                sp.absolute = hdr
+                headers.append(sp)
             return headers
 
         # Search for '#include' lines
@@ -257,7 +258,7 @@ class CCompiler(bouwer.util.Singleton):
                 try:
                     if p:
                         os.stat(p + os.sep + header_name)
-                        sp = SourcePath('')
+                        sp = SourcePath('') # TODO: just use Path() then?
                         sp.absolute = p + os.sep + header_name
                         headers.append(sp)
                         headers_str.append(sp.absolute)

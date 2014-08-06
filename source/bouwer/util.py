@@ -165,25 +165,25 @@ class Cache(object):
         self.filename = tempfile(self.name + '.cache')
 
         try:
-            self.fp = open(self.filename, 'r+')
-        except IOError:
-            self.fp = open(self.filename, 'w+')
+            self.fp = open(self.filename, 'rb+')
+            self.data = pickle.load(self.fp)
+        except (IOError, EOFError):
+            self.fp = open(self.filename, 'wb+')
 
         self.stat = os.stat(self.filename)
-        
-        try:
-            self.data = pickle.load(self.fp)
-        except EOFError:
-            self.data = {} 
-
         self.log.debug('Cache ' + self.name + ' : created')
 
     def __del__(self):
         """
         Class destructor
         """
-        self.flush()
-        self.fp.close()
+        try:
+            self.flush()
+            self.fp.close()
+
+        # Python 3.x seems to auto-close files
+        except ValueError:
+            pass
         self.log.debug('Cache ' + str(self.name) + ' : destroyed')
 
     @classmethod
@@ -193,7 +193,7 @@ class Cache(object):
         """
         if name not in Cache.instances:
             Cache.instances[name] = Cache(name)
-        
+
         return Cache.instances[name]
 
     @classmethod

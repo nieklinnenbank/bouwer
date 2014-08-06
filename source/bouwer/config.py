@@ -32,7 +32,6 @@ import inspect
 import shlex
 import json
 import collections
-from StringIO import StringIO
 import bouwer.util
 
 class Config(object):
