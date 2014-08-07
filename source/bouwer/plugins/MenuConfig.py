@@ -42,6 +42,46 @@ class MenuConfig(Plugin):
         except:
             sys.exit('urwid python module not installed')
 
+        palette = [
+            ('banner', 'black', 'light gray'),
+            ('streak', 'black', 'dark red'),
+            ('bg', 'black', 'dark blue'),]
+
+        def show_or_exit(key):
+            if key in ('q', 'Q'):
+                raise urwid.ExitMainLoop()
+
+        tree_checkboxes=[]
+        tree_checkboxes.append(urwid.Divider())
+        tree_checkboxes.append(urwid.Divider())
+        tree_checkboxes.append(urwid.Divider("=", 1))
+        for tree in conf.trees.values():
+            tree_checkboxes.append(urwid.CheckBox(tree.name, tree.value(tree)))
+
+        lst = urwid.ListBox(urwid.SimpleListWalker(tree_checkboxes))
+
+        # Frame
+        w = urwid.Filler(lst, height=('relative', 100), valign='middle')
+        w = urwid.AttrWrap(lst, 'body')
+        w = urwid.AttrWrap(w, 'bg')
+        hdr = urwid.Text("Urwid BigText example program - F8 exits.")
+        hdr = urwid.AttrWrap(hdr, 'header')
+        ftr = urwid.Text("Footer text")
+        ftr = urwid.AttrWrap(ftr, 'footer')
+        #container = urwid.Frame(header=hdr, body=w, footer=ftr)
+
+        cb = urwid.CheckBox("hoi", False)
+        cb.set_label(('right', 'test'))
+        container = urwid.BoxAdapter(lst, 80)
+        container = urwid.Filler(
+                        urwid.Padding( container, align='center', width=('relative',50))
+#                       , height=('relative',50)
+                    )
+
+        loop = urwid.MainLoop(container, palette, unhandled_input=show_or_exit)
+        loop.run()
+
+    def test_dump():
         for tree in conf.trees.values():
             for path, item_list in tree.get_items_by_path().items():
                 print(path)
