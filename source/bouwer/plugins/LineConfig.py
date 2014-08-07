@@ -74,10 +74,10 @@ class LineConfig(Plugin):
         """
 
         # First ask for our dependencies, if needed
-        for dep in item._keywords.get('depends', []):
-            if dep in tree.subitems:
-                for dep_path in tree.subitems[dep]:
-                    self._change_item(conf, tree, dep_path, tree.subitems[dep][dep_path])
+        for dep_name in item._keywords.get('depends', []):
+            if dep_name in tree.subitems:
+                for dep in tree.subitems[dep_name]:
+                    self._change_item(conf, tree, dep._path, dep)
 
         # If this item is not satisfied in this tree, skip it
         if not item.satisfied(tree):

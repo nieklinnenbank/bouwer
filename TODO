@@ -1,5 +1,7 @@
 [FOR RELEASE]
 
+--> bouw --oldconfig is needed, to sync a currently active configuration with a newer updated Bouwconfig....
+
 ==> UseLibrary() is not able to "transfer" to subdirectories, e.g. a Program() and Object()'s in separate dirs...
 
 ==> support these projects:

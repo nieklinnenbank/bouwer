@@ -188,7 +188,7 @@ class ConfigBool(Config):
     This type of configuration item can only be `True` or `False`.
     """
 
-    def __init__(self, name, value, path, **keywords):
+    def __init__(self, name, value, path = None, **keywords):
         """
         Constructor
         """
@@ -279,7 +279,7 @@ class ConfigTree(ConfigBool):
     Tree configuration items can contain other configuration items
     """
 
-    def __init__(self, name, value, parent = None, **keywords):
+    def __init__(self, name, value, path = None, parent = None, **keywords):
         """
         Constructor
         """
@@ -498,7 +498,7 @@ class BouwConfigParser:
         self.tree = self.parsed[1]
 
     def _parse_tree(self, line):
-        self.item = ConfigTree(self.name, True, self.conf.trees['DEFAULT'])
+        self.item = ConfigTree(self.name, True, parent = self.conf.trees['DEFAULT'])
         self.conf.put(self.item)
 
     def _parse_default(self, line):
@@ -610,7 +610,7 @@ class Configuration(bouwer.util.Singleton):
         conf_dict = json.loads(contents, cls = bouwer.util.AsciiDecoder)
 
         # Add all items to the configuration
-        for json_name, json_paths in conf_dict.iteritems():
+        for json_name, json_paths in conf_dict.items():
             for json_item in json_paths:
                 conf_class = getattr(bouwer.config, json_item['type'])
                 conf_item  = conf_class(json_item['name'],
@@ -643,14 +643,13 @@ class Configuration(bouwer.util.Singleton):
             conf_dict[tree.name] = [ tree.serialize(tree) ]
 
             for subitem_entry in tree.subitems.values():
-                for path, subitem in subitem_entry.iteritems():
-
+                for subitem in subitem_entry:
                     if subitem.name not in conf_dict:
                         conf_dict[subitem.name] = []
 
                     item_dict = subitem.serialize(tree)
                     item_dict['tree'] = tree.name
-                    item_dict['path'] = path
+                    item_dict['path'] = subitem._path
                     conf_dict[subitem.name].append(item_dict)
 
         fp.write(json.dumps(conf_dict, ensure_ascii=True, indent=4, separators=(',', ': ')))

@@ -92,10 +92,25 @@ config MSVC10
 config TCC
     bool "Tiny C Compiler"
     keywords
-      cc      = tcc -o 
-      asm     = tcc -o 
-      ld      = tcc -o 
       cflags  = -Wall
+      cc      = tcc -o
+      clink   = tcc -o
+      c++     = tcc -o
+      c++link = tcc -o
+      asm     = tcc -o
+      ar      = ar
+      ccflags      = -Wall -Wextra -c
+      clinkflags   = -Wall -Wextra
+      c++flags     = -Wall -Wextra -c
+      c++linkflags = -Wall -Wextra
+      ldscript     =
+      ldpath       =
+      ldflag       = -L
+      libs         =
+      libflag      = -l
+      incflag      = -I
+      incpath      =
+      arflags      = crs
     help
       See the Tiny C compiler website http://bellard.org/tcc/
 

@@ -113,7 +113,7 @@ class AsciiDecoder(json.JSONDecoder):
         Uses an OrderedDict to preserve the order of JSON items read from file.
         """
         super(AsciiDecoder, self).__init__(
-                encoding=encoding,
+                #encoding=encoding,
                 object_hook=object_hook,
                 parse_float=parse_float,
                 parse_int=parse_int,
@@ -137,15 +137,21 @@ class AsciiDecoder(json.JSONDecoder):
         if isinstance(data, dict) or isinstance(data, collections.OrderedDict):
             d = collections.OrderedDict()
 
-            for key, value in data.iteritems():
+            for key, value in data.items():
                 d[self.convert(key)] = self.convert(value)
             return d
         elif isinstance(data, list):
             return [self.convert(element) for element in data]
-        elif isinstance(data, unicode):
-            return data.encode('utf-8')
         else:
-            return data
+            try:
+                # Only python 2.x has a separate unicode/str type.
+                if isinstance(data, unicode):
+                    return data.encode('utf-8')
+                else:
+                    return data
+            except NameError:
+                # In Python 3.x all strings are unicode. Do not translate.
+                return data
 
 class Cache(object):
     """
