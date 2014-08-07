@@ -284,7 +284,7 @@ class ConfigTree(ConfigBool):
         Constructor
         """
         super(ConfigTree, self).__init__(name, value, ".", **keywords)
-        self.subitems = {}
+        self.subitems = collections.OrderedDict()
         self._parent = parent
 
     def add(self, item, path = None):
@@ -344,6 +344,18 @@ class ConfigTree(ConfigBool):
             tree = Configuration.Instance().active_tree
 
         return tree.name == self.name and super(ConfigTree, self).value(self)
+
+    def get_items_by_path(self):
+        """
+        Return a dictionary with path as key and items as value
+        """
+        ret_dict = collections.OrderedDict()
+
+        for item_list in self.subitems.values():
+            for item in item_list:
+                ret_dict.setdefault(item._path, []).append(item)
+
+        return ret_dict
 
     def __getattr__(self, name):
         """
@@ -511,9 +523,6 @@ class BouwConfigParser:
     def _parse_tristate(self, line):
         pass
 
-    def _parse_override(self, line):
-        pass
-
     def _parse_bool(self, line):
         if self.mode == self.CHOICE_MODE:
             self.item   = ConfigList(self.name, None, self.conf.active_dir)
@@ -545,10 +554,6 @@ class Configuration(bouwer.util.Singleton):
         self.args   = cli.args
         self.trees  = {}
         self.parser = BouwConfigParser(self)
-
-        # Dict which contains paths of all discovered Bouwconfigs as key,
-        # and as value a list of Config objects that were found there.
-        self.bouwconf_map = collections.OrderedDict()
 
         # Find the path to the Bouwer predefined configuration files
         curr_file = inspect.getfile(inspect.currentframe())
@@ -585,12 +590,6 @@ class Configuration(bouwer.util.Singleton):
             self.trees[item.name] = item
         else:
             self.trees[tree_name].add(item, path)
-
-            # Add item to the Bouwconfig mapping
-            if not self.active_dir in self.bouwconf_map:
-                self.bouwconf_map[self.active_dir] = []
-
-            self.bouwconf_map[self.active_dir].append(item)
 
     def load(self, filename = '.bouwconf'):
         """

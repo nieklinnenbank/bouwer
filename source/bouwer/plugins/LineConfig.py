@@ -44,13 +44,13 @@ class LineConfig(Plugin):
 
         self.done = []
 
-        # Loop all bouwconfig in order
-        for tree_name, tree in conf.trees.items():
-            for bouwconf in conf.bouwconf_map:
+        # Loop all items in order by path
+        for tree in conf.trees.values():
+            for path, item_list in tree.get_items_by_path().items():
                 self.print_path = False
 
-                for item in conf.bouwconf_map[bouwconf]:
-                    self._change_item(conf, tree, bouwconf, item)
+                for item in item_list:
+                    self._change_item(conf, tree, path, item)
 
         # Ask to save the modified configuration.
         print()

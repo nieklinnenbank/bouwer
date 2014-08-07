@@ -16,33 +16,37 @@
 #
 
 import os
+import sys
 import argparse
-from bouwer.plugin import *
+from bouwer.plugin import Plugin
 
-##
-# Configure using ncurses
-#
 class MenuConfig(Plugin):
+    """
+    Configure using the urwid / ncurses text-console frontend
+    """
 
-    ##
-    # Initialize the plugin. Only called once if exists is True.
-    #
     def initialize(self):
+        """
+        Initialize the plugin
+        """
         self.conf.cli.parser.add_argument('--menuconfig', dest='config_plugin',
             action='store_const', const=self, default=argparse.SUPPRESS,
-            help='Change configuration using ncurses terminal interface')
+            help='Change configuration using text console interface (urwid)')
 
-    ##
-    # See if we have ncurses installed
-    #
-    def inspect(self, conf):
-        # Look for the ncurses module
-        return True
-
-    ##
-    # Runs the menu configuration
-    #
     def configure(self, conf):
-        pass
+        """
+        Configure using urwid
+        """
+        try:
+            import urwid
+        except:
+            sys.exit('urwid python module not installed')
 
+        for tree in conf.trees.values():
+            for path, item_list in tree.get_items_by_path().items():
+                print(path)
 
+                for item in item_list:
+                    print(item.name + ' = ' + str(item))
+
+                print

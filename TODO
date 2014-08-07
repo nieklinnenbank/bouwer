@@ -1,6 +1,12 @@
 [FOR RELEASE]
 
 --> bouw --oldconfig is needed, to sync a currently active configuration with a newer updated Bouwconfig....
+    bouw --update-config or bouw --import-config or something, with --oldconfig as an alias
+
+--> bouw -f --full should print the commands BEFORE the Action executes...
+    --> change the ActionEvents stuff for it. We do want builders to execute before output plugin in case of the pretty output, e.g. because they update the configuration items/output result
+
+--> the .bouwconf files should NOT contain hardcoded path= locations. Use None for bouwer's base config dir.
 
 ==> UseLibrary() is not able to "transfer" to subdirectories, e.g. a Program() and Object()'s in separate dirs...
 
@@ -9,6 +15,11 @@
 + apr
 - httpd + apr
 - FreeNOS 0.0.5
+
+==> DOCUMENATION WITH SPHINX
+    --> also do sphinx-apidocs tool, to autogenerate the module docs.
+    --> make a builder for it. Sphinx().
+
 ==> Let FreeNOS 0.0.5 compile with Bouwer, on all platforms!
     ==> ConfigHeader() should include all version information for FreeNOS...
     ==> BUILDROOT, BUILDPATH and also in the incpath...
