@@ -16,6 +16,11 @@
 - httpd + apr
 - FreeNOS 0.0.5
 
+--> Kconfig:
+    - the if ITEM statement, just adds a depends on for each inside the if
+    - the select statement, reverse dependency
+    - depends on expressions: ( ) && || !
+
 ==> DOCUMENATION WITH SPHINX
     --> also do sphinx-apidocs tool, to autogenerate the module docs.
     --> make a builder for it. Sphinx().

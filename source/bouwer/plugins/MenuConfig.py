@@ -19,6 +19,106 @@ import os
 import sys
 import argparse
 from bouwer.plugin import Plugin
+from bouwer.config import *
+
+try:
+    import urwid
+except:
+    # TODO: this should not be required!
+    sys.exit('urwid required')
+
+class ConfigTreeWidget(urwid.TreeWidget):
+    """ Display widget for leaf nodes """
+    def get_display_text(self):
+        value = self.get_node().get_value()
+
+        if isinstance(value, Config):
+            return value.get_key('title', value.name)
+        if isinstance(value, Configuration):
+            return 'Configuration'
+        if isinstance(value, str):
+            return value
+        return str(value)
+
+#    def keypress(self, size, key):
+#        pass
+
+#class ConfigNode(urwid.TreeNode):
+#    """ Data storage object for leaf nodes """
+#    def load_widget(self):
+#        return ConfigTreeWidget(self)
+#
+#    def selectable(self):
+#        return true
+
+class ConfigParentNode(urwid.ParentNode):
+    """ Data storage object for interior/parent nodes """
+
+    def load_widget(self):
+        """ Return widget for displaying us """
+        return ConfigTreeWidget(self)
+
+    def load_child_keys(self):
+        """ Return list of child keys """
+        item = self.get_value()
+        conf = Configuration.Instance()
+        child_lst = []
+
+        if isinstance(item, ConfigList):
+            for child_name in item.get_key('options', []):
+                child = conf.get(child_name) # TODO: but which tree?????
+                child_lst.append(child._path + ':' + child.name)
+
+        if isinstance(item, ConfigTree):
+            for path, item_list in item.get_items_by_path().items():
+
+                if path not in child_lst:
+                    child_lst.append(path + ':')
+
+                for child in item_list:
+                    if not child.get_key('in_list', None):
+                        child_lst.append(path + ':' + child.name)
+
+
+            #for childs in item.subitems.values():
+            #    for child in childs:
+            #        if not child.get_key('in_list', None) and child.name not in child_lst:
+            #            child_lst.append(child.name)
+
+        if isinstance(item, Configuration):
+            for tree in item.trees.values():
+                child_lst.append(tree.name)
+
+        if isinstance(item, list):
+            pass
+
+        return child_lst
+
+    def load_child_node(self, key):
+        """ Return child for the given key """
+        value = self.get_value()
+
+        if isinstance(value, ConfigTree) or \
+           isinstance(value, ConfigList):
+            path, name = key.split(':')
+
+            if name:
+                conf = Configuration.Instance()
+                saved_active = conf.active_dir
+                conf.active_dir = path
+                child = conf.get(name)
+                conf.active_dir = saved_active
+            else:
+                child = path
+                name = path
+
+            return ConfigParentNode(child, parent=self, key=key, depth = self.get_depth() + 1)
+
+        if isinstance(value, Configuration):
+            return ConfigParentNode(value.get(key), parent=self, key=key, depth = self.get_depth() + 1)
+
+        if isinstance(value, str):
+            return ConfigParentNode(key, parent=self, key=key, depth = self.get_depth() + 1)
 
 class MenuConfig(Plugin):
     """
@@ -42,47 +142,12 @@ class MenuConfig(Plugin):
         except:
             sys.exit('urwid python module not installed')
 
-        palette = [
-            ('banner', 'black', 'light gray'),
-            ('streak', 'black', 'dark red'),
-            ('bg', 'black', 'dark blue'),]
+        root_node = self.conf
+        TreeBrowser(root_node).main()
+        #self.test_dump()
 
-        def show_or_exit(key):
-            if key in ('q', 'Q'):
-                raise urwid.ExitMainLoop()
-
-        tree_checkboxes=[]
-        tree_checkboxes.append(urwid.Divider())
-        tree_checkboxes.append(urwid.Divider())
-        tree_checkboxes.append(urwid.Divider("=", 1))
-        for tree in conf.trees.values():
-            tree_checkboxes.append(urwid.CheckBox(tree.name, tree.value(tree)))
-
-        lst = urwid.ListBox(urwid.SimpleListWalker(tree_checkboxes))
-
-        # Frame
-        w = urwid.Filler(lst, height=('relative', 100), valign='middle')
-        w = urwid.AttrWrap(lst, 'body')
-        w = urwid.AttrWrap(w, 'bg')
-        hdr = urwid.Text("Urwid BigText example program - F8 exits.")
-        hdr = urwid.AttrWrap(hdr, 'header')
-        ftr = urwid.Text("Footer text")
-        ftr = urwid.AttrWrap(ftr, 'footer')
-        #container = urwid.Frame(header=hdr, body=w, footer=ftr)
-
-        cb = urwid.CheckBox("hoi", False)
-        cb.set_label(('right', 'test'))
-        container = urwid.BoxAdapter(lst, 80)
-        container = urwid.Filler(
-                        urwid.Padding( container, align='center', width=('relative',50))
-#                       , height=('relative',50)
-                    )
-
-        loop = urwid.MainLoop(container, palette, unhandled_input=show_or_exit)
-        loop.run()
-
-    def test_dump():
-        for tree in conf.trees.values():
+    def test_dump(self):
+        for tree in self.conf.trees.values():
             for path, item_list in tree.get_items_by_path().items():
                 print(path)
 
@@ -90,3 +155,63 @@ class MenuConfig(Plugin):
                     print(item.name + ' = ' + str(item))
 
                 print
+
+class TreeBrowser:
+    palette = [
+        ('body', 'black', 'light gray'),
+        ('focus', 'light gray', 'dark blue', 'standout'),
+        ('head', 'yellow', 'black', 'standout'),
+        ('foot', 'light gray', 'black'),
+        ('key', 'light cyan', 'black','underline'),
+        ('title', 'white', 'black', 'bold'),
+        ('flag', 'dark gray', 'light gray'),
+        ('error', 'dark red', 'light gray'),
+        ]
+
+    footer_text = [
+        ('title', "Example Data Browser"), "    ",
+        ('key', "UP"), ",", ('key', "DOWN"), ",",
+        ('key', "PAGE UP"), ",", ('key', "PAGE DOWN"),
+        "  ",
+        ('key', "+"), ",",
+        ('key', "-"), "  ",
+        ('key', "LEFT"), "  ",
+        ('key', "HOME"), "  ",
+        ('key', "END"), "  ",
+        ('key', "Q"),
+        ]
+
+    def __init__(self, data=None):
+        self.topnode = ConfigParentNode(data)
+        self.listbox = urwid.TreeListBox(urwid.TreeWalker(self.topnode))
+        self.listbox.offset_rows = 1
+        self.header = urwid.Text( "" )
+        self.footer = urwid.AttrWrap( urwid.Text( self.footer_text ),
+            'foot')
+        self.view = urwid.Frame(
+            urwid.AttrWrap( self.listbox, 'body' ),
+            header=urwid.AttrWrap(self.header, 'head' ),
+            footer=self.footer )
+
+    def main(self):
+        """Run the program."""
+
+        self.loop = urwid.MainLoop(self.view, self.palette,
+                                   unhandled_input=self.unhandled_input)
+        self.loop.run()
+
+    def unhandled_input(self, k):
+        if k in ('q','Q'):
+            raise urwid.ExitMainLoop()
+
+
+def get_example_tree():
+    """ generate a quick 100 leaf tree for demo purposes """
+    retval = {"name":"parent","children":[]}
+    for i in range(10):
+        retval['children'].append({"name":"child " + str(i)})
+        retval['children'][i]['children']=[]
+        for j in range(10):
+            retval['children'][i]['children'].append({"name":"grandchild " +
+                                                      str(i) + "." + str(j)})
+    return retval
