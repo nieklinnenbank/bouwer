@@ -1,3 +1,12 @@
+[menuconfig]
+- ConfigString: question box
+- ConfigList: also in a tree maybe, or list of checkboxes
+- Keywords please, add them as childs
+- trees fix, also HOST and TARGET should work
+- layout fixing
+- keyboard shortcuts: Y/N/Enter/ESC, UP, DOWN, etc
+- save Y/N
+
 [FOR RELEASE]
 
 --> bouw --oldconfig is needed, to sync a currently active configuration with a newer updated Bouwconfig....

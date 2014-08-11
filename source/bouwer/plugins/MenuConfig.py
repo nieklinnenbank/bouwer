@@ -22,36 +22,89 @@ from bouwer.plugin import Plugin
 from bouwer.config import *
 
 try:
-    import urwid
+    from urwid import *
 except:
     # TODO: this should not be required!
-    sys.exit('urwid required')
+    class TreeWidget: pass
+    class ParentNode: pass
 
-class ConfigTreeWidget(urwid.TreeWidget):
+class ConfigTreeWidget(TreeWidget):
     """ Display widget for leaf nodes """
+
+    def __init__(self, node):
+        value = node.get_value()
+
+        if isinstance(value, ConfigBool):
+            un_icon = '[ ]'
+            ex_icon = '[*]'
+        else:
+            un_icon = ex_icon = '  '
+
+        self.unexpanded_icon = SelectableIcon(un_icon, 0)
+        self.expanded_icon = SelectableIcon(ex_icon, 0)
+
+        super(ConfigTreeWidget, self).__init__(node)
+
+    def __getattribute__(self, name):
+        """
+        Override the self.expanded with the actual ConfigBool.value()
+        """
+        if name == 'expanded':
+            item = object.__getattribute__(self, 'get_node')().get_value()
+
+            if isinstance(item, ConfigBool):
+                return item.value()
+
+        return object.__getattribute__(self, name)
+
+    def __setattr__(self, name, value):
+        if name == 'expanded':
+            item = self.get_node().get_value()
+
+            if isinstance(item, ConfigBool):
+                item.update(value)
+
+        self.__dict__[name] = value
+
+    def get_indented_widget(self):
+        widget = self.get_inner_widget()
+        if not self.is_leaf:
+            widget = Columns([('fixed', 3,
+                [self.unexpanded_icon, self.expanded_icon][self.expanded]),
+                widget], dividechars=1)
+        indent_cols = self.get_indent_cols()
+        return Padding(widget,
+            width=('relative', 100), left=indent_cols)
+
     def get_display_text(self):
         value = self.get_node().get_value()
 
         if isinstance(value, Config):
-            return value.get_key('title', value.name)
+            return value.get_key('title', value.name) + ' (' + str(value.value()) + ')'
         if isinstance(value, Configuration):
             return 'Configuration'
         if isinstance(value, str):
             return value
         return str(value)
 
-#    def keypress(self, size, key):
-#        pass
+    def keypress(self, size, key):
+        if self.is_leaf:
+            return key
+        if key == "enter":
+            self.expanded = not self.expanded
+            self.update_expanded_icon()
+        elif key in ("+", "right"):
+            self.expanded = True
+            self.update_expanded_icon()
+        elif key == "-":
+            self.expanded = False
+            self.update_expanded_icon()
+        elif self._w.selectable():
+            return self.__super.keypress(size, key)
+        else:
+            return key
 
-#class ConfigNode(urwid.TreeNode):
-#    """ Data storage object for leaf nodes """
-#    def load_widget(self):
-#        return ConfigTreeWidget(self)
-#
-#    def selectable(self):
-#        return true
-
-class ConfigParentNode(urwid.ParentNode):
+class ConfigParentNode(ParentNode):
     """ Data storage object for interior/parent nodes """
 
     def load_widget(self):
@@ -142,9 +195,15 @@ class MenuConfig(Plugin):
         except:
             sys.exit('urwid python module not installed')
 
+        # We want trees to evaluate to True in the DEFAULT tree, only during edits.
+        # This makes sure that ConfigBool's do not all get False in the DEFAULT tree,
+        # because they may have a 'depends on MY_TREE' which will be False in the DEFAULT tree otherwise.
+        self.conf.edit_mode = True
+
         root_node = self.conf
         TreeBrowser(root_node).main()
         #self.test_dump()
+        self.conf.edit_mode = False
 
     def test_dump(self):
         for tree in self.conf.trees.values():
@@ -183,26 +242,26 @@ class TreeBrowser:
 
     def __init__(self, data=None):
         self.topnode = ConfigParentNode(data)
-        self.listbox = urwid.TreeListBox(urwid.TreeWalker(self.topnode))
+        self.listbox = TreeListBox(TreeWalker(self.topnode))
         self.listbox.offset_rows = 1
-        self.header = urwid.Text( "" )
-        self.footer = urwid.AttrWrap( urwid.Text( self.footer_text ),
+        self.header = Text( "" )
+        self.footer = AttrWrap( Text( self.footer_text ),
             'foot')
-        self.view = urwid.Frame(
-            urwid.AttrWrap( self.listbox, 'body' ),
-            header=urwid.AttrWrap(self.header, 'head' ),
+        self.view = Frame(
+            AttrWrap( self.listbox, 'body' ),
+            header=AttrWrap(self.header, 'head' ),
             footer=self.footer )
 
     def main(self):
         """Run the program."""
 
-        self.loop = urwid.MainLoop(self.view, self.palette,
+        self.loop = MainLoop(self.view, self.palette,
                                    unhandled_input=self.unhandled_input)
         self.loop.run()
 
     def unhandled_input(self, k):
         if k in ('q','Q'):
-            raise urwid.ExitMainLoop()
+            raise ExitMainLoop()
 
 
 def get_example_tree():

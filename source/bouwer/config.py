@@ -331,19 +331,23 @@ class ConfigTree(ConfigBool):
 
         If no `tree` is specified, the currently active tree will be searched
         """
-        if tree is None:
-            tree = Configuration.Instance().active_tree
+        conf = Configuration.Instance()
 
-        return tree is self
+        if tree is None:
+            tree = conf.active_tree
+
+        return (tree is self) or conf.edit_mode
 
     def value(self, tree = None):
         """
         Retrieve value of the tree. Either `True` or `False`.
         """
-        if tree is None:
-            tree = Configuration.Instance().active_tree
+        conf = Configuration.Instance()
 
-        return tree.name == self.name and super(ConfigTree, self).value(self)
+        if tree is None:
+            tree = conf.active_tree
+
+        return (tree.name == self.name and super(ConfigTree, self).value(self)) or conf.edit_mode
 
     def get_items_by_path(self):
         """
@@ -554,6 +558,7 @@ class Configuration(bouwer.util.Singleton):
         self.args   = cli.args
         self.trees  = {}
         self.parser = BouwConfigParser(self)
+        self.edit_mode = False
 
         # Find the path to the Bouwer predefined configuration files
         curr_file = inspect.getfile(inspect.currentframe())
