@@ -130,8 +130,11 @@ class PluginManager(Singleton):
                 name, ext = os.path.splitext(filename)
 
                 # Import the builder as a module
-                module = importlib.import_module(name)
-                self.load_builders(module)
+                try:
+                    module = importlib.import_module(name)
+                    self.load_builders(module)
+                except ImportError as e:
+                    self.log.debug('skipped ' + path + os.sep + filename + ' : ' + str(e))
 
     def load_builders(self, module):
         """

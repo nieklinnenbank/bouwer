@@ -9,6 +9,8 @@
 
 [FOR RELEASE]
 
+--> PyPy compatibility... Jython, CPython, etc
+
 --> bouw --oldconfig is needed, to sync a currently active configuration with a newer updated Bouwconfig....
     bouw --update-config or bouw --import-config or something, with --oldconfig as an alias
 
