@@ -25,17 +25,6 @@ from bouwer.config import *
 loop = None
 view = None
 
-class ConfigListTree(urwid.TreeWidget):
-    # This class shows the contents of a list as a tree too.
-    # The items are the nodes, and the keywords are the childs of each item.
-    pass
-
-class ConfigListWidget(urwid.PopUpLauncher):
-    #
-    # This contains a Button (and the selected item in text), which will create a PopUp
-    # to a ConfigListTree, to modify the ConfigList and its items when selected.
-    #
-    pass
 
 class DialogExit(Exception):
     pass
@@ -105,20 +94,32 @@ class DialogDisplay:
         if self.parent is None:
             raise DialogExit(button.exitcode)
         else:
-            self.loop.widget=self.parent                # !!!! THERE IT IS!!!!!
+            self.loop.widget=self.parent
+            self.loop._unhandled_input = self.loop._saved_unhandled_input
 
     def show(self):
         if self.loop is None:
-            self.loop = urwid.MainLoop(self.view, self.palette)
+            self.loop = urwid.MainLoop(self.view, self.palette, unhandled_input=self.unhandled_input)
+            self.loop._saved_unhandled_input = self.loop._unhandled_input
             try:
                 self.loop.run()
-            except DialogExit, e:
+            except DialogExit as e:
                 return self.on_exit( e.args[0] )
         else:
             self.loop.widget = self.view
+            self.loop._saved_unhandled_input = self.loop._unhandled_input
+            self.loop._unhandled_input = self.unhandled_input
 
     def on_exit(self, exitcode):
         return exitcode, ""
+
+    def unhandled_input(self, key):
+        if key in ("tab"):
+            if self.frame.get_focus() == 'body':
+                self.frame.set_focus("footer")
+            else:
+                self.frame.set_focus('body')
+        return key
 
 class InputDialogDisplay(DialogDisplay):
     def __init__(self, item, caller, height, width, parent, loop):
@@ -135,8 +136,23 @@ class InputDialogDisplay(DialogDisplay):
         if text.endswith("\n"):
             self.item.update(str(text.rstrip()))
             self.loop.widget = self.parent
+            self.loop._unhandled_input = self.loop._saved_unhandled_input
             self.caller._w.base_widget.widget_list[1].set_text(self.caller.get_display_text())
             self.caller._invalidate()
+
+    def on_exit(self, exitcode):
+        return exitcode, self.edit.get_edit_text()
+
+class TreeDialogDisplay(DialogDisplay):
+    def __init__(self, item, caller, height, width, parent, loop):
+        self.item = item
+        self.node = ConfigListNode(self.item, None, None, 0, do_expand=True)
+        self.caller = caller
+        body = urwid.TreeListBox(urwid.TreeWalker(self.node))
+        body.offset_rows = 1
+        body = urwid.AttrWrap(body, 'selectable', 'focustext')
+        DialogDisplay.__init__(self, self.item.name, height, width, body, parent, loop)
+        self.frame.set_focus('body')
 
     def on_exit(self, exitcode):
         return exitcode, self.edit.get_edit_text()
@@ -149,10 +165,75 @@ class ConfigMenuWidget(urwid.TreeWidget):
     #
     pass
 
+class ConfigListWidget(urwid.TreeWidget):
+    def __init__(self, node):
+        super(ConfigListWidget, self).__init__(node)
+        self.unexpanded_icon = urwid.SelectableIcon('   ', 0)
+        self.expanded_icon = urwid.SelectableIcon('   ', 0)
+        self.update_expanded_icon()
+
+    def get_display_text(self):
+        item = self.get_node().get_value()
+        return item.get_key('title', item.name) + ' (' + str(item.value()) + ') --->'
+
+    def get_indented_widget(self):
+        widget = self.get_inner_widget()
+        if not self.is_leaf:
+            widget = urwid.Columns([('fixed', 3,
+                [self.unexpanded_icon, self.expanded_icon][self.expanded]),
+                widget], dividechars=1)
+        indent_cols = self.get_indent_cols()
+        return urwid.Padding(widget,
+            width=('relative', 100), left=indent_cols)
+
+    def update_all(self):
+        parent = self.get_node()._parent
+        if parent:
+            parent._widget.update()
+        else:
+            self.update()
+
+    def update(self):
+        for key in self.get_node().get_child_keys():
+            child = self.get_node().get_child_node(key)
+            if child._widget:
+                child._widget.update()
+        self.update_expanded_icon()
+
+    def keypress(self, size, key):
+        item = self.get_node().get_value()
+        if key == "enter":
+            d = TreeDialogDisplay(item, self, 50, 100, loop, view)
+            d.add_buttons([("OK", 0)])
+            d.show()
+            self.update_expanded_icon()
+        elif self._w.selectable():
+            return self.__super.keypress(size, key)
+        else:
+            return key
+
 class ConfigStringWidget(urwid.TreeWidget):
+
+    def __init__(self, node):
+        super(ConfigStringWidget, self).__init__(node)
+        self.unexpanded_icon = urwid.SelectableIcon('   ', 0)
+        self.expanded_icon = urwid.SelectableIcon('   ', 0)
+        self.update_expanded_icon()
+
     def get_display_text(self):
         item = self.get_node().get_value()
         return item.get_key('title', item.name) + ' (' + str(item.value()) + ')' # TODO: the tree!!!
+
+    def get_indented_widget(self):
+        widget = self.get_inner_widget()
+        if not self.is_leaf:
+            widget = urwid.Columns([('fixed', 3,
+                [self.unexpanded_icon, self.expanded_icon][self.expanded]),
+                widget], dividechars=1)
+        indent_cols = self.get_indent_cols()
+        return urwid.Padding(widget,
+            width=('relative', 100), left=indent_cols)
+
     def keypress(self, size, key):
         item = self.get_node().get_value()
         if key == "enter":
@@ -164,6 +245,31 @@ class ConfigStringWidget(urwid.TreeWidget):
             return self.__super.keypress(size, key)
         else:
             return key
+
+    # TODO: put in generic widget!!!
+    def update(self):
+        for key in self.get_node().get_child_keys():
+            child = self.get_node().get_child_node(key)
+            child._widget.update()
+        self.update_expanded_icon()
+
+class ConfigPathWidget(urwid.TreeWidget):
+    def selectable(self):
+        return False
+    def get_indented_widget(self):
+        widget = self.get_inner_widget()
+        if not self.is_leaf:
+            widget = urwid.Columns([('fixed', 0,
+                [self.unexpanded_icon, self.expanded_icon][self.expanded]),
+                widget], dividechars=1)
+        indent_cols = self.get_indent_cols()
+        return urwid.Padding(widget,
+            width=('relative', 100), left=indent_cols)
+
+    def get_display_text(self):
+        return "\n" + self.get_node().get_value()
+    def update(self):
+        pass
 
 # TODO: ConfigBoolWidget(TreeWidget)
 # only for ConfigBools... (and ConfigTree also?)
@@ -182,7 +288,14 @@ class ConfigTreeWidget(urwid.TreeWidget):
         self.unexpanded_icon = urwid.SelectableIcon(un_icon, 0)
         self.expanded_icon = urwid.SelectableIcon(ex_icon, 0)
 
-        super(ConfigTreeWidget, self).__init__(node)
+        self._node = node
+        self._innerwidget = None
+        self.is_leaf = not hasattr(node, 'get_first_child')
+        self.expanded = self.expanded
+        widget = self.get_indented_widget()
+        urwid.WidgetWrap.__init__(self, widget)
+
+        #super(ConfigTreeWidget, self).__init__(node)
 
     def __getattribute__(self, name):
         """
@@ -193,6 +306,10 @@ class ConfigTreeWidget(urwid.TreeWidget):
 
             if isinstance(item, ConfigBool):
                 return item.value()
+            elif isinstance(item, Configuration):
+                return True
+            else:
+                raise Exception('not bool?')
 
         return object.__getattribute__(self, name)
 
@@ -201,9 +318,14 @@ class ConfigTreeWidget(urwid.TreeWidget):
             item = self.get_node().get_value()
 
             if isinstance(item, ConfigBool):
+                # TODO: here check if inside a list...
+                if item.get_key('in_list') and value:
+                    # TODO: what about the tree????
+                    lst_item = Configuration.Instance().get(item.get_key('in_list'))
+                    lst_item.update(item.name)
                 item.update(value)
-
-        self.__dict__[name] = value
+        else:
+            self.__dict__[name] = value
 
     def get_indented_widget(self):
         widget = self.get_inner_widget()
@@ -219,37 +341,52 @@ class ConfigTreeWidget(urwid.TreeWidget):
         value = self.get_node().get_value()
 
         if isinstance(value, Config):
-            return value.get_key('title', value.name) + ' (' + str(value.value()) + ')'
+            return value.get_key('title', value.name)
         if isinstance(value, Configuration):
             return 'Configuration'
         if isinstance(value, str):
             return value
         return str(value)
 
+    def update_all(self):
+        parent = self.get_node()._parent
+        if parent:
+            parent._widget.update()
+        else:
+            self.update()
+
+    def update(self):
+        for key in self.get_node().get_child_keys():
+            child = self.get_node().get_child_node(key)
+            if child._widget:
+                child._widget.update()
+        self.update_expanded_icon()
+
+
     def keypress(self, size, key):
         if self.is_leaf:
             return key
         if key == "enter":
             self.expanded = not self.expanded
-            self.update_expanded_icon()
+            self.update_all()
         elif key in ("+", "right", "y"):
             self.expanded = True
-            self.update_expanded_icon()
+            self.update_all()
         elif key in ("-", "n"):
             self.expanded = False
-            self.update_expanded_icon()
+            self.update_all()
         elif self._w.selectable():
             return self.__super.keypress(size, key)
         else:
             return key
 
-class ConfigMenuNode(urwid.ParentNode):
+class ConfigPathNode(urwid.ParentNode):
     """
-    Represents a Bouwconfig 'menu' entry in urwid.
+    Represents a Bouwconfig path.
     """
 
     def load_widget(self):
-        return ConfigTreeWidget(self)
+        return ConfigPathWidget(self)
     def load_child_keys(self):
         return []
 
@@ -258,16 +395,22 @@ class ConfigListNode(urwid.ParentNode):
     Represents a ConfigList in urwid.
     """
 
+    def __init__(self, child, parent, key, depth, do_expand):
+        super(ConfigListNode, self).__init__(child, parent=parent, key=key, depth=depth)
+        self.do_expand = do_expand
+
     def load_widget(self):
-        return ConfigTreeWidget(self)
+        return ConfigListWidget(self)
 
     def load_child_keys(self):
         child_lst = []
-        conf = Configuration.Instance()
 
-        for child_name in self.get_value().get_key('options', []):
-            child = conf.get(child_name) # TODO: but which tree?????
-            child_lst.append(child._path + ':' + child.name)
+        if self.do_expand:
+            conf = Configuration.Instance()
+
+            for child_name in self.get_value().get_key('options', []):
+                child = conf.get(child_name) # TODO: but which tree?????
+                child_lst.append(child._path + ':' + child.name)
         return child_lst
 
     def load_child_node(self, key):
@@ -337,11 +480,11 @@ class ConfigTreeNode(urwid.ParentNode):
         if isinstance(child, ConfigBool):
             return ConfigBoolNode(child, parent=self, key=key, depth=self.get_depth() + 1)
         elif isinstance(child, ConfigList):
-            return ConfigListNode(child, parent=self, key=key, depth=self.get_depth() + 1)
+            return ConfigListNode(child, parent=self, key=key, depth=self.get_depth() + 1, do_expand=False)
         elif isinstance(child, ConfigString):
             return ConfigStringNode(child, parent=self, key=key, depth=self.get_depth() + 1)
         elif isinstance(child, str):
-            return ConfigMenuNode(child, parent=self, key=key, depth = self.get_depth() + 1)
+            return ConfigPathNode(child, parent=self, key=key, depth = self.get_depth() + 1)
         else:
             raise Exception("unknown child type: " + str(type(child)))
 
@@ -379,7 +522,6 @@ class MenuConfig(Plugin):
         """
         Configure using urwid
         """
-
         # We want trees to evaluate to True in the DEFAULT tree, only during edits.
         # This makes sure that ConfigBool's do not all get False in the DEFAULT tree,
         # because they may have a 'depends on MY_TREE' which will be False in the

@@ -192,7 +192,11 @@ class ConfigBool(Config):
         """
         Constructor
         """
-        super(ConfigBool, self).__init__(name, bool(value), path, **keywords)
+        super(ConfigBool, self).__init__(name, bouwer.util.str2bool(value), path, **keywords)
+
+        # List items are always true.
+        if 'in_list' in keywords:
+            self._value = True
 
     def value(self, tree = None):
         """
@@ -206,10 +210,7 @@ class ConfigBool(Config):
         """
         Update the `value` of this boolean item
         """
-        if type(value) is not bool:
-            raise Exception('value must be either True or False')
-        else:
-            super(ConfigBool, self).update(value)
+        super(ConfigBool, self).update(bouwer.util.str2bool(value))
 
 class ConfigString(Config):
     """
@@ -518,7 +519,7 @@ class BouwConfigParser:
         self.conf.put(self.item)
 
     def _parse_default(self, line):
-        self.item._value = self.parsed[1] # TODO: this goes WRONG!!!!! Now all the config items get a string....
+        self.item.update(self.parsed[1])
 
     def _parse_string(self, line):
         self.item = ConfigString(self.name, '', self.conf.active_dir)

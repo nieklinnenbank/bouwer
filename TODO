@@ -1,8 +1,11 @@
 [menuconfig]
-- ConfigString: question box
++ ConfigString: question box
 - ConfigList: also in a tree maybe, or list of checkboxes
+- ConfigList: if Value is None, then only give its keywords a childs, not the options.
+    e.g. CC incpath override only (no default set)
+
 - Keywords please, add them as childs
-- trees fix, also HOST and TARGET should work
++/- trees fix, also HOST and TARGET should work
 - layout fixing
 - keyboard shortcuts: Y/N/Enter/ESC, UP, DOWN, etc
 - save Y/N

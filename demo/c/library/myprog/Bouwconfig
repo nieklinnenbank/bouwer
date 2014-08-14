@@ -16,8 +16,9 @@
 #
 
 config MYPROG
-    bool "The myprog example consumer program for libdummy"
+    bool "The myprog example consumer program for libdummy and libfuzz"
     depends on LIBDUMMY
+    depends on LIBFUZZ
     help
       This program demonstrates how to use libraries
 

@@ -23,46 +23,35 @@ choice OS
 
 config LINUX
     bool "Linux operating system"
-    default False
 
 config WINDOWS
     bool
-    default False
 
 config CYGWIN
     bool
-    default False
 
 config MACOS
     bool
-    default False
 
 config FREEBSD
     bool
-    default False
 
 config SUNOS
     bool
-    default False
 
 config BEOS
     bool
-    default False
 
 config AIX
     bool
-    default False
 
 config NETWARE
     bool
-    default False
 
 config OS2
     bool
-    default False
 
 config OS390
     bool
-    default False
 
 endchoice

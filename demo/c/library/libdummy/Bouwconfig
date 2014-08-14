@@ -39,6 +39,7 @@ config LIBDUMMY_BAR
 
 config LIBDUMMY_UTIL
     bool "Enable the dummy util stuffs"
+    default False
     depends on LIBDUMMY_FOO
     help
       This option enables all about util stuffs.

@@ -27,6 +27,15 @@ Bouwer generic utilities
 
 BOUWTEMP = '.bouwtemp'
 
+def str2bool(s):
+    """
+    Convert string to bool type.
+    """
+    if isinstance(s, str):
+        return s.lower() in ("yes", "true", "t", "1", "y")
+    else:
+        return s
+
 def tempfile(filename):
     """
     Create a temporary builder file

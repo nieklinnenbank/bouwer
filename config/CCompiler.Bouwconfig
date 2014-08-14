@@ -25,7 +25,6 @@ choice CC
 
 config GCC
     bool "GNU C/C++ Compiler"
-    default True
     keywords
       cc      = gcc -o
       clink   = gcc -o

@@ -154,7 +154,7 @@ class LibraryTester(DemoClass):
         self.assertTrue(self.conf.get('LIBDUMMY').value())
         self.assertTrue(self.conf.get('LIBDUMMY_FOO').value())
         self.assertTrue(self.conf.get('LIBDUMMY_BAR').value())
-        self.assertTrue(self.conf.get('LIBDUMMY_UTIL').value())
+        self.assertFalse(self.conf.get('LIBDUMMY_UTIL').value())
 
     def test_library_actions(self):
         """ Verify actions of the Library demo """
