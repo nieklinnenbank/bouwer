@@ -171,7 +171,9 @@ class Config(object):
         return dict(name = self.name,
                     type = self.__class__.__name__,
                     value = self.value(tree),
-                    keywords = self._keywords)
+                    keywords = self._keywords,
+                    path = self._path,
+                    parent = str(self._parent.name) if self._parent else None )
 
     def __str__(self):
         """ String representation """
@@ -625,6 +627,10 @@ class Configuration(bouwer.util.Singleton):
                 if 'path' in json_item:
                     self.active_dir = json_item['path']
 
+                # Set parent
+                #if 'parent' in json_item:
+                #    conf_item._parent = self.trees[json_item['parent']]
+
                 if type(conf_item) is ConfigTree:
                     self.put(conf_item)
                     self.active_tree = conf_item
@@ -643,10 +649,12 @@ class Configuration(bouwer.util.Singleton):
         # i.e. ConfigTree's will appear first in the JSON file
         conf_dict = collections.OrderedDict()
 
-        # Save only default tree items and overwrites
+        # First add trees.
         for tree in self.trees.values():
             conf_dict[tree.name] = [ tree.serialize(tree) ]
 
+        # Now the subitems
+        for tree in self.trees.values():
             for subitem_entry in tree.subitems.values():
                 for subitem in subitem_entry:
                     if subitem.name not in conf_dict:
@@ -654,7 +662,6 @@ class Configuration(bouwer.util.Singleton):
 
                     item_dict = subitem.serialize(tree)
                     item_dict['tree'] = tree.name
-                    item_dict['path'] = subitem._path
                     conf_dict[subitem.name].append(item_dict)
 
         fp.write(json.dumps(conf_dict, ensure_ascii=True, indent=4, separators=(',', ': ')))
