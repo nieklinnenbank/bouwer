@@ -648,15 +648,15 @@ class MenuConfig(Plugin):
         ]
 
         footer_text = [
-            ('title', "Example Data Browser"), "    ",
-            ('key', "UP"), ",", ('key', "DOWN"), ",",
-            ('key', "PAGE UP"), ",", ('key', "PAGE DOWN"),
-            "  ",
-            ('key', "+"), ",",
-            ('key', "-"), "  ",
-            ('key', "LEFT"), "  ",
-            ('key', "HOME"), "  ",
-            ('key', "END"), "  ",
+            ('title', "Navigation:"), " ",
+            ('key', "UP"), "/",
+            ('key', "DOWN"), "/",
+            ('key', "LEFT"), "/",
+            ('key', "RIGHT"), "/",
+            ('key', "TAB"), "   Select:",
+            ('key', "Y"), "/",
+            ('key', "N"), "/",
+            ('key', "ENTER"), "  Quit:",
             ('key', "Q"),
         ]
 
