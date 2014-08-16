@@ -39,9 +39,11 @@ class ConfigHeader(Plugin):
 
         # TODO: we should be able to provide a python function as builder also...
         target = TargetPath(filename)
+        source = SourcePath('')
+        source.absolute = '.bouwconf'
 
         # Schedule Action to compile it
-        self.build.action(target, [SourcePath('.bouwconf')], '# ConfigHeader',
+        self.build.action(target, [ source ], '# ConfigHeader',
                           pretty_name='GEN',
                           pretty_target=target.absolute,
                           prefix=prefix)

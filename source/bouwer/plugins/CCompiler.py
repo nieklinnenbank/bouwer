@@ -253,7 +253,10 @@ class CCompiler(bouwer.util.Singleton):
                 header_name = line.split('"')[1]
 
             # Try to locate the header in any of the include paths
-            paths.append(os.path.dirname(SourcePath(header_name).absolute))
+            header_dir = os.path.dirname(SourcePath(header_name).absolute)
+            if not header_dir:
+                header_dir = '.'
+            paths.append(header_dir)
             for p in paths:
                 try:
                     if p:
