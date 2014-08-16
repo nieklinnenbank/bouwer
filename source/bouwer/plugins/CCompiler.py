@@ -218,6 +218,48 @@ class CCompiler(bouwer.util.Singleton):
         self.use_libraries = {}
         self.objects_for_items = {}
 
+    def _extract_header_includes(self, source, paths):
+        """
+        Return header #include's for the given SourcePath file.
+        """
+        headers = []
+        headers_str = []
+
+        # Search for '#include' lines
+        fp = open(source.absolute, "r")
+        for line in fp.readlines():
+            idx = line.find('#include')
+            if idx == -1:
+                continue
+
+            if line.find('<') != -1:
+                header_name = line.split('<')[1].split('>')[0]
+            else:
+                header_name = line.split('"')[1]
+
+            # Try to locate the header in any of the include paths
+            header_dir = os.path.dirname(SourcePath(header_name).absolute)
+            if not header_dir:
+                header_dir = '.'
+            paths.append(header_dir)
+
+            for p in paths:
+                try:
+                    absolute_path = p + os.sep + header_name
+
+                    if p and absolute_path not in headers_str:
+                        os.stat(absolute_path)
+                        sp = SourcePath('') # TODO: just use Path() then?
+                        sp.absolute = absolute_path
+                        headers.append(sp)
+                        headers_str.append(sp.absolute)
+                except OSError as e:
+                    pass
+
+        # Update the cache. Finish up.
+        fp.close()
+        return [headers, headers_str]
+
     def _find_headers(self, source, paths):
         """
         Find headers included by a C file.
@@ -240,36 +282,15 @@ class CCompiler(bouwer.util.Singleton):
                 headers.append(sp)
             return headers
 
-        # Search for '#include' lines
-        fp = open(source.absolute, "r")
-        for line in fp.readlines():
-            idx = line.find('#include')
-            if idx == -1:
-                continue
+        # For each found header, do a recursive search.
+        search_list = [source]
+        while search_list:
+            new_headers = self._extract_header_includes(search_list.pop(), paths)
+            headers += new_headers[0]
+            headers_str += new_headers[1]
+            # TODO: check for circular loop here?
+            search_list += new_headers[0]
 
-            if line.find('<') != -1:
-                header_name = line.split('<')[1].split('>')[0]
-            else:
-                header_name = line.split('"')[1]
-
-            # Try to locate the header in any of the include paths
-            header_dir = os.path.dirname(SourcePath(header_name).absolute)
-            if not header_dir:
-                header_dir = '.'
-            paths.append(header_dir)
-            for p in paths:
-                try:
-                    if p:
-                        os.stat(p + os.sep + header_name)
-                        sp = SourcePath('') # TODO: just use Path() then?
-                        sp.absolute = p + os.sep + header_name
-                        headers.append(sp)
-                        headers_str.append(sp.absolute)
-                except OSError as e:
-                    pass
-
-        # Update the cache. Finish up.
-        fp.close()
         cache.put(source.absolute, headers_str)
         return headers
 
