@@ -95,7 +95,7 @@ class DialogDisplay:
             raise DialogExit(button.exitcode)
         else:
             self.loop.widget=self.parent
-            self.loop._unhandled_input = self.loop._saved_unhandled_input
+            self.loop._unhandled_input = self.loop._saved_unhandled_input.pop()
 
             if self.caller:
                 self.caller.update_all()
@@ -104,14 +104,14 @@ class DialogDisplay:
     def show(self):
         if self.loop is None:
             self.loop = urwid.MainLoop(self.view, self.palette, unhandled_input=self.unhandled_input)
-            self.loop._saved_unhandled_input = self.loop._unhandled_input
+            self.loop._saved_unhandled_input = [ self.loop._unhandled_input ]
             try:
                 self.loop.run()
             except DialogExit as e:
                 return self.on_exit( e.args[0] )
         else:
             self.loop.widget = self.view
-            self.loop._saved_unhandled_input = self.loop._unhandled_input
+            self.loop._saved_unhandled_input.append(self.loop._unhandled_input)
             self.loop._unhandled_input = self.unhandled_input
 
     def on_exit(self, exitcode):
@@ -140,7 +140,7 @@ class InputDialogDisplay(DialogDisplay):
         if text.endswith("\n"):
             self.item.update(str(text.rstrip()))
             self.loop.widget = self.parent
-            self.loop._unhandled_input = self.loop._saved_unhandled_input
+            self.loop._unhandled_input = self.loop._saved_unhandled_input.pop()
 
             if self.caller:
                 self.caller._w.base_widget.widget_list[1].set_text(self.caller.get_display_text())
@@ -148,6 +148,28 @@ class InputDialogDisplay(DialogDisplay):
 
     def on_exit(self, exitcode):
         return exitcode, self.edit.get_edit_text()
+
+class InputKeywordDialog(DialogDisplay):
+    def __init__(self, val, caller, height, width, parent, loop):
+        self.keyword = val[1]
+        self.item = val[0]
+        self.edit = urwid.Edit(multiline=True, edit_text=self.item.get_key(self.keyword)) # TODO: tree???
+        self.caller = caller
+        body = urwid.ListBox([self.edit])
+        body = urwid.AttrWrap(body, 'selectable','focustext')
+        DialogDisplay.__init__(self, self.item.name + ' : ' + self.keyword, height, width, body, parent, loop, self.caller)
+        self.frame.set_focus('body')
+        urwid.connect_signal(self.edit, 'change', self.input_change)
+
+    def input_change(self, widget, text):
+        if text.endswith("\n"):
+            self.item._keywords[self.keyword] = str(text.rstrip())
+            self.loop.widget = self.parent
+            self.loop._unhandled_input = self.loop._saved_unhandled_input.pop()
+
+            if self.caller:
+                self.caller._w.base_widget.widget_list[1].set_text(self.caller.get_display_text())
+                self.caller._invalidate()
 
 class TreeDialogDisplay(DialogDisplay):
     def __init__(self, item, caller, height, width, parent, loop):
@@ -173,6 +195,51 @@ class ConfigMenuWidget(urwid.TreeWidget):
     # with the childs registered in that menu...
     #
     pass
+
+class ConfigKeywordWidget(urwid.TreeWidget):
+    """
+    Represents a Config item keyword
+    """
+
+    def __init__(self, node):
+        super(ConfigKeywordWidget, self).__init__(node)
+        self.unexpanded_icon = urwid.SelectableIcon('   ', 0)
+        self.expanded_icon = urwid.SelectableIcon('   ', 0)
+        self.update_expanded_icon()
+
+    def get_display_text(self):
+        val = self.get_node().get_value()
+        return val[1] + ' (' + val[0].get_key(val[1]) + ')'
+
+    def get_indented_widget(self):
+        widget = self.get_inner_widget()
+        if not self.is_leaf:
+            widget = urwid.Columns([('fixed', 3,
+                [self.unexpanded_icon, self.expanded_icon][self.expanded]),
+                widget], dividechars=1)
+        indent_cols = self.get_indent_cols()
+        return urwid.Padding(widget,
+            width=('relative', 100), left=indent_cols)
+
+    def keypress(self, size, key):
+        val = self.get_node().get_value()
+        if key == "enter":
+            d = InputKeywordDialog(val, self, 9, 100, loop, loop.widget)
+            d.add_buttons([("OK", 0)])
+            d.show()
+            self.update_expanded_icon()
+        elif self._w.selectable():
+            return self.__super.keypress(size, key)
+        else:
+            return key
+
+    # TODO: put in generic widget!!!
+    def update(self):
+        for key in self.get_node().get_child_keys():
+            child = self.get_node().get_child_node(key)
+            child._widget.update()
+        self.update_expanded_icon()
+
 
 class ConfigListWidget(urwid.TreeWidget):
     def __init__(self, node):
@@ -390,6 +457,16 @@ class ConfigTreeWidget(urwid.TreeWidget):
         else:
             return key
 
+class ConfigKeywordNode(urwid.ParentNode):
+    """
+    Represents a Config keyword.
+    """
+
+    def load_widget(self):
+        return ConfigKeywordWidget(self)
+    def load_child_keys(self):
+        return []
+
 class ConfigPathNode(urwid.ParentNode):
     """
     Represents a Bouwconfig path.
@@ -442,8 +519,18 @@ class ConfigBoolNode(urwid.ParentNode):
     def load_widget(self):
         return ConfigTreeWidget(self)
     def load_child_keys(self):
-        # TODO: must have our keywords as child...
-        return []
+        childs = self.get_value()._keywords.keys()
+        for key in [ 'in_list', 'depends', 'help' ]:
+            try:
+                childs.remove(key)
+            except:
+                pass
+        return childs
+
+    def load_child_node(self, key):
+        item = self.get_value()
+        val = [ item, key ]
+        return ConfigKeywordNode(val, parent=self, key=key, depth = self.get_depth() + 1)
 
 class ConfigStringNode(urwid.ParentNode):
     """
@@ -541,6 +628,11 @@ class MenuConfig(Plugin):
         self.conf.edit_mode = False
 
         # TODO: ask for saving here
+        d = DialogDisplay( 'Do you want to save your configuration?' , 10, 100 )
+        d.add_buttons([    ("Yes", 0), ("No", 1) ])
+        ret = d.show()
+        if ret[0] == 0:
+            self.conf.save()
 
     def open_urwid_editor(self):
 
@@ -585,6 +677,7 @@ class MenuConfig(Plugin):
         loop = urwid.MainLoop(view, palette,
                               unhandled_input=self.unhandled_input,
                               pop_ups=True)
+        loop._saved_unhandled_input = []
         loop.run()
 
     def unhandled_input(self, k):
