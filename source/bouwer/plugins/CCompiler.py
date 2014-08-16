@@ -19,6 +19,7 @@ import os
 import os.path
 import glob
 import copy
+import subprocess
 from bouwer.plugin import *
 from bouwer.builder import *
 from bouwer.config import *
@@ -218,51 +219,9 @@ class CCompiler(bouwer.util.Singleton):
         self.use_libraries = {}
         self.objects_for_items = {}
 
-    def _extract_header_includes(self, source, paths):
+    def _find_headers(self, source, incflags, cc):
         """
-        Return header #include's for the given SourcePath file.
-        """
-        headers = []
-        headers_str = []
-
-        # Search for '#include' lines
-        fp = open(source.absolute, "r")
-        for line in fp.readlines():
-            idx = line.find('#include')
-            if idx == -1:
-                continue
-
-            if line.find('<') != -1:
-                header_name = line.split('<')[1].split('>')[0]
-            else:
-                header_name = line.split('"')[1]
-
-            # Try to locate the header in any of the include paths
-            header_dir = os.path.dirname(SourcePath(header_name).absolute)
-            if not header_dir:
-                header_dir = '.'
-            paths.append(header_dir)
-
-            for p in paths:
-                try:
-                    absolute_path = p + os.sep + header_name
-
-                    if p and absolute_path not in headers_str:
-                        os.stat(absolute_path)
-                        sp = SourcePath('') # TODO: just use Path() then?
-                        sp.absolute = absolute_path
-                        headers.append(sp)
-                        headers_str.append(sp.absolute)
-                except OSError as e:
-                    pass
-
-        # Update the cache. Finish up.
-        fp.close()
-        return [headers, headers_str]
-
-    def _find_headers(self, source, paths):
-        """
-        Find headers included by a C file.
+        Find headers included by a C file using the C preprocessor.
         Return them as a list.
         """
 
@@ -282,14 +241,21 @@ class CCompiler(bouwer.util.Singleton):
                 headers.append(sp)
             return headers
 
-        # For each found header, do a recursive search.
-        search_list = [source]
-        while search_list:
-            new_headers = self._extract_header_includes(search_list.pop(), paths)
-            headers += new_headers[0]
-            headers_str += new_headers[1]
-            # TODO: check for circular loop here?
-            search_list += new_headers[0]
+        # Invoke the preprocessor to determine header dependencies
+        try:
+            cpp_command=cc['cpp'] + ' ' + incflags + ' ' + cc['cppflags'] + ' ' + source.absolute
+            result = str(subprocess.check_output(cpp_command, stderr=subprocess.PIPE, shell=True))
+
+            header_list = result.replace(' \\\n', '').strip().split(' ')
+            headers_str = header_list[2:]
+
+            for header in headers_str:
+                if header:
+                    sp = SourcePath('')
+                    sp.absolute = header
+                    headers.append(sp)
+        except subprocess.CalledProcessError:
+            pass
 
         cache.put(source.absolute, headers_str)
         return headers
@@ -351,9 +317,9 @@ class CCompiler(bouwer.util.Singleton):
 
         # Fill compiler command
         if splitfile[1] == '.c' or splitfile[1] == '.S':
-            compiler = cc['cc'] + ' ' + str(outfile) + ' ' + cc['ccflags']
+            compiler = cc['cc'] + ' ' + str(outfile) + ' ' + cc['ccflags'] + ' ' + cc['cppflags']
         elif splitfile[1] == '.cpp':
-            compiler = cc['c++'] + ' ' + str(outfile) + ' ' + cc['c++flags']
+            compiler = cc['c++'] + ' ' + str(outfile) + ' ' + cc['c++flags'] + ' ' + cc['cppflags']
         else:
             raise Exception('not a C source file: ' + source)
 
@@ -376,7 +342,7 @@ class CCompiler(bouwer.util.Singleton):
                 pass
 
         # Determine dependencies to build output file.
-        deps = self._find_headers(source, incpath) + depends
+        deps = self._find_headers(source, incflags, cc) + depends
         deps.append(source)
 
         # Set our pretty name

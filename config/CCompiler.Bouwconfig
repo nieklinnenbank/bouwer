@@ -32,10 +32,12 @@ config GCC
       c++link = g++ -o
       asm     = gcc -o
       ar      = ar
+      cpp     = cpp -MM
       ccflags      = -Wall -Wextra -c
       clinkflags   = -Wall -Wextra
       c++flags     = -Wall -Wextra -c
       c++linkflags = -Wall -Wextra
+      cppflags     =
       ldscript     =
       ldpath       =
       ldflag       = -L
@@ -55,9 +57,11 @@ config CLANG
       asm     = clang -o
       clink   = clang -o
       ar      = ar
+      cpp     = llvm-cpp -MM
       ccflags = -Wall -Wextra -c
       cplusflags =
       clinkflags = -Wall -Wextra
+      cppflags =
       ldscript =
       ldpath  =
       ldflag  = -L
@@ -76,32 +80,35 @@ config MSVC10
       asm     = asm.exe
       ld      = link.exe
       ccflags = \err:full \extra:all
-      ldflags = 
+      cpp     = cpp.exe -MM
+      cppflags =
+      ldflags =
       ldscript =
-      ldpath  = 
-      ldflag  = 
+      ldpath  =
+      ldflag  =
       libs    =
-      libflag = 
-      incflag = 
+      libflag =
+      incflag =
       incpath =
-      arflags = 
+      arflags =
     help
       See microsoft homepage at http://www.microsoft.com
 
 config TCC
     bool "Tiny C Compiler"
     keywords
-      cflags  = -Wall
       cc      = tcc -o
       clink   = tcc -o
       c++     = tcc -o
       c++link = tcc -o
       asm     = tcc -o
       ar      = ar
+      cpp     = tcc -MD
       ccflags      = -Wall -Wextra -c
       clinkflags   = -Wall -Wextra
       c++flags     = -Wall -Wextra -c
       c++linkflags = -Wall -Wextra
+      cppflags     =
       ldscript     =
       ldpath       =
       ldflag       = -L

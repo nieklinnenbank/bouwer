@@ -1,5 +1,6 @@
 [bugs]
 - #include "config.h" in hello does not generate a config.h dependency.... why?
+- let cpp scan for dependencies instead of the CCompiler... will be WAY faster.
 
 [menuconfig]
 - Check with FreeNOS:
