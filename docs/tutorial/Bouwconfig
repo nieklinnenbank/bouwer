@@ -1,0 +1,11 @@
+config HELLO
+    bool "Hello World program"
+    help
+      This program outputs a message to standard output
+
+config HELLOMSG
+    string "Hello World Message"
+    default "This is the Hello World program!"
+    depends on HELLO
+    help
+      Message for the Hello World Program

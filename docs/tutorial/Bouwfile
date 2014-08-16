@@ -1,0 +1,6 @@
+def build(conf):
+    """
+    Build the hello world program
+    """
+    ConfigHeader('config.h')
+    Program(conf.HELLO, 'hello.c')

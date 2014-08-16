@@ -1,0 +1,14 @@
+def build(conf):
+    """ Build the hello world program """
+
+    RequireVersion('0.1.0')
+
+    CheckOS(conf.OS)
+    CheckCompiler(conf.CC)
+    CheckHeader('HAS_SYSLOG', 'syslog.h', False)
+    CheckFunction('HAS_ADDCH', 'addch', 'ncurses', False)
+    CheckFunction('HAS_ADDSTR', 'addstr', 'ncurses', False)
+    CheckLibrary('HAS_NCURSES', 'ncurses', False)
+    ConfigHeader('config.h')
+
+    Program(conf.HELLO, 'hello.c')
