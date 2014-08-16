@@ -1,62 +1,68 @@
-{% extends "defindex.html" %}
-{% block tables %}
+{% extends "!defindex.html" %}
+{% block body %}
+<h1>Bouwer</h1>
+<div style="float: left; width: 600px">
+<p>a Python-based configurable build system</p>
 
-  <p><strong>Parts of the documentation:</strong></p>
-  <table class="contentstable" align="center"><tr>
-    <td width="50%" style="vertical-align:top;">
-      <p class="biglink"><a class="biglink" href="{{ pathto("introduction") }}">Introduction</a><br/>
-         <span class="linkdescr">A short introduction to Bouwer</span></p>
+<ul>
+<li>Fully configurable builds using Bouwfiles (similar to Kconfig)</li>
+<li>MenuConfig graphical console configuration</li>
+<li>Extendable with Python plugins</li>
+<li>Integrated Autoconf-like support for finding #include files, libraries, functions</li>
+<li>Parallel builds</li>
+<li>Global view of all dependencies</li>
+<li>Builtin support for C/C++ compilers: GCC, Clang/LLVM, Tiny C compiler</li>
+<li>Automatic C/C++ header dependency resolving</li>
+<li>Customizable build output (quiet, full command, pretty, progressbar)</li>
+</ul>
 
-      <p class="biglink"><a class="biglink" href="{{ pathto("installation") }}">Installation</a><br/>
-         <span class="linkdescr">Guides for installing Bouwer on your system</span></p>
+<h3>Download:</h3>
+<div class="hilight">
+<pre>
+$ git clone https://github.com/nieklinnenbank/bouwer
+$ cd bouwer
+$ ./bouw --help
+</pre>
+</div>
 
-      <p class="biglink"><a class="biglink" href="{{ pathto("understanding/index") }}">Understanding Bouwer</a><br/>
-         <span class="linkdescr">Details of Bouwer architecture and internals</span></p>
 
-    </td>
-    <td width="50%" style='vertical-align:top;'>
-      <p class="biglink"><a class="biglink" href="{{ pathto("builders") }}">Builder Reference</a><br/>
-         <span class="linkdescr">Reference of standard builders included in Bouwer</span></p>
+<div class="section" id="requirements">
+<h3>Requirements</h3>
+<ul>
+<li>Python 2.7, 3.x</li>
+<li>Linux, OSX, BSD or other unix-like OS</li>
+<li><a href="http://urwid.org">urwid</a> for --menuconfig configuration</li>
+</ul>
+</div>
 
-      <p class="biglink"><a class="biglink" href="{{ pathto("faq") }}">FAQ</a><br/>
-         <span class="linkdescr">List of frequently asked questions</span></p>
+<div class="section" id="similar">
+<h3>Links</h3>
 
-      <p class="biglink"><a class="biglink" href="{{ pathto("tutorials/index") }}">Tutorials</a><br/>
-         <span class="linkdescr">Learn how to use Bouwer step-by-step</span></p>
+<ul>
+<li><a href="http://github.com/nieklinnenbank/bouwer">Github page</a></li>
+<li><a href="http://github.com/nieklinnenbank/bouwer/issues">Report Issues</a></li>
+</ul>
+</div>
+</div>
 
-    </td></tr>
-  </table>
+<div style="padding-left: 650px;">
+<div class="section" id="big-buttons">
+<p>
+    <img alt="_images/graph2.png" src="_images/graph2.png" width="200" style="padding-bottom: 5px" /></br>
+</p>
+<p>
+    <img alt="_images/graph2.png" src="_images/graph2.png" width="200" style="padding-bottom: 5px" /></br>
+</p>
+<p>
+    <img alt="_images/graph2.png" src="_images/graph2.png" width="200" style="padding-bottom: 5px" /></br>
+</p>
+<p>
+    <img alt="_images/graph2.png" src="_images/graph2.png" width="200" style="padding-bottom: 5px" /></br>
+</p>
 
-  <p><strong>Indices and tables:</strong></p>
-  <table class="contentstable" align="center"><tr>
-    <td width="50%">
-                <p class="biglink"><a class="biglink" href="{{ pathto("py-modindex") }}">Global Module Index</a><br/>
-         <span class="linkdescr">quick access to all modules</span></p>
-      <p class="biglink"><a class="biglink" href="{{ pathto("genindex") }}">General Index</a><br/>
-         <span class="linkdescr">all functions, classes, terms</span></p>
-    </td><td width="50%" style="vertical-align:top;">
-      <!-- <p class="biglink"><a class="biglink" href="{{ pathto("glossary") }}">Glossary</a><br/>
-         <span class="linkdescr">the most important terms explained</span></p> -->
-      <p class="biglink"><a class="biglink" href="{{ pathto("search") }}">Search page</a><br/>
-         <span class="linkdescr">search this documentation</span></p>
-    </td></tr>
-  </table>
+</div>
+</div>
 
-  <p><strong>Meta information:</strong></p>
-  <table class="contentstable" align="center"><tr>
-    <td width="50%">
-      <p class="biglink"><a class="biglink" href="{{ pathto("copyright") }}">Copyright</a><br/>
-         <span class="linkdescr">Copyright notice</span></p>
 
-      <p class="biglink"><a class="biglink" href="http://code.google.com/p/waf/issues/list">Reporting bugs</a><br/>
-         <span class="linkdescr">Where to report bugs</span></p>
-
-    </td>
-        <td width="50%" style="vertical-align:top;">
-      <p class="biglink"><a class="biglink" href="{{ pathto("about") }}">About</a><br/>
-         <span class="linkdescr">Documenting Waf</span></p>
-
-    </td></tr>
-  </table>
-
+<div style="clear:both">&nbsp;</div>
 {% endblock %}

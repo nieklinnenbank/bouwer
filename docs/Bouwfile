@@ -21,5 +21,6 @@ def build(conf):
 
 def html(conf):
     """ Generate HTML documentation """
+    Command('sphinx-apidoc -o apidoc ../source')
     Command('sphinx-build -b html -d _build/doctrees . _build/html')
 
