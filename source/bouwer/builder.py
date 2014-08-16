@@ -157,11 +157,6 @@ class BuilderInstance:
                                                        self._source_path_list(arguments[1]),
                                                       *arguments[2:],
                                                       **keywords)
-                    #if len(arguments) == 2:
-                    #    return self.builder.execute_config(arguments[0],
-                    #                                       self._source_path_list(arguments[1]))
-                    #else:
-                    #    return self.builder.execute_config(*arguments)
 
                 if hasattr(self.builder, 'execute_config_params'): # TODO: <--- same as execute_any?
                     return self.builder.execute_config_params(*arguments, **keywords)

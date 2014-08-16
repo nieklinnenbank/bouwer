@@ -75,6 +75,12 @@ class Program(Plugin):
         if item.value():
             self.execute_target(TargetPath(name), sources, libraries, depends, item)
 
+    def execute_source(self, source):
+        """
+        Build an executable object given its `source` file
+        """
+        self.execute_target(TargetPath(source.absolute.replace('.c', '')), [source])
+
     def execute_target(self, target, sources, libraries = [], depends = [], item = None):
         """
         Build an program given its `target` name and `sources` list
