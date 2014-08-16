@@ -25,7 +25,6 @@ from bouwer.config import *
 loop = None
 view = None
 
-
 class DialogExit(Exception):
     pass
 
@@ -39,7 +38,7 @@ class DialogDisplay:
         ('focustext','light gray','dark blue'),
         ]
 
-    def __init__(self, text, height, width, body=None, loop=None, parent=None):
+    def __init__(self, text, height, width, body=None, loop=None, parent=None, caller=None):
         width = int(width)
         if width <= 0:
             width = ('relative', 80)
@@ -78,6 +77,7 @@ class DialogDisplay:
         self.parent = parent
         self.loop = loop
         self.view = w
+        self.caller = caller
 
     def add_buttons(self, buttons):
         l = []
@@ -96,6 +96,10 @@ class DialogDisplay:
         else:
             self.loop.widget=self.parent
             self.loop._unhandled_input = self.loop._saved_unhandled_input
+
+            if self.caller:
+                self.caller.update_all()
+            self.on_exit(0)
 
     def show(self):
         if self.loop is None:
@@ -128,7 +132,7 @@ class InputDialogDisplay(DialogDisplay):
         self.caller = caller
         body = urwid.ListBox([self.edit])
         body = urwid.AttrWrap(body, 'selectable','focustext')
-        DialogDisplay.__init__(self, item.name, height, width, body, parent, loop)
+        DialogDisplay.__init__(self, item.name, height, width, body, parent, loop, self.caller)
         self.frame.set_focus('body')
         urwid.connect_signal(self.edit, 'change', self.input_change)
 
@@ -137,8 +141,10 @@ class InputDialogDisplay(DialogDisplay):
             self.item.update(str(text.rstrip()))
             self.loop.widget = self.parent
             self.loop._unhandled_input = self.loop._saved_unhandled_input
-            self.caller._w.base_widget.widget_list[1].set_text(self.caller.get_display_text())
-            self.caller._invalidate()
+
+            if self.caller:
+                self.caller._w.base_widget.widget_list[1].set_text(self.caller.get_display_text())
+                self.caller._invalidate()
 
     def on_exit(self, exitcode):
         return exitcode, self.edit.get_edit_text()
@@ -151,11 +157,14 @@ class TreeDialogDisplay(DialogDisplay):
         body = urwid.TreeListBox(urwid.TreeWalker(self.node))
         body.offset_rows = 1
         body = urwid.AttrWrap(body, 'selectable', 'focustext')
-        DialogDisplay.__init__(self, self.item.name, height, width, body, parent, loop)
+        # TODO: pass the caller. invoke update_all() on it on exit.
+        DialogDisplay.__init__(self, self.item.name, height, width, body, parent, loop, self.caller)
         self.frame.set_focus('body')
 
     def on_exit(self, exitcode):
-        return exitcode, self.edit.get_edit_text()
+        self.caller._w.base_widget.widget_list[1].set_text(self.caller.get_display_text())
+        self.caller._invalidate()
+        return exitcode, ""
 
 class ConfigMenuWidget(urwid.TreeWidget):
     #
@@ -201,8 +210,10 @@ class ConfigListWidget(urwid.TreeWidget):
         self.update_expanded_icon()
 
     def keypress(self, size, key):
-        item = self.get_node().get_value()
-        if key == "enter":
+        node = self.get_node()
+        item = node.get_value()
+
+        if key == "enter" and not node.do_expand:
             d = TreeDialogDisplay(item, self, 50, 100, loop, view)
             d.add_buttons([("OK", 0)])
             d.show()
@@ -361,7 +372,6 @@ class ConfigTreeWidget(urwid.TreeWidget):
             if child._widget:
                 child._widget.update()
         self.update_expanded_icon()
-
 
     def keypress(self, size, key):
         if self.is_leaf:
